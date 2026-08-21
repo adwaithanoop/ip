@@ -1,9 +1,10 @@
+import java.util.ArrayList;
 import java.util.Scanner;
 
 /**
  * A chatbot that greets the user, remembers the tasks the user types,
- * lists them back on request, marks them as done, and exits when the
- * user types {@code bye}.
+ * lists them back on request, marks them as done, removes the ones the user
+ * no longer wants, and exits when the user types {@code bye}.
  *
  * <p>Tasks come in three kinds — {@link Todo}, {@link Deadline} and
  * {@link Event} — each added with its own command word.
@@ -29,6 +30,9 @@ public class Bob {
 
     /** Command that marks a task as not done again; used as {@code unmark <task number>}. */
     private static final String UNMARK_COMMAND = "unmark";
+
+    /** Command that removes a task from the list; used as {@code delete <task number>}. */
+    private static final String DELETE_COMMAND = "delete";
 
     /** Command that adds a task with no date attached; used as {@code todo <description>}. */
     private static final String TODO_COMMAND = "todo";
@@ -66,23 +70,24 @@ public class Bob {
      */
     private static final String DIVIDER = "_".repeat(60);
 
-    /** Maximum number of tasks the chatbot can remember, as allowed by the requirements. */
-    private static final int MAX_TASKS = 100;
-
     /**
-     * Tasks entered so far, stored in insertion order in slots {@code 0..taskCount - 1}.
-     * A fixed-size array is enough here because the requirements cap the number of
-     * tasks; a growable {@code ArrayList} would be the usual choice without that cap.
+     * Tasks entered so far, in the order they were added.
      *
-     * <p>Each slot holds a {@link Task}. Because {@link Todo}, {@link Deadline}
-     * and {@link Event} are all subclasses of {@link Task}, one array of
-     * {@code Task} can hold any mixture of the three, and the code that lists or
-     * marks them needs to know only that each is a task.
+     * <p>This is an {@link ArrayList} rather than a fixed-size array. Now that
+     * tasks can be deleted as well as added, a plain array would mean growing it
+     * by hand when it filled up, and shifting every later element down by one on
+     * every deletion while tracking how many slots are still in use. An
+     * {@code ArrayList} does all of that itself: {@code add} grows it,
+     * {@code remove} closes the gap, and {@code size} always says how many tasks
+     * there are, so there is no separate count that could drift out of step with
+     * the contents.
+     *
+     * <p>Each element is a {@link Task}. Because {@link Todo}, {@link Deadline}
+     * and {@link Event} are all subclasses of {@link Task}, one list of
+     * {@code Task} can hold any mixture of the three, and the code that lists,
+     * marks or deletes them needs to know only that each is a task.
      */
-    private static final Task[] tasks = new Task[MAX_TASKS];
-
-    /** Number of slots of {@link #tasks} currently in use. */
-    private static int taskCount = 0;
+    private static final ArrayList<Task> tasks = new ArrayList<>();
 
     /**
      * ASCII-art banner spelling out the chatbot's name, in the figlet "standard" font.
@@ -166,6 +171,8 @@ public class Bob {
             setTaskDone(argumentsOf(command, MARK_COMMAND), true);
         } else if (isCommand(command, UNMARK_COMMAND)) {
             setTaskDone(argumentsOf(command, UNMARK_COMMAND), false);
+        } else if (isCommand(command, DELETE_COMMAND)) {
+            deleteTask(argumentsOf(command, DELETE_COMMAND));
         } else if (isCommand(command, TODO_COMMAND)) {
             addTodo(argumentsOf(command, TODO_COMMAND));
         } else if (isCommand(command, DEADLINE_COMMAND)) {
@@ -291,22 +298,34 @@ public class Bob {
      * <p>The parameter is a {@link Task}, so this one method stores todos,
      * deadlines and events alike; printing the task calls whichever
      * {@code toString} the actual object has.
-     *
-     * @throws BobException if the store is already full, so that the task is
-     *                      refused rather than the array write running off its end
      */
-    private static void addTask(Task task) throws BobException {
-        if (taskCount == MAX_TASKS) {
-            throw new BobException("My list is full at " + MAX_TASKS + " tasks,"
-                    + " so I can't take another one."
-                    + "\nMark something as done and it will still be there — I have no way"
-                    + " to remove tasks yet.");
-        }
-        tasks[taskCount] = task;
-        taskCount++;
+    private static void addTask(Task task) {
+        tasks.add(task);
         printLine("Got it. I've added this task:");
         printLine("  " + task);
-        printLine("Now you have " + taskCount + " tasks in the list.");
+        printLine("Now you have " + tasks.size() + " tasks in the list.");
+    }
+
+    /**
+     * Removes the task the user named and shows it one last time, so the user can
+     * see which task is gone rather than having to work it out from the numbering.
+     *
+     * <p>The tasks after it move up to fill the gap, so the numbers shown by
+     * {@value #LIST_COMMAND} stay a run of 1, 2, 3 with nothing missing. That
+     * renumbering is why the confirmation shows the task itself: after a deletion
+     * the number the user typed refers to a different task than it did before.
+     *
+     * @param taskNumberText the task number as the user typed it, counting from 1
+     * @throws BobException if the number is missing, is not a number, or names no task
+     */
+    private static void deleteTask(String taskNumberText) throws BobException {
+        int taskIndex = requireTaskIndex(taskNumberText, DELETE_COMMAND);
+        // remove returns the task it took out, so it can be shown without
+        // having to be fetched separately beforehand.
+        Task removed = tasks.remove(taskIndex);
+        printLine("Noted. I've removed this task:");
+        printLine("  " + removed);
+        printLine("Now you have " + tasks.size() + " tasks in the list.");
     }
 
     /**
@@ -317,7 +336,7 @@ public class Bob {
         return new BobException("Sorry, I don't know what \"" + command + "\" means."
                 + "\nTry one of: " + TODO_COMMAND + ", " + DEADLINE_COMMAND + ", "
                 + EVENT_COMMAND + ", " + LIST_COMMAND + ", " + MARK_COMMAND + ", "
-                + UNMARK_COMMAND + ", " + EXIT_COMMAND);
+                + UNMARK_COMMAND + ", " + DELETE_COMMAND + ", " + EXIT_COMMAND);
     }
 
     /**
@@ -334,6 +353,36 @@ public class Bob {
      */
     private static void setTaskDone(String taskNumberText, boolean done) throws BobException {
         String command = done ? MARK_COMMAND : UNMARK_COMMAND;
+        Task task = tasks.get(requireTaskIndex(taskNumberText, command));
+        if (done) {
+            task.markAsDone();
+        } else {
+            task.markAsNotDone();
+        }
+        printLine(done
+                ? "Nice! I've marked this task as done:"
+                : "OK, I've marked this task as not done yet:");
+        printLine("  " + task);
+    }
+
+    /**
+     * Returns the position in {@link #tasks} of the task the user named, having
+     * first checked that they named one and that it exists.
+     *
+     * <p>{@value #MARK_COMMAND}, {@value #UNMARK_COMMAND} and
+     * {@value #DELETE_COMMAND} all take a task number and all reject the same
+     * three mistakes, so the checking lives here once instead of being repeated
+     * in each of them. The command word is passed in only so that the messages
+     * can name the command the user actually typed.
+     *
+     * @param taskNumberText the task number as the user typed it, counting from 1
+     *                       to match the numbering shown by {@value #LIST_COMMAND}
+     * @param command        the command word to name in any error message
+     * @return the position of that task in {@link #tasks}, counting from 0
+     * @throws BobException if no task number was given, if what was given is not a
+     *                      number, or if no task has that number
+     */
+    private static int requireTaskIndex(String taskNumberText, String command) throws BobException {
         if (taskNumberText.isEmpty()) {
             throw new BobException("Which task should I " + command + "?"
                     + "\nGive me its number from " + LIST_COMMAND + ", for example: "
@@ -349,36 +398,28 @@ public class Bob {
                     + "\nI need the number shown next to the task in " + LIST_COMMAND
                     + ", for example: " + command + " 2");
         }
-        if (taskCount == 0) {
+        if (tasks.isEmpty()) {
             throw new BobException("There is nothing to " + command
                     + " yet — your list is empty.");
         }
-        if (taskNumber < 1 || taskNumber > taskCount) {
+        if (taskNumber < 1 || taskNumber > tasks.size()) {
             throw new BobException("I don't have a task numbered " + taskNumber + "."
-                    + "\nYour list runs from 1 to " + taskCount + "; type " + LIST_COMMAND
+                    + "\nYour list runs from 1 to " + tasks.size() + "; type " + LIST_COMMAND
                     + " to see it.");
         }
-        Task task = tasks[taskNumber - 1];
-        if (done) {
-            task.markAsDone();
-        } else {
-            task.markAsNotDone();
-        }
-        printLine(done
-                ? "Nice! I've marked this task as done:"
-                : "OK, I've marked this task as not done yet:");
-        printLine("  " + task);
+        // The user counts from 1, the list counts from 0.
+        return taskNumber - 1;
     }
 
     /** Prints the stored tasks as a numbered list, counting from 1 for readability. */
     private static void showTasks() {
-        if (taskCount == 0) {
+        if (tasks.isEmpty()) {
             printLine("You haven't told me about any tasks yet.");
             return;
         }
         printLine("Here are the tasks in your list:");
-        for (int i = 0; i < taskCount; i++) {
-            printLine((i + 1) + "." + tasks[i]);
+        for (int i = 0; i < tasks.size(); i++) {
+            printLine((i + 1) + "." + tasks.get(i));
         }
     }
 

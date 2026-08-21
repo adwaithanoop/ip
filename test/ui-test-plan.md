@@ -286,7 +286,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "borrow book" means.
-     Try one of: todo, deadline, event, list, mark, unmark, bye
+     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -492,7 +492,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "todolist" means.
-     Try one of: todo, deadline, event, list, mark, unmark, bye
+     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -641,6 +641,380 @@ bye
      Here are the tasks in your list:
      1.[T][ ] read book
      2.[D][X] return book (by: Sunday)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC12 - Delete a task from the middle of the list
+
+**Aim:** Check the worked example from the requirements: `delete 3` removes the
+third task, confirms it by showing the task itself, and reports the number of
+tasks left. The `list` afterwards checks that the tasks below the deleted one
+move up, so the numbering stays an unbroken run from 1 with no gap where the
+deleted task used to be. Showing the removed task in the confirmation matters
+precisely because of that renumbering: after a deletion, the number the user
+typed no longer refers to the same task.
+
+**Input**
+
+```text
+todo read book
+deadline return book /by June 6th
+event project meeting /from Aug 6th 2pm /to 4pm
+todo join sports club
+todo borrow book
+mark 1
+mark 2
+mark 4
+list
+delete 3
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+      ____        _
+     | __ )  ___ | |__
+     |  _ \ / _ \| '_ \
+     | |_) | (_) | |_) |
+     |____/ \___/|_.__/
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: June 6th)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] project meeting (from: Aug 6th 2pm to: 4pm)
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] join sports club
+     Now you have 4 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] borrow book
+     Now you have 5 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [T][X] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [D][X] return book (by: June 6th)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [T][X] join sports club
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][X] read book
+     2.[D][X] return book (by: June 6th)
+     3.[E][ ] project meeting (from: Aug 6th 2pm to: 4pm)
+     4.[T][X] join sports club
+     5.[T][ ] borrow book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [E][ ] project meeting (from: Aug 6th 2pm to: 4pm)
+     Now you have 4 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][X] read book
+     2.[D][X] return book (by: June 6th)
+     3.[T][X] join sports club
+     4.[T][ ] borrow book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC13 - Bad arguments to delete
+
+**Aim:** Check that `delete` rejects the same four mistakes as `mark` and
+`unmark` — a task number given on an empty list, no number at all, something
+that is not a number, and a number outside the list — each with the explanation
+that fits it and naming `delete` rather than another command. The `list` at the
+end checks that no refused `delete` removed anything.
+
+**Input**
+
+```text
+delete 1
+todo read book
+delete
+delete two
+delete 0
+delete 2
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+      ____        _
+     | __ )  ___ | |__
+     |  _ \ / _ \| '_ \
+     | |_) | (_) | |_) |
+     |____/ \___/|_.__/
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     There is nothing to delete yet — your list is empty.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Which task should I delete?
+     Give me its number from list, for example: delete 2
+    ____________________________________________________________
+
+    ____________________________________________________________
+     "two" isn't a task number.
+     I need the number shown next to the task in list, for example: delete 2
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't have a task numbered 0.
+     Your list runs from 1 to 1; type list to see it.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't have a task numbered 2.
+     Your list runs from 1 to 1; type list to see it.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC14 - Deleting the first and last tasks, emptying the list, and adding again
+
+**Aim:** Check the ends of the list, which the middle deletion in TC12 does not
+reach: deleting the first task and deleting the last one. Then check that a task
+added after deletions is counted against how many tasks there actually are, not
+against how many have ever been added — the count would keep climbing if it were
+kept as a separate running total instead of being read from the list itself.
+Finally, check that deleting the last remaining task leaves the list genuinely
+empty, so `list` says so rather than printing nothing.
+
+**Input**
+
+```text
+todo read book
+todo return book
+todo borrow book
+delete 1
+delete 2
+list
+todo join sports club
+list
+delete 1
+delete 1
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+      ____        _
+     | __ )  ___ | |__
+     |  _ \ / _ \| '_ \
+     | |_) | (_) | |_) |
+     |____/ \___/|_.__/
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] return book
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] borrow book
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [T][ ] read book
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [T][ ] borrow book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] return book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] join sports club
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] return book
+     2.[T][ ] join sports club
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [T][ ] return book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [T][ ] join sports club
+     Now you have 0 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You haven't told me about any tasks yet.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC15 - A deleted task is gone for good, and marking follows the new numbering
+
+**Aim:** Check that the numbers `mark` and `delete` take are read against the
+list as it stands *now*, not as it stood before a deletion. After `delete 1`,
+`mark 1` must mark what used to be task 2, and the highest number that was valid
+before the deletion must no longer be. Also checks that a deleted task does not
+come back: nothing in a later `list` shows it.
+
+**Input**
+
+```text
+todo read book
+deadline return book /by Sunday
+event project meeting /from Mon 2pm /to 4pm
+delete 1
+mark 1
+mark 3
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+      ____        _
+     | __ )  ___ | |__
+     |  _ \ / _ \| '_ \
+     | |_) | (_) | |_) |
+     |____/ \___/|_.__/
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: Sunday)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] project meeting (from: Mon 2pm to: 4pm)
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [T][ ] read book
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [D][X] return book (by: Sunday)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't have a task numbered 3.
+     Your list runs from 1 to 2; type list to see it.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[D][X] return book (by: Sunday)
+     2.[E][ ] project meeting (from: Mon 2pm to: 4pm)
     ____________________________________________________________
 
     ____________________________________________________________
