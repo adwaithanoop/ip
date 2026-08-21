@@ -2,11 +2,16 @@
  * A single task the chatbot remembers: what the user wants to do,
  * and whether it has been done yet.
  *
- * <p>Bundling the description and the done status into one object replaces the
- * two parallel arrays {@code Bob} used before, where slot {@code i} of one array
- * had to be kept lined up with slot {@code i} of the other by hand.
+ * <p>This class holds only what every kind of task has in common. The kinds the
+ * chatbot supports — {@link Todo}, {@link Deadline} and {@link Event} — extend it
+ * and add whatever is particular to them, so the shared parts are written once
+ * here instead of being repeated three times.
+ *
+ * <p>It is {@code abstract} because "a task" on its own is not something the user
+ * can add: every task the chatbot stores is one of the three kinds. Declaring it
+ * abstract has the compiler enforce that, rather than leaving it to be remembered.
  */
-public class Task {
+public abstract class Task {
 
     /** What the user typed when adding the task. */
     protected String description;
@@ -24,6 +29,16 @@ public class Task {
         this.description = description;
         this.isDone = false;
     }
+
+    /**
+     * Returns the single character shown inside the first box of a listing,
+     * identifying which kind of task this is: {@code T}, {@code D} or {@code E}.
+     *
+     * <p>Each subclass answers for itself, and {@link #toString()} calls this
+     * without knowing which subclass it is talking to. That is polymorphism doing
+     * the work: the listing code stays the same however many kinds of task exist.
+     */
+    public abstract String getTypeIcon();
 
     /**
      * Returns the single character shown inside the status box of a listing:
@@ -44,15 +59,15 @@ public class Task {
     }
 
     /**
-     * Returns the task as it is shown to the user, for example
-     * {@code [X] read book}.
+     * Returns the part of the task's display form that every kind of task shares,
+     * for example {@code [T][X] read book}.
      *
-     * <p>Overriding {@code toString} rather than writing a separate formatting
-     * method means the task prints correctly wherever it is used in a string,
-     * such as {@code printLine("  " + task)}.
+     * <p>Subclasses that have something to add, such as a deadline's due date,
+     * override this and append to {@code super.toString()}, so the type box,
+     * status box and description are formatted in one place only.
      */
     @Override
     public String toString() {
-        return "[" + getStatusIcon() + "] " + description;
+        return "[" + getTypeIcon() + "][" + getStatusIcon() + "] " + description;
     }
 }
