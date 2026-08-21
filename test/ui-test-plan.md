@@ -230,13 +230,14 @@ bye
     ____________________________________________________________
 ```
 
-### TC5 - Bad arguments to mark, and an unrecognised line
+### TC5 - Bad arguments to mark and unmark, and an unrecognised line
 
-**Aim:** Check that the chatbot survives a task number that does not exist and a task
-number that is not a number, reporting each instead of crashing. Also checks
-that a line which is not one of the known commands is reported as such: now
-that every task is added with `todo`, `deadline` or `event`, a bare line is no
-longer stored as a task the way it used to be.
+**Aim:** Check that a task number that does not exist, a task number that is not a
+number, and a `mark`/`unmark` with no number at all are each answered with their
+own explanation instead of crashing or being lumped together. Also checks that a
+line which is not one of the known commands is reported as such: now that every
+task is added with `todo`, `deadline` or `event`, a bare line is no longer stored
+as a task the way it used to be.
 
 **Input**
 
@@ -270,15 +271,17 @@ bye
 
     ____________________________________________________________
      I don't have a task numbered 5.
+     Your list runs from 1 to 1; type list to see it.
     ____________________________________________________________
 
     ____________________________________________________________
-     Please tell me which task to mark, for example: mark 2
+     "two" isn't a task number.
+     I need the number shown next to the task in list, for example: mark 2
     ____________________________________________________________
 
     ____________________________________________________________
-     Sorry, I don't know what "unmark" means.
-     Try one of: todo, deadline, event, list, mark, unmark, bye
+     Which task should I unmark?
+     Give me its number from list, for example: unmark 2
     ____________________________________________________________
 
     ____________________________________________________________
@@ -330,8 +333,9 @@ todo read book
 ### TC7 - Missing description or date parts
 
 **Aim:** Check that an add command with a missing description, a missing `/by`, or a
-missing `/to` is answered with an example of the right form instead of
-storing a half-filled task or crashing.
+missing `/to` is answered with an explanation of the part that is missing and an
+example of the right form, instead of storing a half-filled task or crashing. The
+`list` at the end checks that nothing was stored by the refused commands.
 
 **Input**
 
@@ -358,19 +362,23 @@ bye
     ____________________________________________________________
 
     ____________________________________________________________
-     Please tell me what the todo is, for example: todo borrow book
+     A todo needs a description — tell me what to do.
+     For example: todo borrow book
     ____________________________________________________________
 
     ____________________________________________________________
-     Please say when it is due, for example: deadline return book /by Sunday
+     A deadline needs a due date, written after /by.
+     For example: deadline return book /by Sunday
     ____________________________________________________________
 
     ____________________________________________________________
-     Please give both a description and a due date, for example: deadline return book /by Sunday
+     A deadline needs a description, written before /by.
+     For example: deadline return book /by Sunday
     ____________________________________________________________
 
     ____________________________________________________________
-     Please say when it starts and ends, for example: event project meeting /from Mon 2pm /to 4pm
+     An event needs an end time, written after /to at the end.
+     For example: event project meeting /from Mon 2pm /to 4pm
     ____________________________________________________________
 
     ____________________________________________________________
@@ -426,6 +434,213 @@ bye
      Here are the tasks in your list:
      1.[D][ ] do homework (by: no idea :-p)
      2.[E][ ] orientation week (from: 4/10/2019 to: 11/10/2019)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC9 - The remaining ways an add command can be incomplete
+
+**Aim:** Check the malformed add commands that TC7 does not cover — a `/by` with
+nothing after it, an event with no description, and an event whose `/from` is
+missing while `/to` is present — each get the explanation that fits them, rather
+than one catch-all message. Also checks that `todolist` is treated as an unknown
+command and not as a `todo` whose description is `list`, and that `mark` on an
+empty list says the list is empty rather than quoting a range of task numbers
+that does not exist.
+
+**Input**
+
+```text
+deadline return book /by
+event /from Mon /to Tue
+event party /to 4pm
+todolist
+mark 0
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+      ____        _
+     | __ )  ___ | |__
+     |  _ \ / _ \| '_ \
+     | |_) | (_) | |_) |
+     |____/ \___/|_.__/
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You wrote /by but not when it is due.
+     For example: deadline return book /by Sunday
+    ____________________________________________________________
+
+    ____________________________________________________________
+     An event needs a description, written before /from.
+     For example: event project meeting /from Mon 2pm /to 4pm
+    ____________________________________________________________
+
+    ____________________________________________________________
+     An event needs a start time, written after /from.
+     For example: event project meeting /from Mon 2pm /to 4pm
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Sorry, I don't know what "todolist" means.
+     Try one of: todo, deadline, event, list, mark, unmark, bye
+    ____________________________________________________________
+
+    ____________________________________________________________
+     There is nothing to mark yet — your list is empty.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC10 - Empty and blank input lines
+
+**Aim:** Check that pressing Enter on its own, or typing only spaces, is answered
+with a prompt to type something rather than with "I don't know what "" means",
+and that the conversation carries on normally afterwards.
+
+**Input**
+
+```text
+
+   
+todo read book
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+      ____        _
+     | __ )  ___ | |__
+     |  _ \ / _ \| '_ \
+     | |_) | (_) | |_) |
+     |____/ \___/|_.__/
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You didn't type anything.
+     Tell me about a task, or type list to see the ones I already have.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You didn't type anything.
+     Tell me about a task, or type list to see the ones I already have.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC11 - Refused commands leave the list untouched
+
+**Aim:** Check that errors do not quietly change what the chatbot has stored.
+Good and bad commands are interleaved, and the running task count in each
+confirmation, together with the `list` at the end, shows that every refused
+command added nothing and marked nothing. In particular the failed `mark 3`
+must not affect the task that `mark 2` later marks.
+
+**Input**
+
+```text
+todo read book
+todo
+deadline return book /by Sunday
+deadline /by
+mark 3
+mark 2
+event project meeting /from Mon 2pm
+unmark 1
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+      ____        _
+     | __ )  ___ | |__
+     |  _ \ / _ \| '_ \
+     | |_) | (_) | |_) |
+     |____/ \___/|_.__/
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     A todo needs a description — tell me what to do.
+     For example: todo borrow book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: Sunday)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     A deadline needs a description, written before /by.
+     For example: deadline return book /by Sunday
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't have a task numbered 3.
+     Your list runs from 1 to 2; type list to see it.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [D][X] return book (by: Sunday)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     An event needs an end time, written after /to at the end.
+     For example: event project meeting /from Mon 2pm /to 4pm
+    ____________________________________________________________
+
+    ____________________________________________________________
+     OK, I've marked this task as not done yet:
+       [T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] read book
+     2.[D][X] return book (by: Sunday)
     ____________________________________________________________
 
     ____________________________________________________________
