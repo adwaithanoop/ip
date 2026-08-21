@@ -7,7 +7,9 @@ import java.util.Scanner;
  * no longer wants, and exits when the user types {@code bye}.
  *
  * <p>Tasks come in three kinds — {@link Todo}, {@link Deadline} and
- * {@link Event} — each added with its own command word.
+ * {@link Event} — each added with its own command word. The words the chatbot
+ * understands are listed in {@link Command}, which also decides which one a
+ * given line is; this class is left to say what each of them does.
  *
  * <p>Anything the user types that cannot be carried out — an unknown command,
  * a missing description, a task number that does not exist — is reported by
@@ -19,30 +21,6 @@ public class Bob {
     /** Name the chatbot introduces itself with. */
     private static final String NAME = "Bob";
 
-    /** Command that ends the conversation. */
-    private static final String EXIT_COMMAND = "bye";
-
-    /** Command that prints everything stored so far. */
-    private static final String LIST_COMMAND = "list";
-
-    /** Command that marks a task as done; used as {@code mark <task number>}. */
-    private static final String MARK_COMMAND = "mark";
-
-    /** Command that marks a task as not done again; used as {@code unmark <task number>}. */
-    private static final String UNMARK_COMMAND = "unmark";
-
-    /** Command that removes a task from the list; used as {@code delete <task number>}. */
-    private static final String DELETE_COMMAND = "delete";
-
-    /** Command that adds a task with no date attached; used as {@code todo <description>}. */
-    private static final String TODO_COMMAND = "todo";
-
-    /** Command that adds a task with a due date; used as {@code deadline <description> /by <when>}. */
-    private static final String DEADLINE_COMMAND = "deadline";
-
-    /** Command that adds a task with a start and end; used as {@code event <description> /from <when> /to <when>}. */
-    private static final String EVENT_COMMAND = "event";
-
     /** Marker separating a deadline's description from its due date. */
     private static final String BY_KEYWORD = "/by";
 
@@ -52,13 +30,14 @@ public class Bob {
     /** Marker separating an event's start from its end. */
     private static final String TO_KEYWORD = "/to";
 
-    /** Example of a well-formed {@value #DEADLINE_COMMAND} command, shown when one is malformed. */
+    /** Example of a well-formed {@link Command#DEADLINE} command, shown when one is malformed. */
     private static final String DEADLINE_EXAMPLE =
-            DEADLINE_COMMAND + " return book " + BY_KEYWORD + " Sunday";
+            Command.DEADLINE.getKeyword() + " return book " + BY_KEYWORD + " Sunday";
 
-    /** Example of a well-formed {@value #EVENT_COMMAND} command, shown when one is malformed. */
+    /** Example of a well-formed {@link Command#EVENT} command, shown when one is malformed. */
     private static final String EVENT_EXAMPLE =
-            EVENT_COMMAND + " project meeting " + FROM_KEYWORD + " Mon 2pm " + TO_KEYWORD + " 4pm";
+            Command.EVENT.getKeyword() + " project meeting " + FROM_KEYWORD
+                    + " Mon 2pm " + TO_KEYWORD + " 4pm";
 
     /** Leading whitespace that sets the chatbot's output apart from the user's input. */
     private static final String INDENT = "    ";
@@ -121,11 +100,16 @@ public class Bob {
 
     /**
      * Reads one command per line and responds to it in its own block,
-     * stopping when the user types {@value #EXIT_COMMAND}.
+     * stopping when the user types {@code bye}.
+     *
+     * <p>{@link Command#BYE} is dealt with here rather than in
+     * {@link #handleCommand} because it is the one command whose answer is not
+     * printed as a block in the middle of the conversation: the farewell is
+     * printed after the loop has ended.
      *
      * <p>The loop is guarded by {@code hasNextLine} rather than looping forever,
      * so the program also ends cleanly if the input runs out (for example when
-     * input is piped in from a file that has no {@value #EXIT_COMMAND} line).
+     * input is piped in from a file that has no {@code bye} line).
      *
      * <p>This is also the one place where a {@link BobException} is caught. Any
      * command that cannot be carried out reports itself by throwing, the message
@@ -135,13 +119,13 @@ public class Bob {
     private static void handleCommandsUntilExit() {
         try (Scanner scanner = new Scanner(System.in)) {
             while (scanner.hasNextLine()) {
-                String command = scanner.nextLine().trim();
-                if (command.equals(EXIT_COMMAND)) {
+                String line = scanner.nextLine().trim();
+                if (Command.BYE.matches(line)) {
                     return;
                 }
                 openBlock();
                 try {
-                    handleCommand(command);
+                    handleCommand(line);
                 } catch (BobException e) {
                     showError(e);
                 }
@@ -156,64 +140,44 @@ public class Bob {
      * <p>Kept separate from the reading loop above so that the loop is only about
      * reading lines, and this method is only about what each line means.
      *
-     * @param command one whole line as the user typed it, with surrounding spaces removed
+     * <p>Working out which command the line is, and where its arguments start,
+     * is left to {@link Command}. What is left here is a {@code switch} saying
+     * what each command does — one branch per command, with the command's name
+     * rather than its spelling on the label, so the list of branches can be read
+     * against the list of constants in the enum.
+     *
+     * @param line one whole line as the user typed it, with surrounding spaces removed
      * @throws BobException if the line is not a command the chatbot knows, or is
      *                      one it knows but cannot carry out as written
      */
-    private static void handleCommand(String command) throws BobException {
-        if (command.isEmpty()) {
+    private static void handleCommand(String line) throws BobException {
+        if (line.isEmpty()) {
             throw new BobException("You didn't type anything."
-                    + "\nTell me about a task, or type " + LIST_COMMAND
+                    + "\nTell me about a task, or type " + Command.LIST.getKeyword()
                     + " to see the ones I already have.");
-        } else if (command.equals(LIST_COMMAND)) {
-            showTasks();
-        } else if (isCommand(command, MARK_COMMAND)) {
-            setTaskDone(argumentsOf(command, MARK_COMMAND), true);
-        } else if (isCommand(command, UNMARK_COMMAND)) {
-            setTaskDone(argumentsOf(command, UNMARK_COMMAND), false);
-        } else if (isCommand(command, DELETE_COMMAND)) {
-            deleteTask(argumentsOf(command, DELETE_COMMAND));
-        } else if (isCommand(command, TODO_COMMAND)) {
-            addTodo(argumentsOf(command, TODO_COMMAND));
-        } else if (isCommand(command, DEADLINE_COMMAND)) {
-            addDeadline(argumentsOf(command, DEADLINE_COMMAND));
-        } else if (isCommand(command, EVENT_COMMAND)) {
-            addEvent(argumentsOf(command, EVENT_COMMAND));
-        } else {
-            throw unknownCommand(command);
+        }
+        // orElseThrow unwraps the Optional when a command was recognised, and
+        // throws the "I don't know what that means" error when none was.
+        Command command = Command.of(line).orElseThrow(() -> unknownCommand(line));
+        String arguments = command.argumentsIn(line);
+        switch (command) {
+            case LIST -> showTasks();
+            case MARK -> setTaskDone(arguments, true);
+            case UNMARK -> setTaskDone(arguments, false);
+            case DELETE -> deleteTask(arguments);
+            case TODO -> addTodo(arguments);
+            case DEADLINE -> addDeadline(arguments);
+            case EVENT -> addEvent(arguments);
+            // Listed so that every constant of the enum is accounted for here.
+            // The read loop returns on bye before calling this method, so a line
+            // reaching this branch would mean that loop had stopped doing so.
+            case BYE -> throw new IllegalStateException(
+                    "bye should have ended the read loop before reaching here");
         }
     }
 
     /**
-     * Returns whether {@code command} starts with the word {@code commandWord},
-     * either on its own or followed by arguments.
-     *
-     * <p>Checking for the whole word rather than using {@code startsWith} alone
-     * keeps a task such as {@code todolist} from being mistaken for the
-     * {@value #TODO_COMMAND} command.
-     *
-     * <p>Matching the bare word too, and not only the word with arguments after
-     * it, is what lets {@code mark} on its own be answered with "which task?"
-     * rather than with "I don't know what that means": the chatbot recognises
-     * the command and can then explain what is missing from it.
-     */
-    private static boolean isCommand(String command, String commandWord) {
-        return command.equals(commandWord) || command.startsWith(commandWord + " ");
-    }
-
-    /**
-     * Returns everything the user typed after the command word, with surrounding
-     * spaces removed, or an empty string if they typed nothing after it.
-     */
-    private static String argumentsOf(String command, String commandWord) {
-        if (command.length() <= commandWord.length()) {
-            return "";
-        }
-        return command.substring(commandWord.length() + 1).trim();
-    }
-
-    /**
-     * Adds a {@link Todo} from the text following {@value #TODO_COMMAND}.
+     * Adds a {@link Todo} from the text following {@link Command#TODO}.
      * Everything the user typed is the description.
      *
      * @throws BobException if no description was given
@@ -221,13 +185,13 @@ public class Bob {
     private static void addTodo(String arguments) throws BobException {
         if (arguments.isEmpty()) {
             throw new BobException("A todo needs a description — tell me what to do."
-                    + "\nFor example: " + TODO_COMMAND + " borrow book");
+                    + "\nFor example: " + Command.TODO.getKeyword() + " borrow book");
         }
         addTask(new Todo(arguments));
     }
 
     /**
-     * Adds a {@link Deadline} from the text following {@value #DEADLINE_COMMAND},
+     * Adds a {@link Deadline} from the text following {@link Command#DEADLINE},
      * which is the description and the due date separated by {@value #BY_KEYWORD}.
      *
      * <p>The three things that can be missing — the {@value #BY_KEYWORD} marker,
@@ -256,7 +220,7 @@ public class Bob {
     }
 
     /**
-     * Adds an {@link Event} from the text following {@value #EVENT_COMMAND},
+     * Adds an {@link Event} from the text following {@link Command#EVENT},
      * which is the description, then {@value #FROM_KEYWORD} and the start,
      * then {@value #TO_KEYWORD} and the end.
      *
@@ -311,7 +275,7 @@ public class Bob {
      * see which task is gone rather than having to work it out from the numbering.
      *
      * <p>The tasks after it move up to fill the gap, so the numbers shown by
-     * {@value #LIST_COMMAND} stay a run of 1, 2, 3 with nothing missing. That
+     * {@link Command#LIST} stay a run of 1, 2, 3 with nothing missing. That
      * renumbering is why the confirmation shows the task itself: after a deletion
      * the number the user typed refers to a different task than it did before.
      *
@@ -319,7 +283,7 @@ public class Bob {
      * @throws BobException if the number is missing, is not a number, or names no task
      */
     private static void deleteTask(String taskNumberText) throws BobException {
-        int taskIndex = requireTaskIndex(taskNumberText, DELETE_COMMAND);
+        int taskIndex = requireTaskIndex(taskNumberText, Command.DELETE);
         // remove returns the task it took out, so it can be shown without
         // having to be fetched separately beforehand.
         Task removed = tasks.remove(taskIndex);
@@ -332,27 +296,25 @@ public class Bob {
      * Returns the error to throw for a line that is not one of the commands the
      * chatbot knows, listing the ones it does know so the user can pick one.
      */
-    private static BobException unknownCommand(String command) {
-        return new BobException("Sorry, I don't know what \"" + command + "\" means."
-                + "\nTry one of: " + TODO_COMMAND + ", " + DEADLINE_COMMAND + ", "
-                + EVENT_COMMAND + ", " + LIST_COMMAND + ", " + MARK_COMMAND + ", "
-                + UNMARK_COMMAND + ", " + DELETE_COMMAND + ", " + EXIT_COMMAND);
+    private static BobException unknownCommand(String line) {
+        return new BobException("Sorry, I don't know what \"" + line + "\" means."
+                + "\nTry one of: " + Command.allKeywords());
     }
 
     /**
      * Sets the done status of the task the user named and shows it back to them.
-     * Both {@value #MARK_COMMAND} and {@value #UNMARK_COMMAND} share this method,
+     * Both {@link Command#MARK} and {@link Command#UNMARK} share this method,
      * since they differ only in the status they set and the wording they report.
      *
      * @param taskNumberText the task number as the user typed it, counting from 1
-     *                       to match the numbering shown by {@value #LIST_COMMAND}
+     *                       to match the numbering shown by {@link Command#LIST}
      * @param done           {@code true} to mark the task as done,
      *                       {@code false} to mark it as not done yet
      * @throws BobException if no task number was given, if what was given is not a
      *                      number, or if no task has that number
      */
     private static void setTaskDone(String taskNumberText, boolean done) throws BobException {
-        String command = done ? MARK_COMMAND : UNMARK_COMMAND;
+        Command command = done ? Command.MARK : Command.UNMARK;
         Task task = tasks.get(requireTaskIndex(taskNumberText, command));
         if (done) {
             task.markAsDone();
@@ -369,24 +331,28 @@ public class Bob {
      * Returns the position in {@link #tasks} of the task the user named, having
      * first checked that they named one and that it exists.
      *
-     * <p>{@value #MARK_COMMAND}, {@value #UNMARK_COMMAND} and
-     * {@value #DELETE_COMMAND} all take a task number and all reject the same
-     * three mistakes, so the checking lives here once instead of being repeated
-     * in each of them. The command word is passed in only so that the messages
-     * can name the command the user actually typed.
+     * <p>{@link Command#MARK}, {@link Command#UNMARK} and {@link Command#DELETE}
+     * all take a task number and all reject the same three mistakes, so the
+     * checking lives here once instead of being repeated in each of them.
+     *
+     * <p>The command is passed as a {@link Command} rather than as its keyword,
+     * so a caller cannot name a command in the message that does not exist. The
+     * keyword is read off it here, where the message is written.
      *
      * @param taskNumberText the task number as the user typed it, counting from 1
-     *                       to match the numbering shown by {@value #LIST_COMMAND}
-     * @param command        the command word to name in any error message
+     *                       to match the numbering shown by {@link Command#LIST}
+     * @param command        the command to name in any error message
      * @return the position of that task in {@link #tasks}, counting from 0
      * @throws BobException if no task number was given, if what was given is not a
      *                      number, or if no task has that number
      */
-    private static int requireTaskIndex(String taskNumberText, String command) throws BobException {
+    private static int requireTaskIndex(String taskNumberText, Command command) throws BobException {
+        String word = command.getKeyword();
+        String listCommand = Command.LIST.getKeyword();
         if (taskNumberText.isEmpty()) {
-            throw new BobException("Which task should I " + command + "?"
-                    + "\nGive me its number from " + LIST_COMMAND + ", for example: "
-                    + command + " 2");
+            throw new BobException("Which task should I " + word + "?"
+                    + "\nGive me its number from " + listCommand + ", for example: "
+                    + word + " 2");
         }
         int taskNumber;
         try {
@@ -395,16 +361,16 @@ public class Bob {
             taskNumber = Integer.parseInt(taskNumberText);
         } catch (NumberFormatException e) {
             throw new BobException("\"" + taskNumberText + "\" isn't a task number."
-                    + "\nI need the number shown next to the task in " + LIST_COMMAND
-                    + ", for example: " + command + " 2");
+                    + "\nI need the number shown next to the task in " + listCommand
+                    + ", for example: " + word + " 2");
         }
         if (tasks.isEmpty()) {
-            throw new BobException("There is nothing to " + command
+            throw new BobException("There is nothing to " + word
                     + " yet — your list is empty.");
         }
         if (taskNumber < 1 || taskNumber > tasks.size()) {
             throw new BobException("I don't have a task numbered " + taskNumber + "."
-                    + "\nYour list runs from 1 to " + tasks.size() + "; type " + LIST_COMMAND
+                    + "\nYour list runs from 1 to " + tasks.size() + "; type " + listCommand
                     + " to see it.");
         }
         // The user counts from 1, the list counts from 0.

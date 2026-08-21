@@ -1021,3 +1021,69 @@ bye
      Bye. Hope to see you again soon!
     ____________________________________________________________
 ```
+
+### TC16 - Commands that take no arguments reject trailing text
+
+**Aim:** Check that `list` and `bye`, which stand alone, are recognised only when
+typed exactly. `bye now` must not end the conversation and `list foo` must not
+list anything; both are unrecognised lines. The commands after them prove the
+conversation carried on, which is the visible consequence of `bye now` not being
+taken as `bye`. Also checks that command words are case-sensitive, so `BYE` is
+not `bye`. This is the counterpart to the `todolist` case in TC9: there, a
+command that *does* take arguments must not match a longer word; here, a command
+that takes none must not match a longer line.
+
+**Input**
+
+```text
+bye now
+list foo
+BYE
+todo read book
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+      ____        _
+     | __ )  ___ | |__
+     |  _ \ / _ \| '_ \
+     | |_) | (_) | |_) |
+     |____/ \___/|_.__/
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Sorry, I don't know what "bye now" means.
+     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Sorry, I don't know what "list foo" means.
+     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Sorry, I don't know what "BYE" means.
+     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
