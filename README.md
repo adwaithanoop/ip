@@ -23,3 +23,26 @@ Prerequisites: JDK 25, update Intellij to the most recent version.
    ```
 
 **Warning:** Keep the `src\main\java` folder as the root folder for Java files (i.e., don't rename those folders or move Java files to another folder outside of this folder path), as this is the default location some tools (e.g., Gradle) expect to find Java files.
+
+## Acknowledgements
+
+### Use of AI
+
+Parts of this project were written with the help of an AI coding assistant, in line with the
+course's [policy on citing AI-generated/assisted work](https://nus-cs2103-ay2627-s1.github.io/website/admin/appendixB-policies.html).
+
+* **Tool used:** Claude Code (Anthropic), models Claude Opus 5.
+* **Used by:** Adwaith Anoop, the sole author of this project.
+* **Extent:** AI assistance was used across most increments from Level 1 to Level 6.
+  It contributed to the Java sources under `src/main/java/`, the commit
+  messages, and the UI test plan in `test/ui-test-plan.md`. Where the assistance was confined to a
+  specific method or block, it is also noted in a comment at that point in the code.
+* **How it was used:** "For earlier levels I practised using the course's suggested prompts. Later on,
+  I described the increment, reviewed the AI's implementation line by line, and revised
+  it before committing" (level AI-5).
+* **What I checked:** I reviewed the changes made line by line and ran test cases in `test/ui-test-plan.md`
+  after every change. I am also actively revisiting past commits and comparing with coding principles I have learnt
+  from CS2030S and week 1's pre-req material.
+
+The `.claude/` directory in this repository holds project instructions and a test-running skill for
+the assistant. These configure how the AI works on this project and are not part of the chatbot.
