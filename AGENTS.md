@@ -28,6 +28,32 @@ Unless the user says otherwise, assume that you are assisting a student working 
 
 Ensure that Java 25 is used when running the application or build tasks. On macOS, use `sdk use java 25.0.3.fx-zulu` to switch to Java 25 if needed.
 
+## Coding standard
+
+All Java code in this repository must follow the SE-EDU Java coding standard
+(basic + intermediate rules), recorded in the project skill
+`seedu-java-coding-standard` and published at
+<https://se-education.org/guides/conventions/java/intermediate.html>.
+
+This is not optional and applies to every Java file under `src/` and `test/`,
+whether newly written or edited:
+
+1. Invoke the `seedu-java-coding-standard` skill before writing or changing any
+   Java code, so the rules are in hand while the code is being written rather
+   than applied as a clean-up afterwards.
+2. Write the code compliant the first time. Code that is handed back with
+   violations in it is not finished.
+3. Any Java file you touch must come out compliant, including parts of it that
+   the task did not itself change. Do not, however, reformat whole files that
+   the task never asked about.
+4. Before reporting a Java change as complete, work through the review
+   checklist at the end of that skill.
+5. Use the Google Java Style Guide for anything the standard does not cover.
+
+If following the standard would require a change the user has not asked for
+(for example moving classes into a package), say so and explain why, rather
+than quietly leaving the violation in place.
+
 ## Testing after a code change
 
 After any change to the code under `src/`, and before reporting the change as complete:
@@ -40,6 +66,32 @@ If a test case fails, report the failing test case with its expected and actual 
 
 ## Git
 
-Use lightweight tags unless the user requests an annotated tag.
-When proposing or creating a commit message, include enough detail to explain the rationale for the change.
-Do not commit or push unless explicitly asked.
+Do not commit or push unless explicitly asked. Use lightweight tags unless the
+user requests an annotated tag.
+
+### Git conventions
+
+All commits and branches in this repository must follow the SE-EDU Git
+conventions, recorded in the project skill `seedu-git-standard` and published
+at <https://se-education.org/guides/conventions/git.html>.
+
+This is not optional and applies to every commit message you write or propose,
+from now on:
+
+1. Invoke the `seedu-git-standard` skill before drafting any commit message or
+   creating any branch, so the rules are in hand while the message is being
+   written rather than applied as a clean-up afterwards.
+2. Get the message right the first time. In particular: a subject line in the
+   imperative mood, capitalized, with no trailing period, within 50 characters
+   (72 at the absolute most); and for any non-trivial commit a body, separated
+   from the subject by a blank line and hard-wrapped at 72 characters.
+3. The body must explain WHAT changed and WHY, not HOW — the reader has the
+   diff. Include enough detail that the change can be judged without opening
+   the diff, following the structure the skill sets out: current situation, why
+   it needs to change, what is being done about it, why it is done that way.
+4. Before showing the user a commit message, work through the review checklist
+   at the end of that skill.
+
+If a commit's message is growing long and sprawling, that is a sign the commit
+should be split into finer-grained pieces; say so rather than writing a message
+that tries to cover everything at once.
