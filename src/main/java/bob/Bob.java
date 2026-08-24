@@ -1,4 +1,7 @@
+package bob;
+
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -69,18 +72,41 @@ public class Bob {
     private static final ArrayList<Task> tasks = new ArrayList<>();
 
     /**
-     * ASCII-art banner spelling out the chatbot's name, in the figlet "standard" font.
-     * Stored as one line per array element so each line can be indented
+     * ASCII-art banner shown when the chatbot starts: its name in the figlet
+     * "slant" font, drifting through a field of stars with a few small
+     * spaceships. Stored as one line per element so each line can be indented
      * the same way as every other line the chatbot prints.
+     *
+     * <p>No line is wider than the {@link #DIVIDER} that frames each block of
+     * output, so the art never spills past the right-hand end of the rule.
+     *
+     * <p>Each backslash is written twice because a backslash starts an escape
+     * sequence in a Java string literal; {@code \\} is the escape that means one
+     * literal backslash, so the doubled ones here print singly.
+     *
+     * <p>Held in an immutable {@link List#of} list rather than an array. The coding
+     * standard reserves the {@code SCREAMING_SNAKE_CASE} name for constants, and a
+     * {@code static final String[]} is not one — the reference cannot be reassigned,
+     * but any code could still overwrite an element. An immutable list cannot be
+     * changed at all, so the name is honest about what it holds.
      */
-    private static final String[] BANNER = {
-            " ____        _     ",
-            "| __ )  ___ | |__  ",
-            "|  _ \\ / _ \\| '_ \\ ",
-            "| |_) | (_) | |_) |",
-            "|____/ \\___/|_.__/ ",
-    };
+    private static final List<String> BANNER = List.of(
+            "  .        *         .        .        *        .",
+            "      *         .         +        .       <]==-     .",
+            "   .        +        ____        __      .        *",
+            " -==[>  *           / __ )____  / /_         +",
+            " +           .     / __  / __ \\/ __ \\  *              .",
+            "          *       / /_/ / /_/ / /_/ /   <]==-   .",
+            "    .         +  /_____/\\____/_.___/       .        *",
+            "        +         .         *        .        +        .",
+            "   .        -==[>      .         *                 .");
 
+    /**
+     * Starts the chatbot: greets the user, answers commands until they say
+     * goodbye, then signs off.
+     *
+     * @param args command line arguments, which this chatbot does not use
+     */
     public static void main(String[] args) {
         showGreeting();
         handleCommandsUntilExit();
@@ -156,7 +182,7 @@ public class Bob {
                     + "\nTell me about a task, or type " + Command.LIST.getKeyword()
                     + " to see the ones I already have.");
         }
-        // orElseThrow unwraps the Optional when a command was recognised, and
+        // orElseThrow unwraps the Optional when a command was recognized, and
         // throws the "I don't know what that means" error when none was.
         Command command = Command.of(line).orElseThrow(() -> unknownCommand(line));
         String arguments = command.argumentsIn(line);
@@ -308,20 +334,20 @@ public class Bob {
      *
      * @param taskNumberText the task number as the user typed it, counting from 1
      *                       to match the numbering shown by {@link Command#LIST}
-     * @param done           {@code true} to mark the task as done,
+     * @param isDone         {@code true} to mark the task as done,
      *                       {@code false} to mark it as not done yet
      * @throws BobException if no task number was given, if what was given is not a
      *                      number, or if no task has that number
      */
-    private static void setTaskDone(String taskNumberText, boolean done) throws BobException {
-        Command command = done ? Command.MARK : Command.UNMARK;
+    private static void setTaskDone(String taskNumberText, boolean isDone) throws BobException {
+        Command command = isDone ? Command.MARK : Command.UNMARK;
         Task task = tasks.get(requireTaskIndex(taskNumberText, command));
-        if (done) {
+        if (isDone) {
             task.markAsDone();
         } else {
             task.markAsNotDone();
         }
-        printLine(done
+        printLine(isDone
                 ? "Nice! I've marked this task as done:"
                 : "OK, I've marked this task as not done yet:");
         printLine("  " + task);

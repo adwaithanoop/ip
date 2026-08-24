@@ -1,3 +1,5 @@
+package bob;
+
 /**
  * A task that has to be done before a given point in time, for example
  * {@code return book (by: Sunday)}.

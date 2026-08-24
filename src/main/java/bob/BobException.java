@@ -1,3 +1,5 @@
+package bob;
+
 /**
  * An error in what the user asked the chatbot to do, described in words that
  * can be shown to the user as-is.

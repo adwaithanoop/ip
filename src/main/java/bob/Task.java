@@ -1,3 +1,5 @@
+package bob;
+
 /**
  * A single task the chatbot remembers: what the user wants to do,
  * and whether it has been done yet.

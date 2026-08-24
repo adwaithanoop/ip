@@ -1,3 +1,5 @@
+package bob;
+
 /**
  * A task with no date or time attached to it, for example
  * {@code borrow book}. It adds nothing to {@link Task} beyond its

@@ -1,9 +1,11 @@
+package bob;
+
 import java.util.Optional;
 import java.util.StringJoiner;
 
 /**
  * The words the chatbot understands at the start of a line, and the rules for
- * recognising each one.
+ * recognizing each one.
  *
  * <p>These were eight separate {@code String} constants in {@link Bob}. An enum
  * suits them better because they are a fixed, known-in-advance set of values
@@ -13,10 +15,10 @@ import java.util.StringJoiner;
  * compile error instead of a command that silently never matches.
  *
  * <p>Two things follow from the set being known in one place. {@link #of} finds
- * the command a line begins with by walking {@link #values()}, so recognising a
+ * the command a line begins with by walking {@link #values()}, so recognizing a
  * command is no longer a chain of {@code else if} branches that has to be
  * extended by hand. And {@link #allKeywords} builds the list of commands shown
- * to a user who typed something unrecognised, so that message can no longer
+ * to a user who typed something unrecognized, so that message can no longer
  * fall out of step with the commands that actually exist — which is exactly the
  * kind of mistake that is easy to make when adding a command.
  */
@@ -58,18 +60,18 @@ public enum Command {
      * {@code equals} and the rest with a separate helper — which made it
      * something a reader had to notice rather than something the code states.
      */
-    private final boolean takesArguments;
+    private final boolean canTakeArguments;
 
     /**
      * Creates a command. The constructor is private, as every enum constructor
      * is: the constants declared above are the only instances there will ever be.
      *
-     * @param keyword        the word the user types
-     * @param takesArguments whether text may follow that word
+     * @param keyword          the word the user types
+     * @param canTakeArguments whether text may follow that word
      */
-    Command(String keyword, boolean takesArguments) {
+    Command(String keyword, boolean canTakeArguments) {
         this.keyword = keyword;
-        this.takesArguments = takesArguments;
+        this.canTakeArguments = canTakeArguments;
     }
 
     /** Returns the word the user types to invoke this command, for example {@code delete}. */
@@ -85,7 +87,7 @@ public enum Command {
      * {@code todolist} from being read as {@code todo} with the description
      * {@code list}. Matching the bare keyword as well is what lets {@code mark}
      * on its own be answered with "which task?" rather than "I don't know what
-     * that means": the command is recognised first, and only then is it found to
+     * that means": the command is recognized first, and only then is it found to
      * be incomplete.
      *
      * <p>A command that takes no arguments matches only its exact keyword, so
@@ -94,7 +96,7 @@ public enum Command {
      * @param line one whole line as the user typed it, with surrounding spaces removed
      */
     public boolean matches(String line) {
-        if (takesArguments) {
+        if (canTakeArguments) {
             return line.equals(keyword) || line.startsWith(keyword + " ");
         }
         return line.equals(keyword);
@@ -119,7 +121,7 @@ public enum Command {
      * <p>An {@link Optional} is returned rather than {@code null} so that the
      * caller cannot forget the "no such command" case: the result has to be
      * unwrapped before the command inside can be used, and the compiler enforces
-     * that. Returning {@code null} would let an unrecognised line travel on
+     * that. Returning {@code null} would let an unrecognized line travel on
      * unnoticed and fail later as a {@code NullPointerException}, well away from
      * the line that caused it.
      *

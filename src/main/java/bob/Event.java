@@ -1,3 +1,5 @@
+package bob;
+
 /**
  * A task that runs from one point in time to another, for example
  * {@code project meeting (from: Mon 2pm to: 4pm)}.
