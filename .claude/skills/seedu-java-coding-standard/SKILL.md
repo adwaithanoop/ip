@@ -113,21 +113,26 @@ for anything not covered here.
 
   ```java
   switch (condition) {
-  case ABC:
-      statements;
-      // Fallthrough
-  case DEF:
-      statements;
-      break;
-  default:
-      statements;
-      break;
+      case ABC:
+          statements;
+          // Fallthrough
+      case DEF:
+          statements;
+          break;
+      default:
+          statements;
+          break;
   }
 
   switch (condition) {
-  case ABC -> method("1");
-  default -> method("0");
+      case ABC -> method("1");
+      default -> method("0");
   }
+
+  int size = switch (condition) {
+      case ABC -> 1;
+      default -> 0;
+  };
   ```
 
   A `case` in the colon form that has no `break` **must** carry an explicit
