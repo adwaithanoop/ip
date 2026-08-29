@@ -44,7 +44,7 @@ TIMEOUT_SECONDS = 10
 
 # Where the program keeps its tasks, relative to the working directory it is
 # started in, unless the plan says otherwise.
-DEFAULT_DATA_FILE = "data/duke.txt"
+DEFAULT_DATA_FILE = "data/bob.txt"
 
 # What a "Data file after" block holds when the test case expects the program
 # to have left no save file at all.  An empty block cannot say this: it would

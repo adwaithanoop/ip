@@ -21,6 +21,13 @@ started in, so a directory per test case is what stops one test case from
 loading the tasks another one saved — and it keeps a test run from writing
 anything into the repository.
 
+The one test case that has the program print the path of the data file (TC22)
+expects it written with `/` between the folder and the file name. That is how
+the path prints on macOS and Linux; on Windows the same path prints as
+`data\duke.txt`, because the program builds it from its parts and lets the
+operating system supply the separator. On Windows, expect that test case to
+report a difference in those four lines only.
+
 ## The save file
 
 Because the task list now outlives a run of the program, a test case may say
@@ -1561,10 +1568,10 @@ bye
 
     ____________________________________________________________
      Welcome back! I've picked up 2 tasks you saved earlier.
-     Line 2 of ./data/duke.txt isn't a task I can read: "X" is not a kind of task I know (I know T, D and E).
-     Line 3 of ./data/duke.txt isn't a task I can read: a saved deadline has 4 fields, but this line has 3.
-     Line 4 of ./data/duke.txt isn't a task I can read: "2" doesn't say whether the task is done (it should be 1 or 0).
-     Line 5 of ./data/duke.txt isn't a task I can read: the description is empty.
+     Line 2 of data/duke.txt isn't a task I can read: "X" is not a kind of task I know (I know T, D and E).
+     Line 3 of data/duke.txt isn't a task I can read: a saved deadline has 4 fields, but this line has 3.
+     Line 4 of data/duke.txt isn't a task I can read: "2" doesn't say whether the task is done (it should be 1 or 0).
+     Line 5 of data/duke.txt isn't a task I can read: the description is empty.
      I've left those 4 lines out of your list.
      They will be lost the next time the list changes — fix the file to keep them.
     ____________________________________________________________

@@ -44,8 +44,15 @@ import java.util.StringJoiner;
  */
 public class Storage {
 
-    /** Where the tasks are kept, relative to the directory the chatbot is run from. */
-    public static final String DEFAULT_FILE_PATH = "./data/duke.txt";
+    /**
+     * Where the tasks are kept, relative to the directory the chatbot is run from.
+     *
+     * <p>The path is built from its parts rather than written out as one piece of
+     * text, so that the separator between them is the one the operating system
+     * running the chatbot uses. A path spelled {@code "data/duke.txt"} would carry
+     * an assumption about that separator that this project has no reason to make.
+     */
+    public static final Path DEFAULT_FILE_PATH = Path.of("data", "duke.txt");
 
     /** Text written between the fields of a saved task. */
     private static final String FIELD_SEPARATOR = " | ";
@@ -76,10 +83,10 @@ public class Storage {
      * it is created, along with any missing folders above it, the first time
      * the task list is saved.
      *
-     * @param filePath where to keep the tasks, for example {@value #DEFAULT_FILE_PATH}.
+     * @param filePath where to keep the tasks, for example {@link #DEFAULT_FILE_PATH}.
      */
-    public Storage(String filePath) {
-        this.filePath = Path.of(filePath);
+    public Storage(Path filePath) {
+        this.filePath = filePath;
     }
 
     /**
