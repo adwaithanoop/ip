@@ -34,7 +34,7 @@ public abstract class Task {
      * Creates a task that is not done yet, since a task the user has just
      * mentioned is something still to do.
      *
-     * @param description what the user typed when adding the task
+     * @param description what the user typed when adding the task.
      */
     public Task(String description) {
         this.description = description;

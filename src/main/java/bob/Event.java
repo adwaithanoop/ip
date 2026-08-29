@@ -23,9 +23,9 @@ public class Event extends Task {
     /**
      * Creates an event that is not done yet.
      *
-     * @param description what the event is
-     * @param from        when it starts
-     * @param to          when it ends
+     * @param description what the event is.
+     * @param from        when it starts.
+     * @param to          when it ends.
      */
     public Event(String description, String from, String to) {
         super(description);

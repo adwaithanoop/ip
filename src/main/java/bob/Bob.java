@@ -121,7 +121,7 @@ public class Bob {
      * Starts the chatbot: greets the user, picks up the tasks left from last
      * time, answers commands until they say goodbye, then signs off.
      *
-     * @param args command line arguments, which this chatbot does not use
+     * @param args command line arguments, which this chatbot does not use.
      */
     public static void main(String[] args) {
         showGreeting();
@@ -218,9 +218,9 @@ public class Bob {
      * rather than its spelling on the label, so the list of branches can be read
      * against the list of constants in the enum.
      *
-     * @param line one whole line as the user typed it, with surrounding spaces removed
+     * @param line one whole line as the user typed it, with surrounding spaces removed.
      * @throws BobException if the line is not a command the chatbot knows, or is
-     *                      one it knows but cannot carry out as written
+     *                      one it knows but cannot carry out as written.
      */
     private static void handleCommand(String line) throws BobException {
         if (line.isEmpty()) {
@@ -252,7 +252,7 @@ public class Bob {
      * Adds a {@link Todo} from the text following {@link Command#TODO}.
      * Everything the user typed is the description.
      *
-     * @throws BobException if no description was given
+     * @throws BobException if no description was given.
      */
     private static void addTodo(String arguments) throws BobException {
         if (arguments.isEmpty()) {
@@ -270,7 +270,7 @@ public class Bob {
      * the description before it, the date after it — are reported separately, so
      * the user is told which one to add rather than just that the command is wrong.
      *
-     * @throws BobException if the marker, the description or the due date is missing
+     * @throws BobException if the marker, the description or the due date is missing.
      */
     private static void addDeadline(String arguments) throws BobException {
         int byIndex = arguments.indexOf(BY_KEYWORD);
@@ -300,7 +300,7 @@ public class Bob {
      * {@value #TO_KEYWORD} appearing earlier in the description is not
      * mistaken for the separator.
      *
-     * @throws BobException if a marker, the description, the start or the end is missing
+     * @throws BobException if a marker, the description, the start or the end is missing.
      */
     private static void addEvent(String arguments) throws BobException {
         int fromIndex = arguments.indexOf(FROM_KEYWORD);
@@ -335,7 +335,7 @@ public class Bob {
      * deadlines and events alike; printing the task calls whichever
      * {@code toString} the actual object has.
      *
-     * @throws BobException if the list could not be written to disk afterwards
+     * @throws BobException if the list could not be written to disk afterwards.
      */
     private static void addTask(Task task) throws BobException {
         tasks.add(task);
@@ -355,7 +355,7 @@ public class Bob {
      * instead of it.
      *
      * @throws BobException if the file could not be written, carrying the reason
-     *                      and a warning that the change will not outlive the session
+     *                      and a warning that the change will not outlive the session.
      */
     private static void saveTasks() throws BobException {
         storage.save(tasks);
@@ -370,9 +370,9 @@ public class Bob {
      * renumbering is why the confirmation shows the task itself: after a deletion
      * the number the user typed refers to a different task than it did before.
      *
-     * @param taskNumberText the task number as the user typed it, counting from 1
+     * @param taskNumberText the task number as the user typed it, counting from 1.
      * @throws BobException if the number is missing, is not a number, names no task,
-     *                      or if the shortened list could not be written to disk
+     *                      or if the shortened list could not be written to disk.
      */
     private static void deleteTask(String taskNumberText) throws BobException {
         int taskIndex = requireTaskIndex(taskNumberText, Command.DELETE);
@@ -400,12 +400,12 @@ public class Bob {
      * since they differ only in the status they set and the wording they report.
      *
      * @param taskNumberText the task number as the user typed it, counting from 1
-     *                       to match the numbering shown by {@link Command#LIST}
+     *                       to match the numbering shown by {@link Command#LIST}.
      * @param isDone         {@code true} to mark the task as done,
-     *                       {@code false} to mark it as not done yet
+     *                       {@code false} to mark it as not done yet.
      * @throws BobException if no task number was given, if what was given is not a
      *                      number, if no task has that number, or if the changed
-     *                      list could not be written to disk
+     *                      list could not be written to disk.
      */
     private static void setTaskDone(String taskNumberText, boolean isDone) throws BobException {
         Command command = isDone ? Command.MARK : Command.UNMARK;
@@ -435,11 +435,11 @@ public class Bob {
      * keyword is read off it here, where the message is written.
      *
      * @param taskNumberText the task number as the user typed it, counting from 1
-     *                       to match the numbering shown by {@link Command#LIST}
-     * @param command        the command to name in any error message
-     * @return the position of that task in {@link #tasks}, counting from 0
+     *                       to match the numbering shown by {@link Command#LIST}.
+     * @param command        the command to name in any error message.
+     * @return the position of that task in {@link #tasks}, counting from 0.
      * @throws BobException if no task number was given, if what was given is not a
-     *                      number, or if no task has that number
+     *                      number, or if no task has that number.
      */
     private static int requireTaskIndex(String taskNumberText, Command command) throws BobException {
         String word = command.getKeyword();

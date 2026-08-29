@@ -23,8 +23,8 @@ public class Deadline extends Task {
     /**
      * Creates a deadline that is not done yet.
      *
-     * @param description what the user has to do
-     * @param by          when it has to be done by
+     * @param description what the user has to do.
+     * @param by          when it has to be done by.
      */
     public Deadline(String description, String by) {
         super(description);
