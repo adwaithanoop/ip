@@ -21,6 +21,16 @@ Each test case in the plan states:
 - an **input** — the lines the user types, one command per line,
 - an **expected output** — everything the program should print for those lines.
 
+Because the chatbot saves its task list to a file, a test case may also state:
+
+- a **data file before** — a save file put in place before the program starts,
+  standing for tasks saved in an earlier session,
+- a **data file after** — what the save file should hold when the program has
+  finished. The single line `(no file)` says no save file should exist at all.
+
+A test case with neither block starts from no save file and has nothing checked
+about what it saves.
+
 ## Running the tests
 
 1. Make sure Java 25 is active; if `java -version` reports anything else, run
@@ -38,6 +48,10 @@ The runner compiles the sources into a temporary directory, then for each test
 case starts the program again and feeds it that test case's input lines. It
 prints a record of the console session — the input typed and the output
 printed — for every test case it runs.
+
+Each test case runs in a working directory of its own, so the save file one
+test case writes is never found by the next, and a test run leaves nothing
+behind in the repository.
 
 ## Reporting the result
 
@@ -60,8 +74,8 @@ intended change). Do not assume the plan is right.
 Append a new `###` heading to the `## Test cases` section of
 `test/ui-test-plan.md`, following the format of the test cases already there:
 an id and title (`### TC7 - Short title`), an `**Aim:**` line, then `**Input**`
-and `**Expected output**` fenced blocks. The runner picks it up with no other
-change.
+and `**Expected output**` fenced blocks, and optionally `**Data file before**`
+and `**Data file after**` blocks. The runner picks it up with no other change.
 
 Write the expected output by hand from the requirements where possible. If you
 instead capture it by running the current program, say so when reporting —
