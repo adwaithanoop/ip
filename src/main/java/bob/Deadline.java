@@ -1,5 +1,7 @@
 package bob;
 
+import java.util.List;
+
 /**
  * A task that has to be done before a given point in time, for example
  * {@code return book (by: Sunday)}.
@@ -11,6 +13,9 @@ package bob;
  * and reformatted.
  */
 public class Deadline extends Task {
+
+    /** The letter that stands for a deadline, as {@link Todo#TYPE_ICON} does for a todo. */
+    public static final String TYPE_ICON = "D";
 
     /** When the task is due, exactly as the user typed it after {@code /by}. */
     protected String by;
@@ -28,12 +33,20 @@ public class Deadline extends Task {
 
     @Override
     public String getTypeIcon() {
-        return "D";
+        return TYPE_ICON;
     }
 
     /** Returns for example {@code [D][ ] return book (by: Sunday)}. */
     @Override
     public String toString() {
         return super.toString() + " (by: " + by + ")";
+    }
+
+    /** Adds the due date after the three fields every task saves. */
+    @Override
+    public List<String> toSaveFields() {
+        List<String> fields = super.toSaveFields();
+        fields.add(by);
+        return fields;
     }
 }

@@ -14,10 +14,17 @@ import java.util.Scanner;
  * understands are listed in {@link Command}, which also decides which one a
  * given line is; this class is left to say what each of them does.
  *
+ * <p>The task list outlives a single run: it is read from a file on startup and
+ * written back whenever it changes, so the user finds their tasks where they
+ * left them. All of that is done by {@link Storage}; this class only says when
+ * to load and when to save.
+ *
  * <p>Anything the user types that cannot be carried out — an unknown command,
  * a missing description, a task number that does not exist — is reported by
  * throwing a {@link BobException} carrying the explanation. The command loop
  * catches it and prints it, so a mistyped command never ends the conversation.
+ * A failure to save is reported the same way, so it is seen rather than passing
+ * silently, and the conversation carries on.
  */
 public class Bob {
 
@@ -72,6 +79,15 @@ public class Bob {
     private static final ArrayList<Task> tasks = new ArrayList<>();
 
     /**
+     * The file the task list is read from and written back to.
+     *
+     * <p>Named in {@code camelCase} rather than as a constant: the reference
+     * cannot be reassigned, but a {@code Storage} is not immutable, and the
+     * coding standard keeps {@code SCREAMING_SNAKE_CASE} for values that are.
+     */
+    private static final Storage storage = new Storage(Storage.DEFAULT_FILE_PATH);
+
+    /**
      * ASCII-art banner shown when the chatbot starts: its name in the figlet
      * "slant" font, drifting through a field of stars with a few small
      * spaceships. Stored as one line per element so each line can be indented
@@ -102,15 +118,45 @@ public class Bob {
             "   .        -==[>      .         *                 .");
 
     /**
-     * Starts the chatbot: greets the user, answers commands until they say
-     * goodbye, then signs off.
+     * Starts the chatbot: greets the user, picks up the tasks left from last
+     * time, answers commands until they say goodbye, then signs off.
      *
      * @param args command line arguments, which this chatbot does not use
      */
     public static void main(String[] args) {
         showGreeting();
+        loadTasks();
         handleCommandsUntilExit();
         showFarewell();
+    }
+
+    /**
+     * Fills the task list with whatever was saved last time, and reports anything
+     * the user should know about the file it came from.
+     *
+     * <p>Nothing is printed on the two ordinary cases — no save file yet, or a
+     * save file that read cleanly and was empty — because a user who has nothing
+     * saved does not need to be told about a file they have never seen.
+     *
+     * <p>{@link Storage#load()} does not throw: a chatbot that cannot read its
+     * save file can still be used for the rest of the session, so a problem with
+     * the file comes back as a message to print rather than as a failure to start.
+     */
+    private static void loadTasks() {
+        Storage.LoadResult result = storage.load();
+        tasks.addAll(result.tasks());
+        if (tasks.isEmpty() && result.messages().isEmpty()) {
+            return;
+        }
+        openBlock();
+        if (!tasks.isEmpty()) {
+            printLine("Welcome back! I've picked up " + tasks.size()
+                    + (tasks.size() == 1 ? " task" : " tasks") + " you saved earlier.");
+        }
+        for (String message : result.messages()) {
+            printLine(message);
+        }
+        closeBlock();
     }
 
     /** Prints the banner and welcome message as one block. */
@@ -288,12 +334,31 @@ public class Bob {
      * <p>The parameter is a {@link Task}, so this one method stores todos,
      * deadlines and events alike; printing the task calls whichever
      * {@code toString} the actual object has.
+     *
+     * @throws BobException if the list could not be written to disk afterwards
      */
-    private static void addTask(Task task) {
+    private static void addTask(Task task) throws BobException {
         tasks.add(task);
         printLine("Got it. I've added this task:");
         printLine("  " + task);
         printLine("Now you have " + tasks.size() + " tasks in the list.");
+        saveTasks();
+    }
+
+    /**
+     * Writes the task list to disk, so that it survives the end of the session.
+     *
+     * <p>Called after every command that changes the list, and after the change
+     * has been confirmed to the user. That order is deliberate: the change really
+     * has been made to the list either way, so the confirmation is true even when
+     * the save fails, and the failure is then reported after it rather than
+     * instead of it.
+     *
+     * @throws BobException if the file could not be written, carrying the reason
+     *                      and a warning that the change will not outlive the session
+     */
+    private static void saveTasks() throws BobException {
+        storage.save(tasks);
     }
 
     /**
@@ -306,7 +371,8 @@ public class Bob {
      * the number the user typed refers to a different task than it did before.
      *
      * @param taskNumberText the task number as the user typed it, counting from 1
-     * @throws BobException if the number is missing, is not a number, or names no task
+     * @throws BobException if the number is missing, is not a number, names no task,
+     *                      or if the shortened list could not be written to disk
      */
     private static void deleteTask(String taskNumberText) throws BobException {
         int taskIndex = requireTaskIndex(taskNumberText, Command.DELETE);
@@ -316,6 +382,7 @@ public class Bob {
         printLine("Noted. I've removed this task:");
         printLine("  " + removed);
         printLine("Now you have " + tasks.size() + " tasks in the list.");
+        saveTasks();
     }
 
     /**
@@ -337,7 +404,8 @@ public class Bob {
      * @param isDone         {@code true} to mark the task as done,
      *                       {@code false} to mark it as not done yet
      * @throws BobException if no task number was given, if what was given is not a
-     *                      number, or if no task has that number
+     *                      number, if no task has that number, or if the changed
+     *                      list could not be written to disk
      */
     private static void setTaskDone(String taskNumberText, boolean isDone) throws BobException {
         Command command = isDone ? Command.MARK : Command.UNMARK;
@@ -351,6 +419,7 @@ public class Bob {
                 ? "Nice! I've marked this task as done:"
                 : "OK, I've marked this task as not done yet:");
         printLine("  " + task);
+        saveTasks();
     }
 
     /**

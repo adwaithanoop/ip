@@ -1,5 +1,7 @@
 package bob;
 
+import java.util.List;
+
 /**
  * A task that runs from one point in time to another, for example
  * {@code project meeting (from: Mon 2pm to: 4pm)}.
@@ -8,6 +10,9 @@ package bob;
  * user typed; the current requirements do not ask for real dates.
  */
 public class Event extends Task {
+
+    /** The letter that stands for an event, as {@link Todo#TYPE_ICON} does for a todo. */
+    public static final String TYPE_ICON = "E";
 
     /** When the event starts, exactly as the user typed it after {@code /from}. */
     protected String from;
@@ -30,12 +35,27 @@ public class Event extends Task {
 
     @Override
     public String getTypeIcon() {
-        return "E";
+        return TYPE_ICON;
     }
 
     /** Returns for example {@code [E][ ] project meeting (from: Mon 2pm to: 4pm)}. */
     @Override
     public String toString() {
         return super.toString() + " (from: " + from + " to: " + to + ")";
+    }
+
+    /**
+     * Adds the start and the end after the three fields every task saves.
+     *
+     * <p>They are added as two fields rather than joined into one, so that reading
+     * them back is a matter of taking two fields apart rather than of splitting a
+     * time the user was free to write any way they liked.
+     */
+    @Override
+    public List<String> toSaveFields() {
+        List<String> fields = super.toSaveFields();
+        fields.add(from);
+        fields.add(to);
+        return fields;
     }
 }

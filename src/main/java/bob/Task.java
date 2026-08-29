@@ -1,5 +1,8 @@
 package bob;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * A single task the chatbot remembers: what the user wants to do,
  * and whether it has been done yet.
@@ -14,6 +17,12 @@ package bob;
  * abstract has the compiler enforce that, rather than leaving it to be remembered.
  */
 public abstract class Task {
+
+    /** Status field written to the save file for a task that has been done. */
+    public static final String DONE_FLAG = "1";
+
+    /** Status field written to the save file for a task that has not been done yet. */
+    public static final String NOT_DONE_FLAG = "0";
 
     /** What the user typed when adding the task. */
     protected String description;
@@ -58,6 +67,28 @@ public abstract class Task {
     /** Records that the task is not done after all. */
     public void markAsNotDone() {
         this.isDone = false;
+    }
+
+    /**
+     * Returns the task as the list of fields that {@link Storage} writes to the
+     * save file: the kind of task, whether it has been done, and what it is.
+     *
+     * <p>Subclasses that remember more than that — a deadline's due date, an
+     * event's start and end — override this and append to
+     * {@code super.toSaveFields()}, exactly as they do for {@link #toString()},
+     * so the three shared fields are listed in one place only.
+     *
+     * <p>The fields are returned separately rather than as one finished line of
+     * text. Joining them, and protecting a field that itself contains the
+     * separator, is then left to {@link Storage}, which is the one class that
+     * knows the layout of the file.
+     */
+    public List<String> toSaveFields() {
+        List<String> fields = new ArrayList<>();
+        fields.add(getTypeIcon());
+        fields.add(isDone ? DONE_FLAG : NOT_DONE_FLAG);
+        fields.add(description);
+        return fields;
     }
 
     /**
