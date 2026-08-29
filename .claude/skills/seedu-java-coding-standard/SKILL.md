@@ -33,6 +33,7 @@ for anything not covered here.
 | Class / enum | noun, `PascalCase` | `Line`, `AudioSystem` |
 | Variable | `camelCase` | `line`, `audioSystem` |
 | Constant | `SCREAMING_SNAKE_CASE` | `MAX_ITERATIONS`, `COLOR_RED` |
+| Enum constant | `SCREAMING_SNAKE_CASE` | `TODO`, `DEADLINE` |
 | Method | verb, `camelCase` | `getName()`, `computeTotalWidth()` |
 
 - **What counts as a constant** is decided by the [Google Java Style Guide][g]:
@@ -41,7 +42,10 @@ for anything not covered here.
   contents can still change — so it takes a `camelCase` name, or is made truly
   immutable (`List.of(...)`) and keeps the constant name.
 - **Abbreviations and acronyms are not uppercased** inside a name:
-  `exportHtmlSource()`, not `exportHTMLSource()`.
+  `exportHtmlSource()`, not `exportHTMLSource()`. The Google guide's rule for
+  the awkward cases is to lowercase the acronym entirely and then uppercase
+  only its first letter: `XmlHttpRequest`, `newCustomerId`, `supportsIpv6OnIos`
+  — never `XMLHTTPRequest`, `newCustomerID` or `supportsIPv6OnIOS`.
 - **All names in English.**
 - **Scope sets length:** wide scope → long descriptive name; a scratch variable
   living a few lines may be short. Loop iterators may be `i`, `j`, `k`; `j` and
