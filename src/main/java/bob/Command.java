@@ -66,8 +66,8 @@ public enum Command {
      * Creates a command. The constructor is private, as every enum constructor
      * is: the constants declared above are the only instances there will ever be.
      *
-     * @param keyword          the word the user types
-     * @param canTakeArguments whether text may follow that word
+     * @param keyword          the word the user types.
+     * @param canTakeArguments whether text may follow that word.
      */
     Command(String keyword, boolean canTakeArguments) {
         this.keyword = keyword;
@@ -93,7 +93,7 @@ public enum Command {
      * <p>A command that takes no arguments matches only its exact keyword, so
      * {@code bye now} is not treated as {@code bye}.
      *
-     * @param line one whole line as the user typed it, with surrounding spaces removed
+     * @param line one whole line as the user typed it, with surrounding spaces removed.
      */
     public boolean matches(String line) {
         if (canTakeArguments) {
@@ -106,7 +106,7 @@ public enum Command {
      * Returns everything the user typed after the keyword, with surrounding
      * spaces removed, or an empty string if they typed nothing after it.
      *
-     * @param line a line that {@link #matches} has already accepted
+     * @param line a line that {@link #matches} has already accepted.
      */
     public String argumentsIn(String line) {
         if (line.length() <= keyword.length()) {
@@ -125,8 +125,8 @@ public enum Command {
      * unnoticed and fail later as a {@code NullPointerException}, well away from
      * the line that caused it.
      *
-     * @param line one whole line as the user typed it, with surrounding spaces removed
-     * @return the matching command, or an empty {@code Optional} if there is none
+     * @param line one whole line as the user typed it, with surrounding spaces removed.
+     * @return the matching command, or an empty {@code Optional} if there is none.
      */
     public static Optional<Command> of(String line) {
         for (Command command : values()) {

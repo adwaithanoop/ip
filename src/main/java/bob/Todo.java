@@ -8,9 +8,19 @@ package bob;
 public class Todo extends Task {
 
     /**
+     * The letter that stands for a todo, both in the box shown in a listing and
+     * in the first field of a saved line.
+     *
+     * <p>Named as a constant so that {@link Storage}, which has to recognize the
+     * letter when reading a saved line back, can say {@code Todo.TYPE_ICON}
+     * rather than repeating {@code "T"} and leaving two places to keep in step.
+     */
+    public static final String TYPE_ICON = "T";
+
+    /**
      * Creates a todo that is not done yet.
      *
-     * @param description what the user wants to do
+     * @param description what the user wants to do.
      */
     public Todo(String description) {
         super(description);
@@ -18,6 +28,6 @@ public class Todo extends Task {
 
     @Override
     public String getTypeIcon() {
-        return "T";
+        return TYPE_ICON;
     }
 }

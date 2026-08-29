@@ -27,7 +27,7 @@ public class BobException extends Exception {
      * Creates an error carrying a message meant for the user's eyes.
      *
      * @param message what went wrong, and where helpful how to put it right;
-     *                may contain {@code \n} to be printed as several lines
+     *                may contain {@code \n} to be printed as several lines.
      */
     public BobException(String message) {
         super(message);

@@ -22,7 +22,7 @@ for anything not covered here.
   this file, and report each violation with its file, line and the rule it
   breaks — do not silently fix things without saying what changed and why.
 - **After any change under `src/`:** the project's usual testing rule still
-  applies — update `test/ui-test-plan.md` if visible behaviour changed, then run
+  applies — update `test/ui-test-plan.md` if visible behavior changed, then run
   the `test-ui` skill.
 
 ## Naming
@@ -33,6 +33,7 @@ for anything not covered here.
 | Class / enum | noun, `PascalCase` | `Line`, `AudioSystem` |
 | Variable | `camelCase` | `line`, `audioSystem` |
 | Constant | `SCREAMING_SNAKE_CASE` | `MAX_ITERATIONS`, `COLOR_RED` |
+| Enum constant | `SCREAMING_SNAKE_CASE` | `TODO`, `DEADLINE` |
 | Method | verb, `camelCase` | `getName()`, `computeTotalWidth()` |
 
 - **What counts as a constant** is decided by the [Google Java Style Guide][g]:
@@ -41,7 +42,10 @@ for anything not covered here.
   contents can still change — so it takes a `camelCase` name, or is made truly
   immutable (`List.of(...)`) and keeps the constant name.
 - **Abbreviations and acronyms are not uppercased** inside a name:
-  `exportHtmlSource()`, not `exportHTMLSource()`.
+  `exportHtmlSource()`, not `exportHTMLSource()`. The Google guide's rule for
+  the awkward cases is to lowercase the acronym entirely and then uppercase
+  only its first letter: `XmlHttpRequest`, `newCustomerId`, `supportsIpv6OnIos`
+  — never `XMLHTTPRequest`, `newCustomerID` or `supportsIPv6OnIOS`.
 - **All names in English.**
 - **Scope sets length:** wide scope → long descriptive name; a scratch variable
   living a few lines may be short. Loop iterators may be `i`, `j`, `k`; `j` and
@@ -71,6 +75,17 @@ for anything not covered here.
     bounds, and the `|` in a multi-catch;
   - keep a method or constructor name attached to its opening `(`;
   - prefer a higher-level break (outside the parentheses) to a lower-level one.
+- **A ternary** is written either on one line, or split before both the `?` and
+  the `:` — these are the two accepted forms:
+
+  ```java
+  alpha = (aLongBooleanExpression) ? beta : gamma;
+
+  alpha = (aLongBooleanExpression)
+          ? beta
+          : gamma;
+  ```
+
 - **K&R (Egyptian) brackets** — the opening brace ends the line that opens the
   block; `} else {` and `} catch (...) {` sit on one line.
 - **Statement forms** to follow exactly:
@@ -113,21 +128,26 @@ for anything not covered here.
 
   ```java
   switch (condition) {
-  case ABC:
-      statements;
-      // Fallthrough
-  case DEF:
-      statements;
-      break;
-  default:
-      statements;
-      break;
+      case ABC:
+          statements;
+          // Fallthrough
+      case DEF:
+          statements;
+          break;
+      default:
+          statements;
+          break;
   }
 
   switch (condition) {
-  case ABC -> method("1");
-  default -> method("0");
+      case ABC -> method("1");
+      default -> method("0");
   }
+
+  int size = switch (condition) {
+      case ABC -> 1;
+      default -> 0;
+  };
   ```
 
   A `case` in the colon form that has no `break` **must** carry an explicit
@@ -164,7 +184,7 @@ for anything not covered here.
   scope.** If no valid value is available at that point, leave it uninitialized
   rather than assigning a phony one.
 - **No `public` class variables**, unless the class is a pure data class with no
-  behaviour. Constants are exempt. Use non-public fields with accessors.
+  behavior. Constants are exempt. Use non-public fields with accessors.
 
 ### Loops and conditionals
 
@@ -231,9 +251,11 @@ Run through this before reporting a Java change as done.
       `SCREAMING_SNAKE_CASE` — and mutable `static final` fields are not.
 - [ ] Booleans read like booleans and carry an `is`/`has`/`was`/`can`/`should`
       prefix where reasonable; collections have plural names.
-- [ ] 4-space indent, no tabs, no line over 120 characters, wrapped lines
-      indented by 8.
+- [ ] 4-space indent, no tabs, lines within 110 characters (120 at the
+      absolute most), wrapped lines indented by 8.
 - [ ] K&R braces; every `if`/`for`/`while` body braced, even one-liners.
+- [ ] `switch` labels indented one level inside the `switch`; every colon-form
+      `case` without a `break` carries a `// Fallthrough` comment.
 - [ ] Spaces around operators, after commas, after reserved words and after the
       semicolons in a `for` header.
 - [ ] No `public` non-constant fields.
@@ -242,4 +264,6 @@ Run through this before reporting a Java change as done.
       setters, overrides and test code.
 - [ ] Javadoc first sentences start `Returns`/`Adds`/`Prints`...; `@param` is
       all-or-nothing; tags are separated from the description by a blank line.
+- [ ] Every `@param`, `@return` and `@throws` description ends in punctuation —
+      on its last line where the description spans several.
 - [ ] Comments are in English with American spelling.

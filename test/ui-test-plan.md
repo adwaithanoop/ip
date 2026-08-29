@@ -9,10 +9,40 @@ adding a test case here is all that is needed to have it run.
 
 - **Main class:** `bob.Bob`
 - **Source directory:** `src/main/java`
+- **Data file:** `data/duke.txt`
 
 The program is compiled fresh into a temporary directory before the session
 starts, and is started again for each test case, so no test case can be
 affected by tasks left over from an earlier one.
+
+Each test case also runs in a working directory of its own. The program keeps
+its task list in the data file named above, relative to the directory it is
+started in, so a directory per test case is what stops one test case from
+loading the tasks another one saved — and it keeps a test run from writing
+anything into the repository.
+
+The one test case that has the program print the path of the data file (TC22)
+expects it written with `/` between the folder and the file name. That is how
+the path prints on macOS and Linux; on Windows the same path prints as
+`data\duke.txt`, because the program builds it from its parts and lets the
+operating system supply the separator. On Windows, expect that test case to
+report a difference in those four lines only.
+
+## The save file
+
+Because the task list now outlives a run of the program, a test case may say
+what is on the disk on either side of the run:
+
+- a **Data file before** block is written to `data/duke.txt` before the program
+  starts, standing for tasks saved in an earlier session;
+- a **Data file after** block is compared with `data/duke.txt` once the program
+  has finished, and the test case fails if it does not match. The block may be
+  the single line `(no file)`, which says the program should have left no save
+  file at all.
+
+A test case with neither block starts with no save file — the ordinary first
+run — and nothing is checked about what it saves. That is the case for TC1 to
+TC16 below, all of which were written before the chatbot saved anything.
 
 ## How to run the tests
 
@@ -1150,4 +1180,421 @@ bye
     ____________________________________________________________
      Bye. Hope to see you again soon!
     ____________________________________________________________
+```
+
+### TC17 - Every change to the list is written to the save file
+
+**Aim:** Check that the tasks are on the disk as soon as they are entered, rather
+than only when the chatbot is shut down properly. The save file is checked after
+a run that adds one task of each kind and marks one of them, so it also checks
+that each kind is written with its own fields and that a `mark` is saved too.
+The console output is unchanged by saving: the user is told nothing about a save
+that worked, because there is nothing they need to do about it.
+
+**Input**
+
+```text
+todo read book
+deadline return book /by June 6th
+event project meeting /from Aug 6th 2pm /to 4pm
+mark 1
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: June 6th)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] project meeting (from: Aug 6th 2pm to: 4pm)
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [T][X] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 1 | read book
+D | 0 | return book | June 6th
+E | 0 | project meeting | Aug 6th 2pm | 4pm
+```
+
+### TC18 - Tasks saved earlier are there again at startup
+
+**Aim:** Check the other half of the round trip: a save file written by an earlier
+session is read back into the list, with each task's kind, done status and dates
+as they were saved. The user is told that tasks were picked up, since a list that
+was not empty to begin with would otherwise be a surprise. The save file is
+checked afterwards as well, to confirm that merely reading and listing tasks does
+not rewrite it.
+
+**Data file before**
+
+```text
+T | 1 | read book
+D | 0 | return book | June 6th
+E | 0 | project meeting | Aug 6th 2pm | 4pm
+```
+
+**Input**
+
+```text
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Welcome back! I've picked up 3 tasks you saved earlier.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][X] read book
+     2.[D][ ] return book (by: June 6th)
+     3.[E][ ] project meeting (from: Aug 6th 2pm to: 4pm)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 1 | read book
+D | 0 | return book | June 6th
+E | 0 | project meeting | Aug 6th 2pm | 4pm
+```
+
+### TC19 - Deleting and unmarking are saved, and an emptied list empties the file
+
+**Aim:** Check that the save file follows the list down as well as up. A task
+deleted from a loaded list is gone from the file, an `unmark` is written back
+just as a `mark` is, and deleting the last task leaves an empty file rather than
+a file still holding the task that was deleted. Leaving the old contents behind
+would be the failure that matters here: the task would come back at the next
+startup.
+
+**Data file before**
+
+```text
+T | 1 | read book
+D | 0 | return book | June 6th
+```
+
+**Input**
+
+```text
+unmark 1
+delete 2
+delete 1
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Welcome back! I've picked up 2 tasks you saved earlier.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     OK, I've marked this task as not done yet:
+       [T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [D][ ] return book (by: June 6th)
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [T][ ] read book
+     Now you have 0 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You haven't told me about any tasks yet.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+```
+
+### TC20 - A session that changes nothing writes no save file
+
+**Aim:** Check that starting the chatbot and quitting without adding anything
+does not create a save file. A first run should leave the disk as it found it,
+and a `list` that finds nothing is not a change to be written. This is also what
+lets every test case above it start from a genuinely empty state.
+
+**Input**
+
+```text
+list
+mark 1
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You haven't told me about any tasks yet.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     There is nothing to mark yet — your list is empty.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+(no file)
+```
+
+### TC21 - Bars and backslashes in a task survive the round trip
+
+**Aim:** Check the characters that mean something in the save file itself. A
+vertical bar separates the fields of a saved task and a backslash marks the
+character after it as ordinary, so a task containing either would split a saved
+line in the wrong places if it were written as typed. Both are written as escape
+sequences and read back as the characters the user typed: the tasks loaded from
+the file below show the bar and the backslash again in `list`, and the task added
+during the run is written back escaped in the same way.
+
+**Data file before**
+
+```text
+T | 0 | tidy up \| then rest
+D | 1 | back up C:\\work | tomorrow
+```
+
+**Input**
+
+```text
+list
+todo a \ b | c
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Welcome back! I've picked up 2 tasks you saved earlier.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] tidy up | then rest
+     2.[D][X] back up C:\work (by: tomorrow)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] a \ b | c
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | tidy up \| then rest
+D | 1 | back up C:\\work | tomorrow
+T | 0 | a \\ b \| c
+```
+
+### TC22 - Lines that cannot be read are reported and skipped
+
+**Aim:** Check that a damaged save file costs the user only the damaged lines.
+Each way a line can be wrong — a kind of task the chatbot does not know, too few
+fields for the kind it claims to be, a status field that is neither `1` nor `0`,
+and an empty description — is reported on its own, naming the line so the user
+can find it, and the good tasks around it are still loaded. A blank line is not
+damage and is passed over in silence. The warning that the skipped lines will be
+lost is the point of reporting them at all: the next command that changes the
+list rewrites the whole file without them.
+
+**Data file before**
+
+```text
+T | 1 | read book
+X | 0 | who knows
+D | 0 | return book
+T | 2 | maybe done
+T | 0 |
+
+E | 0 | party | Fri 8pm | Fri 11pm
+```
+
+**Input**
+
+```text
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Welcome back! I've picked up 2 tasks you saved earlier.
+     Line 2 of data/duke.txt isn't a task I can read: "X" is not a kind of task I know (I know T, D and E).
+     Line 3 of data/duke.txt isn't a task I can read: a saved deadline has 4 fields, but this line has 3.
+     Line 4 of data/duke.txt isn't a task I can read: "2" doesn't say whether the task is done (it should be 1 or 0).
+     Line 5 of data/duke.txt isn't a task I can read: the description is empty.
+     I've left those 4 lines out of your list.
+     They will be lost the next time the list changes — fix the file to keep them.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][X] read book
+     2.[E][ ] party (from: Fri 8pm to: Fri 11pm)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 1 | read book
+X | 0 | who knows
+D | 0 | return book
+T | 2 | maybe done
+T | 0 |
+
+E | 0 | party | Fri 8pm | Fri 11pm
 ```
