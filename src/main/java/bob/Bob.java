@@ -1,8 +1,6 @@
 package bob;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -20,6 +18,10 @@ import java.util.function.Predicate;
  * Every line the user sees is handed to {@link Ui}, and every line they type
  * comes back from it, so this class is left deciding <em>what</em> to say while
  * {@code Ui} decides how it looks on screen.
+ *
+ * <p>The tasks themselves are held by {@link TaskList}, which is also asked for
+ * the searches the listing commands need. This class no longer knows that they
+ * sit in a list at all — it asks for a task by its number and is given one.
  *
  * <p>The task list outlives a single run: it is read from a file on startup and
  * written back whenever it changes, so the user finds their tasks where they
@@ -103,23 +105,15 @@ public class Bob {
             Command.NEXT.getKeyword() + " " + NEXT_EXAMPLE_COUNT;
 
     /**
-     * Tasks entered so far, in the order they were added.
+     * The tasks the user has told the chatbot about, and everything done to them.
      *
-     * <p>This is an {@link ArrayList} rather than a fixed-size array. Now that
-     * tasks can be deleted as well as added, a plain array would mean growing it
-     * by hand when it filled up, and shifting every later element down by one on
-     * every deletion while tracking how many slots are still in use. An
-     * {@code ArrayList} does all of that itself: {@code add} grows it,
-     * {@code remove} closes the gap, and {@code size} always says how many tasks
-     * there are, so there is no separate count that could drift out of step with
-     * the contents.
-     *
-     * <p>Each element is a {@link Task}. Because {@link Todo}, {@link Deadline}
-     * and {@link Event} are all subclasses of {@link Task}, one list of
-     * {@code Task} can hold any mixture of the three, and the code that lists,
-     * marks or deletes them needs to know only that each is a task.
+     * <p>Starts empty and is replaced by {@link #loadTasks()} with whatever was
+     * saved last time, which is why this one is not {@code final}. An empty list
+     * is a truthful value to hold until then: it is what the chatbot has before
+     * it has looked at the save file, and what it goes on to use if that file
+     * turns out to be unreadable.
      */
-    private static final ArrayList<Task> tasks = new ArrayList<>();
+    private static TaskList tasks = new TaskList();
 
     /**
      * The file the task list is read from and written back to.
@@ -167,7 +161,7 @@ public class Bob {
      */
     private static void loadTasks() {
         Storage.LoadResult result = storage.load();
-        tasks.addAll(result.tasks());
+        tasks = new TaskList(result.tasks());
         if (tasks.isEmpty() && result.messages().isEmpty()) {
             return;
         }
@@ -426,17 +420,17 @@ public class Bob {
      *                      and a warning that the change will not outlive the session.
      */
     private static void saveTasks() throws BobException {
-        storage.save(tasks);
+        storage.save(tasks.asList());
     }
 
     /**
      * Removes the task the user named and shows it one last time, so the user can
      * see which task is gone rather than having to work it out from the numbering.
      *
-     * <p>The tasks after it move up to fill the gap, so the numbers shown by
-     * {@link Command#LIST} stay a run of 1, 2, 3 with nothing missing. That
-     * renumbering is why the confirmation shows the task itself: after a deletion
-     * the number the user typed refers to a different task than it did before.
+     * <p>{@link TaskList#delete} closes the gap left behind, so the numbers shown
+     * by {@link Command#LIST} stay a run of 1, 2, 3 with nothing missing. That is
+     * why the confirmation shows the task itself: after a deletion the number the
+     * user typed refers to a different task than it did before.
      *
      * @param taskNumberText the task number as the user typed it, counting from 1.
      * @throws BobException if the number is missing, is not a number, names no task,
@@ -444,9 +438,9 @@ public class Bob {
      */
     private static void deleteTask(String taskNumberText) throws BobException {
         int taskIndex = requireTaskIndex(taskNumberText, Command.DELETE);
-        // remove returns the task it took out, so it can be shown without
+        // delete returns the task it took out, so it can be shown without
         // having to be fetched separately beforehand.
-        Task removed = tasks.remove(taskIndex);
+        Task removed = tasks.delete(taskIndex);
         ui.showLine("Noted. I've removed this task:");
         ui.showLine("  " + removed);
         ui.showLine("Now you have " + tasks.size() + " tasks in the list.");
@@ -616,10 +610,8 @@ public class Bob {
     /**
      * Prints the tasks with the soonest dates on them, most urgent first.
      *
-     * <p>Unlike the other two listings this one reorders what it shows, so the
-     * positions of the dated tasks are sorted rather than the tasks themselves.
-     * Sorting {@link #tasks} instead would answer the question just as well and
-     * quietly renumber the user's whole list as a side effect.
+     * <p>Unlike the other listings this one reorders what it shows, which
+     * {@link TaskList#findIndexesSoonestFirst()} does without disturbing the list.
      *
      * <p>Fewer tasks than asked for are shown without complaint when the list does
      * not hold that many, and the heading says how many are actually there.
@@ -630,19 +622,11 @@ public class Bob {
      */
     private static void showNextTasks(String countText) throws BobException {
         int wantedCount = requireCount(countText);
-        List<Integer> datedTaskIndexes = new ArrayList<>();
-        for (int i = 0; i < tasks.size(); i++) {
-            if (tasks.get(i).getScheduledDate().isPresent()) {
-                datedTaskIndexes.add(i);
-            }
-        }
+        List<Integer> datedTaskIndexes = tasks.findIndexesSoonestFirst();
         if (datedTaskIndexes.isEmpty()) {
             ui.showLine("None of your tasks have a date on them yet.");
             return;
         }
-        // orElseThrow cannot fire: only tasks that have a date are in this list.
-        datedTaskIndexes.sort(Comparator.comparing(
-                index -> tasks.get(index).getScheduledDate().orElseThrow()));
         int shownCount = Math.min(wantedCount, datedTaskIndexes.size());
         ui.showLine(shownCount == 1
                 ? "Here is your most urgent task:"
@@ -656,15 +640,14 @@ public class Bob {
      * Prints the tasks the caller wants, or says there are none.
      *
      * <p>{@link Command#ON}, {@link Command#BEFORE} and {@link Command#AFTER}
-     * differ only in which tasks they want and what they call them, so the walking
-     * of the list and the choice between a listing and an "I found nothing" line
-     * are written here once.
+     * differ only in which tasks they want and what they call them, so the choice
+     * between a listing and an "I found nothing" line is written here once. The
+     * search itself belongs to the list, and is left to
+     * {@link TaskList#findIndexes}.
      *
-     * <p>Which tasks are wanted arrives as a {@link Predicate}: a question about a
-     * task that can be passed to a method and asked there. Passing the test itself
-     * is what lets one method serve all three commands; the alternative — a flag
-     * saying which command called, and a {@code switch} on it here — would put
-     * each command's meaning somewhere other than in the command.
+     * <p>Which tasks are wanted arrives as a {@link Predicate}, so each of the
+     * three commands says in its own method what it is looking for, and passes
+     * that question along rather than a flag naming itself.
      *
      * @param heading      the line introducing the tasks, printed only if there are any.
      * @param emptyMessage the line to print instead when no task matches.
@@ -672,19 +655,14 @@ public class Bob {
      */
     private static void showMatchingTasks(String heading, String emptyMessage,
             Predicate<Task> isWanted) {
-        List<String> matchingLines = new ArrayList<>();
-        for (int i = 0; i < tasks.size(); i++) {
-            if (isWanted.test(tasks.get(i))) {
-                matchingLines.add(formatNumberedTask(i));
-            }
-        }
-        if (matchingLines.isEmpty()) {
+        List<Integer> matchingIndexes = tasks.findIndexes(isWanted);
+        if (matchingIndexes.isEmpty()) {
             ui.showLine(emptyMessage);
             return;
         }
         ui.showLine(heading);
-        for (String line : matchingLines) {
-            ui.showLine(line);
+        for (int index : matchingIndexes) {
+            ui.showLine(formatNumberedTask(index));
         }
     }
 
@@ -758,5 +736,4 @@ public class Bob {
         }
         return count;
     }
-
 }
