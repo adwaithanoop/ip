@@ -1,5 +1,6 @@
 package bob;
 
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Predicate;
@@ -14,6 +15,14 @@ import java.util.function.Predicate;
  * understands are listed in {@link Command}; making sense of a whole line
  * written with one of them is {@link Parser}'s work, and this class is left to
  * say what each command does once it has been understood.
+ *
+ * <p>A chatbot is an object rather than a class of static members. It has three
+ * things it works with — a {@link Ui}, a {@link Storage} and a {@link TaskList} —
+ * and something that has state of its own is what an object is for. Making them
+ * fields of an instance also means there can be more than one: a second chatbot
+ * can be pointed at a different save file, which is what makes this class
+ * testable at all, and what a graphical front end would need in order to hold a
+ * chatbot of its own.
  *
  * <p>Nothing here writes to the console or reads from the keyboard directly.
  * Every line the user sees is handed to {@link Ui}, and every line they type
@@ -55,65 +64,90 @@ import java.util.function.Predicate;
  */
 public class Bob {
 
-    /**
-     * The tasks the user has told the chatbot about, and everything done to them.
-     *
-     * <p>Starts empty and is replaced by {@link #loadTasks()} with whatever was
-     * saved last time, which is why this one is not {@code final}. An empty list
-     * is a truthful value to hold until then: it is what the chatbot has before
-     * it has looked at the save file, and what it goes on to use if that file
-     * turns out to be unreadable.
-     */
-    private static TaskList tasks = new TaskList();
+    /** Everything printed to the user, and every line read back from them. */
+    private final Ui ui;
+
+    /** The file the task list is read from and written back to. */
+    private final Storage storage;
+
+    /** The tasks the user has told the chatbot about, and everything done to them. */
+    private final TaskList tasks;
 
     /**
-     * The file the task list is read from and written back to.
+     * What {@link Storage} had to say about reading the save file, kept until
+     * there is a good moment to say it.
      *
-     * <p>Named in {@code camelCase} rather than as a constant: the reference
-     * cannot be reassigned, but a {@code Storage} is not immutable, and the
-     * coding standard keeps {@code SCREAMING_SNAKE_CASE} for values that are.
+     * <p>The tasks are read in the constructor but the report on reading them is
+     * not printed there, because the greeting has to come first and a constructor
+     * that printed would be deciding when its own output appeared. Holding the
+     * messages leaves that decision to {@link #run()}, where the order of the
+     * conversation is set out.
      */
-    private static final Storage storage = new Storage(Storage.DEFAULT_FILE_PATH);
+    private final List<String> loadMessages;
 
     /**
-     * The chatbot's side of the conversation: everything printed to the user,
-     * and every line read back from them.
+     * Creates a chatbot that keeps its tasks in one named file, picking up
+     * whatever was saved there last time.
      *
-     * <p>Named in {@code camelCase} for the same reason as {@link #storage}: the
-     * reference cannot be reassigned, but a {@code Ui} is not immutable, and the
-     * coding standard keeps {@code SCREAMING_SNAKE_CASE} for values that are.
+     * <p>Everything this chatbot works with is settled here and never swapped
+     * afterwards, so every field is {@code final} and the compiler enforces it.
+     * That was not possible while the class was made of static fields: the task
+     * list had to start as an empty placeholder and be replaced once the save
+     * file had been read.
+     *
+     * <p>The file is a parameter rather than a constant reached at startup, so a
+     * second chatbot can be pointed somewhere else — at a scratch file in a test,
+     * for instance — without disturbing the one the user is talking to.
+     *
+     * <p>{@link Storage#load()} does not throw: a chatbot that cannot read its
+     * save file can still be used for the rest of the session, so a problem with
+     * the file comes back as a message to report rather than as a failure to
+     * start. That is why nothing here is wrapped in a {@code try}.
+     *
+     * @param filePath where to keep the task list, for example
+     *                 {@link Storage#DEFAULT_FILE_PATH}.
      */
-    private static final Ui ui = new Ui();
+    public Bob(Path filePath) {
+        ui = new Ui();
+        storage = new Storage(filePath);
+        Storage.LoadResult result = storage.load();
+        tasks = new TaskList(result.tasks());
+        loadMessages = result.messages();
+    }
 
     /**
-     * Starts the chatbot: greets the user, picks up the tasks left from last
-     * time, answers commands until they say goodbye, then signs off.
-     *
-     * @param args command line arguments, which this chatbot does not use.
+     * Holds the conversation: greets the user, reports on the tasks picked up
+     * from last time, answers commands until they say goodbye, then signs off.
      */
-    public static void main(String[] args) {
+    public void run() {
         ui.showGreeting();
-        loadTasks();
+        showLoadReport();
         handleCommandsUntilExit();
         ui.showFarewell();
     }
 
     /**
-     * Fills the task list with whatever was saved last time, and reports anything
-     * the user should know about the file it came from.
+     * Starts a chatbot on the usual save file and talks to whoever runs it.
+     *
+     * <p>This is the one thing that has to be {@code static}, since it is called
+     * before there is an object to call it on. It makes one and steps aside.
+     *
+     * @param args command line arguments, which this chatbot does not use.
+     */
+    public static void main(String[] args) {
+        new Bob(Storage.DEFAULT_FILE_PATH).run();
+    }
+
+    /**
+     * Says what was picked up from the save file, and anything the user should
+     * know about reading it.
      *
      * <p>Nothing is printed on the two ordinary cases — no save file yet, or a
      * save file that read cleanly and was empty — because a user who has nothing
      * saved does not need to be told about a file they have never seen.
-     *
-     * <p>{@link Storage#load()} does not throw: a chatbot that cannot read its
-     * save file can still be used for the rest of the session, so a problem with
-     * the file comes back as a message to print rather than as a failure to start.
      */
-    private static void loadTasks() {
-        Storage.LoadResult result = storage.load();
-        tasks = new TaskList(result.tasks());
-        if (tasks.isEmpty() && result.messages().isEmpty()) {
+    private void showLoadReport() {
+        if (tasks.isEmpty() && loadMessages.isEmpty()) {
             return;
         }
         ui.openBlock();
@@ -121,7 +155,7 @@ public class Bob {
             ui.showLine("Welcome back! I've picked up " + tasks.size()
                     + (tasks.size() == 1 ? " task" : " tasks") + " you saved earlier.");
         }
-        for (String message : result.messages()) {
+        for (String message : loadMessages) {
             ui.showLine(message);
         }
         ui.closeBlock();
@@ -149,7 +183,7 @@ public class Bob {
      * is printed here, and the loop simply goes on to read the next line — so a
      * mistake costs the user a line, not the whole conversation.
      */
-    private static void handleCommandsUntilExit() {
+    private void handleCommandsUntilExit() {
         while (ui.hasNextCommand()) {
             String line = ui.readCommand();
             if (Command.BYE.matches(line)) {
@@ -187,7 +221,7 @@ public class Bob {
      * @throws BobException if the line is not a command the chatbot knows, or is
      *                      one it knows but cannot carry out as written.
      */
-    private static void handleCommand(String line) throws BobException {
+    private void handleCommand(String line) throws BobException {
         Parser.ParsedCommand parsed = Parser.parseCommand(line);
         String arguments = parsed.arguments();
         switch (parsed.command()) {
@@ -219,7 +253,7 @@ public class Bob {
      *
      * @throws BobException if the list could not be written to disk afterwards.
      */
-    private static void addTask(Task task) throws BobException {
+    private void addTask(Task task) throws BobException {
         tasks.add(task);
         ui.showLine("Got it. I've added this task:");
         ui.showLine("  " + task);
@@ -239,7 +273,7 @@ public class Bob {
      * @throws BobException if the file could not be written, carrying the reason
      *                      and a warning that the change will not outlive the session.
      */
-    private static void saveTasks() throws BobException {
+    private void saveTasks() throws BobException {
         storage.save(tasks.asList());
     }
 
@@ -256,7 +290,7 @@ public class Bob {
      * @throws BobException if the number is missing, is not a number, names no task,
      *                      or if the shortened list could not be written to disk.
      */
-    private static void deleteTask(String taskNumberText) throws BobException {
+    private void deleteTask(String taskNumberText) throws BobException {
         int taskIndex = requireTaskIndex(taskNumberText, Command.DELETE);
         // delete returns the task it took out, so it can be shown without
         // having to be fetched separately beforehand.
@@ -280,7 +314,7 @@ public class Bob {
      *                      number, if no task has that number, or if the changed
      *                      list could not be written to disk.
      */
-    private static void setTaskDone(String taskNumberText, boolean isDone) throws BobException {
+    private void setTaskDone(String taskNumberText, boolean isDone) throws BobException {
         Command command = isDone ? Command.MARK : Command.UNMARK;
         Task task = tasks.get(requireTaskIndex(taskNumberText, command));
         if (isDone) {
@@ -313,7 +347,7 @@ public class Bob {
      * @throws BobException if no task number was given, if what was given is not a
      *                      number, or if no task has that number.
      */
-    private static int requireTaskIndex(String taskNumberText, Command command) throws BobException {
+    private int requireTaskIndex(String taskNumberText, Command command) throws BobException {
         String word = command.getKeyword();
         String listCommand = Command.LIST.getKeyword();
         int taskNumber = Parser.parseTaskNumber(taskNumberText, command);
@@ -331,7 +365,7 @@ public class Bob {
     }
 
     /** Prints the stored tasks as a numbered list, counting from 1 for readability. */
-    private static void showTasks() {
+    private void showTasks() {
         if (tasks.isEmpty()) {
             ui.showLine("You haven't told me about any tasks yet.");
             return;
@@ -353,7 +387,7 @@ public class Bob {
      * @param dayText the day as the user typed it after {@code on}.
      * @throws BobException if no day was given, or what was given is not a day.
      */
-    private static void showTasksOn(String dayText) throws BobException {
+    private void showTasksOn(String dayText) throws BobException {
         LocalDate day = Parser.parseDay(dayText, Command.ON);
         String dayShown = TaskDate.formatDay(day);
         showMatchingTasks("Here is what you have on " + dayShown + ":",
@@ -371,7 +405,7 @@ public class Bob {
      * @param dayText the day as the user typed it after {@code before}.
      * @throws BobException if no day was given, or what was given is not a day.
      */
-    private static void showTasksBefore(String dayText) throws BobException {
+    private void showTasksBefore(String dayText) throws BobException {
         LocalDate day = Parser.parseDay(dayText, Command.BEFORE);
         String dayShown = TaskDate.formatDay(day);
         showMatchingTasks("Here is what you have before " + dayShown + ":",
@@ -395,7 +429,7 @@ public class Bob {
      * @param dayText the day as the user typed it after {@code after}.
      * @throws BobException if no day was given, or what was given is not a day.
      */
-    private static void showTasksAfter(String dayText) throws BobException {
+    private void showTasksAfter(String dayText) throws BobException {
         LocalDate day = Parser.parseDay(dayText, Command.AFTER);
         String dayShown = TaskDate.formatDay(day);
         showMatchingTasks("Here is what you have after " + dayShown + ":",
@@ -416,7 +450,7 @@ public class Bob {
      * @throws BobException if no count was given, or what was given is not a count
      *                      of one or more.
      */
-    private static void showNextTasks(String countText) throws BobException {
+    private void showNextTasks(String countText) throws BobException {
         int wantedCount = Parser.parseCount(countText);
         List<Integer> datedTaskIndexes = tasks.findIndexesSoonestFirst();
         if (datedTaskIndexes.isEmpty()) {
@@ -449,7 +483,7 @@ public class Bob {
      * @param emptyMessage the line to print instead when no task matches.
      * @param isWanted     the test a task has to pass to be listed.
      */
-    private static void showMatchingTasks(String heading, String emptyMessage,
+    private void showMatchingTasks(String heading, String emptyMessage,
             Predicate<Task> isWanted) {
         List<Integer> matchingIndexes = tasks.findIndexes(isWanted);
         if (matchingIndexes.isEmpty()) {
@@ -473,7 +507,7 @@ public class Bob {
      *
      * @param index the task's position in {@link #tasks}, counting from 0.
      */
-    private static String formatNumberedTask(int index) {
+    private String formatNumberedTask(int index) {
         // The user counts from 1, the list counts from 0.
         return (index + 1) + "." + tasks.get(index);
     }
