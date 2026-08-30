@@ -43,7 +43,7 @@ what is on the disk on either side of the run:
 A test case with neither block starts with no save file — the ordinary first
 run — and nothing is checked about what it saves. That is the case for TC1 to
 TC16 below, all of which were written before the chatbot saved anything, and
-for TC23.
+for TC23 to TC26.
 
 ## How to run the tests
 
@@ -337,7 +337,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "borrow book" means.
-     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -569,7 +569,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "todolist" means.
-     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1164,17 +1164,17 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "bye now" means.
-     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
      Sorry, I don't know what "list foo" means.
-     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
      Sorry, I don't know what "BYE" means.
-     Try one of: todo, deadline, event, list, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1694,4 +1694,405 @@ bye
     ____________________________________________________________
      Bye. Hope to see you again soon!
     ____________________________________________________________
+```
+
+### TC24 - Tasks falling on a specific day
+
+**Aim:** Check that `on` picks out the tasks falling on one day and leaves the
+rest alone. A deadline falls on the day it is due, whether or not it carries a
+time; an event falls on every day it is running, so a day in the middle of a
+week-long event finds it, which is the case a comparison against the start alone
+would miss; and a todo, having no date, is never listed. A day nothing falls on
+says so rather than printing an empty listing. The numbers shown are the tasks'
+numbers in the full list, not 1, 2, 3 counting the matches — the `mark 3` proves
+it, by marking the task that the listing above it numbered 3, and the `on` after
+it shows that task's box now ticked.
+
+**Input**
+
+```text
+todo read book
+deadline return book /by 2026-12-02
+deadline submit report /by 2026-12-02 0900
+event orientation week /from 2026-10-04 /to 2026-10-11
+on 2026-12-02
+on 2026-10-06
+on 2026-11-01
+mark 3
+on 2026-12-02
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: Dec 02 2026)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] submit report (by: Dec 02 2026 09:00)
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+     Now you have 4 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have on Dec 02 2026:
+     2.[D][ ] return book (by: Dec 02 2026)
+     3.[D][ ] submit report (by: Dec 02 2026 09:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have on Oct 06 2026:
+     4.[E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You have nothing on Nov 01 2026.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [D][X] submit report (by: Dec 02 2026 09:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have on Dec 02 2026:
+     2.[D][ ] return book (by: Dec 02 2026)
+     3.[D][X] submit report (by: Dec 02 2026 09:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC25 - Tasks falling before a specific day
+
+**Aim:** Check that `before` lists what comes earlier than a day, and that the
+day named is itself excluded — `before 2026-12-02` must not show the deadline due
+on the 2nd, so that `before` and `on` for one day never show the same task twice.
+Checked from both sides: the same task does appear once the day asked about is
+moved past it. As with `on`, a todo has no date and so is never listed, and a day
+with nothing before it says so.
+
+**Input**
+
+```text
+deadline return book /by 2026-12-02
+event party /from 2026-12-01 2000 /to 2026-12-01 2300
+todo read book
+before 2026-12-02
+before 2026-12-01
+before 2027-01-01
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: Dec 02 2026)
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] party (from: Dec 01 2026 20:00 to: Dec 01 2026 23:00)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have before Dec 02 2026:
+     2.[E][ ] party (from: Dec 01 2026 20:00 to: Dec 01 2026 23:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You have nothing before Dec 01 2026.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have before Jan 01 2027:
+     1.[D][ ] return book (by: Dec 02 2026)
+     2.[E][ ] party (from: Dec 01 2026 20:00 to: Dec 01 2026 23:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC26 - The most urgent tasks, soonest first
+
+**Aim:** Check that `next` reorders the dated tasks by date rather than showing
+them in the order they were added — the tasks below are deliberately entered in
+the wrong order, so a listing that merely filtered would come out differently.
+Two of them fall on the same day, one with a time and one without, and the one
+without comes first. Asking for more tasks than there are shows all of them and
+says how many that is, rather than complaining, and asking for one uses the
+singular. The three deletions then take every dated task away, so the last `next`
+checks the case where nothing has a date. Throughout, the numbers shown are the
+tasks' numbers in the full list, so they run out of order here — that is the
+point of them, since `1` in a `next` listing would otherwise mean a different
+task from `1` in `list`.
+
+**Input**
+
+```text
+deadline submit report /by 2026-12-02 0900
+event orientation week /from 2026-10-04 /to 2026-10-11
+deadline return book /by 2026-12-02
+todo read book
+next 2
+next 99
+next 1
+delete 2
+delete 1
+delete 1
+next 3
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] submit report (by: Dec 02 2026 09:00)
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: Dec 02 2026)
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 4 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are your 2 most urgent tasks, soonest first:
+     2.[E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+     3.[D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are your 3 most urgent tasks, soonest first:
+     2.[E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+     3.[D][ ] return book (by: Dec 02 2026)
+     1.[D][ ] submit report (by: Dec 02 2026 09:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is your most urgent task:
+     2.[E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [D][ ] submit report (by: Dec 02 2026 09:00)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Noted. I've removed this task:
+       [D][ ] return book (by: Dec 02 2026)
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     None of your tasks have a date on them yet.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC27 - Bad arguments to on, before and next
+
+**Aim:** Check that each way of misusing the three new commands is answered with
+the explanation that fits it. `on` and `before` reject a missing day and text that
+is not a day, each naming the command that was typed in its example. They also
+reject a day with a time tacked on to it: these commands answer questions about
+whole days, and quietly ignoring the `1800` would hide that the question asked was
+not the question answered. `next` rejects a missing count, a count that is not a
+number, and counts of zero and below, which ask for nothing at all. The `list` at
+the end shows that no refused command stored anything, and the absent save file
+shows that these three commands write nothing to the disk — they only look at the
+list, so there is never anything to save.
+
+**Input**
+
+```text
+on
+on someday
+on 2026-12-02 1800
+before
+before 2/12/2026
+next
+next lots
+next 0
+next -2
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Which day should I look at?
+     For example: on 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't understand "someday" as a day.
+     Write the day as yyyy-mm-dd, with no time after it.
+     For example: 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't understand "2026-12-02 1800" as a day.
+     Write the day as yyyy-mm-dd, with no time after it.
+     For example: 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Which day should I look at?
+     For example: before 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't understand "2/12/2026" as a day.
+     Write the day as yyyy-mm-dd, with no time after it.
+     For example: 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     How many tasks should I show?
+     For example: next 3
+    ____________________________________________________________
+
+    ____________________________________________________________
+     "lots" isn't a number of tasks.
+     For example: next 3
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I can show you one task or more, but not 0.
+     For example: next 3
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I can show you one task or more, but not -2.
+     For example: next 3
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You haven't told me about any tasks yet.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+(no file)
 ```
