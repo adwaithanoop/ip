@@ -106,11 +106,16 @@ public class Ui {
         closeBlock();
     }
 
-    /** Prints the sign-off message as one block. */
+    /**
+     * Prints the sign-off message.
+     *
+     * <p>Unlike {@link #showGreeting()} this does not frame itself in a block,
+     * because it is usually printed inside the block already opened for the
+     * {@code bye} that asked for it. The one caller that prints it outside a
+     * block opens one around it.
+     */
     public void showFarewell() {
-        openBlock();
         showLine("Bye. Hope to see you again soon!");
-        closeBlock();
     }
 
     /**

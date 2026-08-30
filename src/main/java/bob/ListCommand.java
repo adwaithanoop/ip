@@ -1,0 +1,17 @@
+package bob;
+
+/**
+ * Prints every task, numbered from 1.
+ *
+ * <p>This changes nothing, so nothing is saved afterwards and the
+ * {@link Storage} it is handed goes unused.
+ */
+public class ListCommand extends Command {
+
+    @Override
+    public void execute(TaskList tasks, Ui ui, Storage storage) {
+        ui.showTasks(tasks, tasks.allIndexes(),
+                "Here are the tasks in your list:",
+                "You haven't told me about any tasks yet.");
+    }
+}

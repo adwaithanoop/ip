@@ -76,34 +76,29 @@ public class Parser {
             CommandWord.NEXT.getKeyword() + " " + NEXT_EXAMPLE_COUNT;
 
     /**
-     * One line of the user's, made sense of: which command it is, and what was
-     * written after the command word.
+     * Returns the command one line of the user's asks for, ready to be run.
      *
-     * <p>Both halves are wanted together and neither is much use alone, so they
-     * come back as one value. A record is the shortest honest way to return a
-     * pair: it is a plain data carrier, so the compiler writes its constructor,
-     * accessors, {@code equals} and {@code toString}. {@link Storage.LoadResult}
-     * is returned the same way, for the same reason.
+     * <p>This is the only way in. Everything below it is private, because the
+     * halfway houses — a date read out of some text, a task number, a description
+     * — are steps on the way to a command and not answers anybody outside wants.
      *
-     * @param command   the command the line asks for.
-     * @param arguments everything written after the command word, trimmed, which
-     *                  is an empty string when nothing was.
-     */
-    public record ParsedCommand(CommandWord command, String arguments) {
-    }
-
-    /**
-     * Returns the command a line asks for, together with its arguments.
+     * <p>Which word is which command is {@link CommandWord}'s own business; what
+     * this method adds is the two ways a line can fail to name one at all, each
+     * with its own explanation rather than a shared "bad command".
      *
-     * <p>Which word is which command is {@link CommandWord}'s own business; what this
-     * method adds is the two ways a line can fail to name one at all, each with
-     * its own explanation rather than a shared "bad command".
+     * <p>The {@code switch} below is the one place left that names every command
+     * in a list. That much is unavoidable: something has to turn a word into an
+     * object, and doing it here means it happens once. What has gone is the other
+     * kind of list — the one that said what each command <em>does</em> — because
+     * that is now in the commands themselves.
      *
      * @param line one whole line as the user typed it, with surrounding spaces removed.
-     * @throws BobException if the line is empty, or does not begin with a command
-     *                      the chatbot knows.
+     * @return the command that line asks for.
+     * @throws BobException if the line is empty, does not begin with a command the
+     *                      chatbot knows, or is one it knows but cannot carry out
+     *                      as written.
      */
-    public static ParsedCommand parseCommand(String line) throws BobException {
+    public static Command parse(String line) throws BobException {
         if (line.isEmpty()) {
             throw new BobException("You didn't type anything."
                     + "\nTell me about a task, or type " + CommandWord.LIST.getKeyword()
@@ -111,8 +106,22 @@ public class Parser {
         }
         // orElseThrow unwraps the Optional when a command was recognized, and
         // throws the "I don't know what that means" error when none was.
-        CommandWord command = CommandWord.of(line).orElseThrow(() -> unknownCommand(line));
-        return new ParsedCommand(command, command.argumentsIn(line));
+        CommandWord word = CommandWord.of(line).orElseThrow(() -> unknownCommand(line));
+        String arguments = word.argumentsIn(line);
+        return switch (word) {
+            case TODO -> new AddCommand(parseTodo(arguments));
+            case DEADLINE -> new AddCommand(parseDeadline(arguments));
+            case EVENT -> new AddCommand(parseEvent(arguments));
+            case LIST -> new ListCommand();
+            case ON -> new OnCommand(parseDay(arguments, word));
+            case BEFORE -> new BeforeCommand(parseDay(arguments, word));
+            case AFTER -> new AfterCommand(parseDay(arguments, word));
+            case NEXT -> new NextCommand(parseCount(arguments));
+            case MARK -> new MarkCommand(parseTaskNumber(arguments, word), true);
+            case UNMARK -> new MarkCommand(parseTaskNumber(arguments, word), false);
+            case DELETE -> new DeleteCommand(parseTaskNumber(arguments, word));
+            case BYE -> new ExitCommand();
+        };
     }
 
     /**
@@ -122,7 +131,7 @@ public class Parser {
      * @param arguments the text following the command word.
      * @throws BobException if no description was given.
      */
-    public static Todo parseTodo(String arguments) throws BobException {
+    private static Todo parseTodo(String arguments) throws BobException {
         if (arguments.isEmpty()) {
             throw new BobException("A todo needs a description — tell me what to do."
                     + "\nFor example: " + CommandWord.TODO.getKeyword() + " borrow book");
@@ -147,7 +156,7 @@ public class Parser {
      * @throws BobException if the marker, the description or the due date is
      *                      missing, or if the due date is not a date.
      */
-    public static Deadline parseDeadline(String arguments) throws BobException {
+    private static Deadline parseDeadline(String arguments) throws BobException {
         int byIndex = arguments.indexOf(BY_KEYWORD);
         if (byIndex < 0) {
             throw new BobException("A deadline needs a due date, written after " + BY_KEYWORD + "."
@@ -185,7 +194,7 @@ public class Parser {
      *                      missing, if the start or the end is not a date, or if
      *                      the end comes before the start.
      */
-    public static Event parseEvent(String arguments) throws BobException {
+    private static Event parseEvent(String arguments) throws BobException {
         int fromIndex = arguments.indexOf(FROM_KEYWORD);
         if (fromIndex < 0) {
             throw new BobException("An event needs a start time, written after " + FROM_KEYWORD + "."
@@ -233,7 +242,7 @@ public class Parser {
      * @throws BobException if no task number was given, or what was given is not
      *                      a number.
      */
-    public static int parseTaskNumber(String taskNumberText, CommandWord command) throws BobException {
+    private static int parseTaskNumber(String taskNumberText, CommandWord command) throws BobException {
         String word = command.getKeyword();
         String listCommand = CommandWord.LIST.getKeyword();
         if (taskNumberText.isEmpty()) {
@@ -267,7 +276,7 @@ public class Parser {
      * @throws BobException if nothing was typed after the command word, or what was
      *                      typed is not a day.
      */
-    public static LocalDate parseDay(String dayText, CommandWord command) throws BobException {
+    private static LocalDate parseDay(String dayText, CommandWord command) throws BobException {
         if (dayText.isEmpty()) {
             throw new BobException("Which day should I look at?"
                     + "\nFor example: " + dayExample(command));
@@ -288,7 +297,7 @@ public class Parser {
      * @throws BobException if nothing was typed after {@code next}, or what was
      *                      typed is not a whole number, or is less than one.
      */
-    public static int parseCount(String countText) throws BobException {
+    private static int parseCount(String countText) throws BobException {
         if (countText.isEmpty()) {
             throw new BobException("How many tasks should I show?"
                     + "\nFor example: " + NEXT_EXAMPLE);
