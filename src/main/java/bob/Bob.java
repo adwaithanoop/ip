@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Scanner;
 import java.util.function.Predicate;
 
 /**
@@ -16,6 +15,11 @@ import java.util.function.Predicate;
  * {@link Event} — each added with its own command word. The words the chatbot
  * understands are listed in {@link Command}, which also decides which one a
  * given line is; this class is left to say what each of them does.
+ *
+ * <p>Nothing here writes to the console or reads from the keyboard directly.
+ * Every line the user sees is handed to {@link Ui}, and every line they type
+ * comes back from it, so this class is left deciding <em>what</em> to say while
+ * {@code Ui} decides how it looks on screen.
  *
  * <p>The task list outlives a single run: it is read from a file on startup and
  * written back whenever it changes, so the user finds their tasks where they
@@ -44,9 +48,6 @@ import java.util.function.Predicate;
  * silently, and the conversation carries on.
  */
 public class Bob {
-
-    /** Name the chatbot introduces itself with. */
-    private static final String NAME = "Bob";
 
     /** Marker separating a deadline's description from its due date. */
     private static final String BY_KEYWORD = "/by";
@@ -101,16 +102,6 @@ public class Bob {
     private static final String NEXT_EXAMPLE =
             Command.NEXT.getKeyword() + " " + NEXT_EXAMPLE_COUNT;
 
-    /** Leading whitespace that sets the chatbot's output apart from the user's input. */
-    private static final String INDENT = "    ";
-
-    /**
-     * Horizontal rule separating blocks of output.
-     * Built with {@code repeat} so the width is stated as a number
-     * rather than as a row of underscores that has to be counted by eye.
-     */
-    private static final String DIVIDER = "_".repeat(60);
-
     /**
      * Tasks entered so far, in the order they were added.
      *
@@ -140,34 +131,14 @@ public class Bob {
     private static final Storage storage = new Storage(Storage.DEFAULT_FILE_PATH);
 
     /**
-     * ASCII-art banner shown when the chatbot starts: its name in the figlet
-     * "slant" font, drifting through a field of stars with a few small
-     * spaceships. Stored as one line per element so each line can be indented
-     * the same way as every other line the chatbot prints.
+     * The chatbot's side of the conversation: everything printed to the user,
+     * and every line read back from them.
      *
-     * <p>No line is wider than the {@link #DIVIDER} that frames each block of
-     * output, so the art never spills past the right-hand end of the rule.
-     *
-     * <p>Each backslash is written twice because a backslash starts an escape
-     * sequence in a Java string literal; {@code \\} is the escape that means one
-     * literal backslash, so the doubled ones here print singly.
-     *
-     * <p>Held in an immutable {@link List#of} list rather than an array. The coding
-     * standard reserves the {@code SCREAMING_SNAKE_CASE} name for constants, and a
-     * {@code static final String[]} is not one — the reference cannot be reassigned,
-     * but any code could still overwrite an element. An immutable list cannot be
-     * changed at all, so the name is honest about what it holds.
+     * <p>Named in {@code camelCase} for the same reason as {@link #storage}: the
+     * reference cannot be reassigned, but a {@code Ui} is not immutable, and the
+     * coding standard keeps {@code SCREAMING_SNAKE_CASE} for values that are.
      */
-    private static final List<String> BANNER = List.of(
-            "  .        *         .        .        *        .",
-            "      *         .         +        .       <]==-     .",
-            "   .        +        ____        __      .        *",
-            " -==[>  *           / __ )____  / /_         +",
-            " +           .     / __  / __ \\/ __ \\  *              .",
-            "          *       / /_/ / /_/ / /_/ /   <]==-   .",
-            "    .         +  /_____/\\____/_.___/       .        *",
-            "        +         .         *        .        +        .",
-            "   .        -==[>      .         *                 .");
+    private static final Ui ui = new Ui();
 
     /**
      * Starts the chatbot: greets the user, picks up the tasks left from last
@@ -176,10 +147,10 @@ public class Bob {
      * @param args command line arguments, which this chatbot does not use.
      */
     public static void main(String[] args) {
-        showGreeting();
+        ui.showGreeting();
         loadTasks();
         handleCommandsUntilExit();
-        showFarewell();
+        ui.showFarewell();
     }
 
     /**
@@ -200,26 +171,15 @@ public class Bob {
         if (tasks.isEmpty() && result.messages().isEmpty()) {
             return;
         }
-        openBlock();
+        ui.openBlock();
         if (!tasks.isEmpty()) {
-            printLine("Welcome back! I've picked up " + tasks.size()
+            ui.showLine("Welcome back! I've picked up " + tasks.size()
                     + (tasks.size() == 1 ? " task" : " tasks") + " you saved earlier.");
         }
         for (String message : result.messages()) {
-            printLine(message);
+            ui.showLine(message);
         }
-        closeBlock();
-    }
-
-    /** Prints the banner and welcome message as one block. */
-    private static void showGreeting() {
-        openBlock();
-        for (String bannerLine : BANNER) {
-            printLine(bannerLine);
-        }
-        printLine("Hello! I'm " + NAME + ".");
-        printLine("What can I do for you?");
-        closeBlock();
+        ui.closeBlock();
     }
 
     /**
@@ -231,9 +191,13 @@ public class Bob {
      * printed as a block in the middle of the conversation: the farewell is
      * printed after the loop has ended.
      *
-     * <p>The loop is guarded by {@code hasNextLine} rather than looping forever,
-     * so the program also ends cleanly if the input runs out (for example when
-     * input is piped in from a file that has no {@code bye} line).
+     * <p>The loop is guarded by {@link Ui#hasNextCommand()} rather than looping
+     * forever, so the program also ends cleanly if the input runs out (for
+     * example when input is piped in from a file that has no {@code bye} line).
+     *
+     * <p>Both ways out of the loop lead to the same line closing the input, which
+     * is why the {@code bye} branch breaks out rather than returning: there is one
+     * exit, so there is one place that has to remember to stop reading.
      *
      * <p>This is also the one place where a {@link BobException} is caught. Any
      * command that cannot be carried out reports itself by throwing, the message
@@ -241,21 +205,20 @@ public class Bob {
      * mistake costs the user a line, not the whole conversation.
      */
     private static void handleCommandsUntilExit() {
-        try (Scanner scanner = new Scanner(System.in)) {
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine().trim();
-                if (Command.BYE.matches(line)) {
-                    return;
-                }
-                openBlock();
-                try {
-                    handleCommand(line);
-                } catch (BobException e) {
-                    showError(e);
-                }
-                closeBlock();
+        while (ui.hasNextCommand()) {
+            String line = ui.readCommand();
+            if (Command.BYE.matches(line)) {
+                break;
             }
+            ui.openBlock();
+            try {
+                handleCommand(line);
+            } catch (BobException e) {
+                ui.showError(e.getMessage());
+            }
+            ui.closeBlock();
         }
+        ui.close();
     }
 
     /**
@@ -444,9 +407,9 @@ public class Bob {
      */
     private static void addTask(Task task) throws BobException {
         tasks.add(task);
-        printLine("Got it. I've added this task:");
-        printLine("  " + task);
-        printLine("Now you have " + tasks.size() + " tasks in the list.");
+        ui.showLine("Got it. I've added this task:");
+        ui.showLine("  " + task);
+        ui.showLine("Now you have " + tasks.size() + " tasks in the list.");
         saveTasks();
     }
 
@@ -484,9 +447,9 @@ public class Bob {
         // remove returns the task it took out, so it can be shown without
         // having to be fetched separately beforehand.
         Task removed = tasks.remove(taskIndex);
-        printLine("Noted. I've removed this task:");
-        printLine("  " + removed);
-        printLine("Now you have " + tasks.size() + " tasks in the list.");
+        ui.showLine("Noted. I've removed this task:");
+        ui.showLine("  " + removed);
+        ui.showLine("Now you have " + tasks.size() + " tasks in the list.");
         saveTasks();
     }
 
@@ -520,10 +483,10 @@ public class Bob {
         } else {
             task.markAsNotDone();
         }
-        printLine(isDone
+        ui.showLine(isDone
                 ? "Nice! I've marked this task as done:"
                 : "OK, I've marked this task as not done yet:");
-        printLine("  " + task);
+        ui.showLine("  " + task);
         saveTasks();
     }
 
@@ -580,12 +543,12 @@ public class Bob {
     /** Prints the stored tasks as a numbered list, counting from 1 for readability. */
     private static void showTasks() {
         if (tasks.isEmpty()) {
-            printLine("You haven't told me about any tasks yet.");
+            ui.showLine("You haven't told me about any tasks yet.");
             return;
         }
-        printLine("Here are the tasks in your list:");
+        ui.showLine("Here are the tasks in your list:");
         for (int i = 0; i < tasks.size(); i++) {
-            printLine(formatNumberedTask(i));
+            ui.showLine(formatNumberedTask(i));
         }
     }
 
@@ -674,18 +637,18 @@ public class Bob {
             }
         }
         if (datedTaskIndexes.isEmpty()) {
-            printLine("None of your tasks have a date on them yet.");
+            ui.showLine("None of your tasks have a date on them yet.");
             return;
         }
         // orElseThrow cannot fire: only tasks that have a date are in this list.
         datedTaskIndexes.sort(Comparator.comparing(
                 index -> tasks.get(index).getScheduledDate().orElseThrow()));
         int shownCount = Math.min(wantedCount, datedTaskIndexes.size());
-        printLine(shownCount == 1
+        ui.showLine(shownCount == 1
                 ? "Here is your most urgent task:"
                 : "Here are your " + shownCount + " most urgent tasks, soonest first:");
         for (int i = 0; i < shownCount; i++) {
-            printLine(formatNumberedTask(datedTaskIndexes.get(i)));
+            ui.showLine(formatNumberedTask(datedTaskIndexes.get(i)));
         }
     }
 
@@ -716,12 +679,12 @@ public class Bob {
             }
         }
         if (matchingLines.isEmpty()) {
-            printLine(emptyMessage);
+            ui.showLine(emptyMessage);
             return;
         }
-        printLine(heading);
+        ui.showLine(heading);
         for (String line : matchingLines) {
-            printLine(line);
+            ui.showLine(line);
         }
     }
 
@@ -796,36 +759,4 @@ public class Bob {
         return count;
     }
 
-    /**
-     * Prints the explanation carried by an error, one line per line of the message,
-     * so that a message written as several lines is indented like any other output.
-     */
-    private static void showError(BobException error) {
-        for (String line : error.getMessage().split("\n")) {
-            printLine(line);
-        }
-    }
-
-    /** Prints the sign-off message as one block. */
-    private static void showFarewell() {
-        openBlock();
-        printLine("Bye. Hope to see you again soon!");
-        closeBlock();
-    }
-
-    /** Starts a block of output with a divider. */
-    private static void openBlock() {
-        System.out.println(INDENT + DIVIDER);
-    }
-
-    /** Prints one indented line of chatbot output. */
-    private static void printLine(String text) {
-        System.out.println(INDENT + " " + text);
-    }
-
-    /** Ends a block with a divider, plus a blank line before whatever comes next. */
-    private static void closeBlock() {
-        System.out.println(INDENT + DIVIDER);
-        System.out.println();
-    }
 }
