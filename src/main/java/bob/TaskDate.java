@@ -15,8 +15,15 @@ import java.util.Locale;
  * all equally acceptable and all equally meaningless to the chatbot. Holding a
  * real {@link LocalDate} instead means the date has been understood rather than
  * merely copied: it can be shown back in a friendlier form than it was typed in,
- * and a later increment can compare two of them to answer questions such as
- * which task is due first — neither of which can be done with a string.
+ * and two of them can be compared to answer questions such as which task is due
+ * first — neither of which can be done with a string.
+ *
+ * <p>That comparing is what {@link Command#ON}, {@link Command#BEFORE} and
+ * {@link Command#NEXT} are built on. This class implements
+ * {@link Comparable} so that a list of dates can simply be sorted, and offers
+ * {@link #isOn}, {@link #isBefore} and {@link #isAfter} so that the code asking
+ * the questions can stay in terms of days rather than reaching inside for the
+ * {@link LocalDate} and comparing it itself.
  *
  * <p>The price is that text which is not a date can no longer be accepted, so
  * {@code no idea :-p} is now refused with an explanation instead of being stored.
@@ -30,7 +37,7 @@ import java.util.Locale;
  * {@code TaskDate} can therefore be passed around freely, with no risk of one
  * holder of it seeing another holder's change.
  */
-public class TaskDate {
+public class TaskDate implements Comparable<TaskDate> {
 
     /** A day on its own, written the way the user types it. */
     public static final String EXAMPLE_DATE = "2026-12-02";
@@ -128,6 +135,45 @@ public class TaskDate {
     }
 
     /**
+     * Returns the day written in {@code text} as {@code yyyy-mm-dd}, for example
+     * {@value #EXAMPLE_DATE}.
+     *
+     * <p>This is the whole-day counterpart to {@link #parse}, used by the commands
+     * that ask about a day rather than about a moment in it. A time of day is
+     * refused here rather than quietly ignored: a user who typed
+     * {@code on 2026-12-02 1800} is asking something this chatbot does not answer,
+     * and silently treating it as the whole of the 2nd would hide that.
+     *
+     * @param text what the user typed after the command word.
+     * @return the day that text names.
+     * @throws BobException if the text is not a day in that form, including a day
+     *                      that does not exist, such as {@code 2026-02-30}.
+     */
+    public static LocalDate parseDay(String text) throws BobException {
+        try {
+            return LocalDate.parse(text.trim());
+        } catch (DateTimeParseException e) {
+            throw new BobException("I don't understand \"" + text + "\" as a day."
+                    + "\nWrite the day as yyyy-mm-dd, with no time after it."
+                    + "\nFor example: " + EXAMPLE_DATE);
+        }
+    }
+
+    /**
+     * Returns a day written the friendly way dates are shown back to the user,
+     * for example {@code Dec 02 2026}.
+     *
+     * <p>Static, and taking a plain {@link LocalDate}, so that a day the user asked
+     * about can be echoed in the same form as the dates on the tasks listed under
+     * it, without having to be wrapped in a {@code TaskDate} first.
+     *
+     * @param day the day to write out.
+     */
+    public static String formatDay(LocalDate day) {
+        return day.format(OUTPUT_DATE_FORMAT);
+    }
+
+    /**
      * Returns the error to report for text that is not a date this chatbot can read.
      *
      * <p>The text is quoted back so that a user who mistyped one character can see
@@ -153,6 +199,49 @@ public class TaskDate {
             return date.toString();
         }
         return date + " " + time.format(INPUT_TIME_FORMAT);
+    }
+
+    /** Returns whether this date falls on {@code day}, whatever time of day it carries. */
+    public boolean isOn(LocalDate day) {
+        return date.equals(day);
+    }
+
+    /** Returns whether this date falls on a day earlier than {@code day}. */
+    public boolean isBefore(LocalDate day) {
+        return date.isBefore(day);
+    }
+
+    /** Returns whether this date falls on a day later than {@code day}. */
+    public boolean isAfter(LocalDate day) {
+        return date.isAfter(day);
+    }
+
+    /**
+     * Orders dates from earliest to latest, so that sorting a list of them puts
+     * the most urgent first.
+     *
+     * <p>Two dates on the same day are separated by their time, and a date given
+     * without a time counts as the start of its day. That is only an ordering
+     * rule, not a claim that the task is due at midnight: it puts a task due "on
+     * the 2nd" before one due at a particular hour of the 2nd, which is the
+     * cautious way round for anyone reading the list to decide what to do next.
+     *
+     * @param other the date to compare this one with.
+     * @return a negative number if this date is earlier, zero if the two are at
+     *         the same point in time, a positive number if this date is later.
+     */
+    @Override
+    public int compareTo(TaskDate other) {
+        int dayComparison = date.compareTo(other.date);
+        if (dayComparison != 0) {
+            return dayComparison;
+        }
+        return getTimeOrStartOfDay().compareTo(other.getTimeOrStartOfDay());
+    }
+
+    /** Returns the time of day, or the start of the day when the user gave no time. */
+    private LocalTime getTimeOrStartOfDay() {
+        return (time == null) ? LocalTime.MIN : time;
     }
 
     /** Returns for example {@code Dec 02 2026}, or {@code Dec 02 2026 18:00} with a time. */

@@ -1,6 +1,7 @@
 package bob;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A task that has to be done before a given point in time, for example
@@ -35,6 +36,16 @@ public class Deadline extends Task {
     @Override
     public String getTypeIcon() {
         return TYPE_ICON;
+    }
+
+    /**
+     * Returns the due date, which is the date a deadline is pinned to: it is when
+     * the task has to be dealt with, so it is what a deadline is listed under and
+     * ordered by.
+     */
+    @Override
+    public Optional<TaskDate> getScheduledDate() {
+        return Optional.of(by);
     }
 
     /** Returns for example {@code [D][ ] return book (by: Dec 02 2026)}. */

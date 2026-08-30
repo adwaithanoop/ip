@@ -1,8 +1,11 @@
 package bob;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.function.Predicate;
 
 /**
  * A chatbot that greets the user, remembers the tasks the user types,
@@ -22,6 +25,14 @@ import java.util.Scanner;
  * <p>A deadline and an event carry dates the chatbot understands rather than
  * text it merely repeats: each is read into a {@link TaskDate}, which is what
  * lets a date be shown back in a friendlier form than it was typed in.
+ *
+ * <p>Because those dates are understood, the chatbot can be asked about them
+ * rather than only told them: {@link Command#ON} and {@link Command#BEFORE} pick
+ * out the tasks falling on, or before, a given day, and {@link Command#NEXT}
+ * shows the few with the soonest dates on them. All three are views of the one
+ * task list — they change nothing, so nothing is saved after them — and each
+ * shows a task with the number it has in {@link Command#LIST}, so a task found
+ * this way can be marked or deleted without looking it up again.
  *
  * <p>Anything the user types that cannot be carried out — an unknown command,
  * a missing description, a task number that does not exist, a due date that is
@@ -69,6 +80,21 @@ public class Bob {
     private static final String EVENT_EXAMPLE =
             Command.EVENT.getKeyword() + " project meeting " + FROM_KEYWORD + " "
                     + TaskDate.EXAMPLE_DATE_TIME + " " + TO_KEYWORD + " " + EVENT_EXAMPLE_END;
+
+    /** Example of a well-formed {@link Command#ON} command, shown when one is malformed. */
+    private static final String ON_EXAMPLE =
+            Command.ON.getKeyword() + " " + TaskDate.EXAMPLE_DATE;
+
+    /** Example of a well-formed {@link Command#BEFORE} command, shown when one is malformed. */
+    private static final String BEFORE_EXAMPLE =
+            Command.BEFORE.getKeyword() + " " + TaskDate.EXAMPLE_DATE;
+
+    /** How many tasks {@link #NEXT_EXAMPLE} asks for. */
+    private static final int NEXT_EXAMPLE_COUNT = 3;
+
+    /** Example of a well-formed {@link Command#NEXT} command, shown when one is malformed. */
+    private static final String NEXT_EXAMPLE =
+            Command.NEXT.getKeyword() + " " + NEXT_EXAMPLE_COUNT;
 
     /** Leading whitespace that sets the chatbot's output apart from the user's input. */
     private static final String INDENT = "    ";
@@ -255,6 +281,9 @@ public class Bob {
         String arguments = command.argumentsIn(line);
         switch (command) {
             case LIST -> showTasks();
+            case ON -> showTasksOn(arguments);
+            case BEFORE -> showTasksBefore(arguments);
+            case NEXT -> showNextTasks(arguments);
             case MARK -> setTaskDone(arguments, true);
             case UNMARK -> setTaskDone(arguments, false);
             case DELETE -> deleteTask(arguments);
@@ -510,8 +539,189 @@ public class Bob {
         }
         printLine("Here are the tasks in your list:");
         for (int i = 0; i < tasks.size(); i++) {
-            printLine((i + 1) + "." + tasks.get(i));
+            printLine(formatNumberedTask(i));
         }
+    }
+
+    /**
+     * Prints the tasks falling on one day, in the order they appear in the list.
+     *
+     * <p>A deadline falls on the day it is due and an event on any day it is
+     * running; a todo, having no date, never appears here. Which of those is which
+     * is decided by each kind of task in {@link Task#occursOn}, so this method only
+     * has to ask.
+     *
+     * @param dayText the day as the user typed it after {@code on}.
+     * @throws BobException if no day was given, or what was given is not a day.
+     */
+    private static void showTasksOn(String dayText) throws BobException {
+        LocalDate day = requireDay(dayText, ON_EXAMPLE);
+        String dayShown = TaskDate.formatDay(day);
+        showMatchingTasks("Here is what you have on " + dayShown + ":",
+                "You have nothing on " + dayShown + ".",
+                task -> task.occursOn(day));
+    }
+
+    /**
+     * Prints the tasks falling before one day, in the order they appear in the list.
+     *
+     * <p>The named day itself is not included, so {@code before} and {@code on} for
+     * the same day never show the same task twice. Someone wanting both can ask for
+     * the day after.
+     *
+     * @param dayText the day as the user typed it after {@code before}.
+     * @throws BobException if no day was given, or what was given is not a day.
+     */
+    private static void showTasksBefore(String dayText) throws BobException {
+        LocalDate day = requireDay(dayText, BEFORE_EXAMPLE);
+        String dayShown = TaskDate.formatDay(day);
+        showMatchingTasks("Here is what you have before " + dayShown + ":",
+                "You have nothing before " + dayShown + ".",
+                task -> task.isBefore(day));
+    }
+
+    /**
+     * Prints the tasks with the soonest dates on them, most urgent first.
+     *
+     * <p>Unlike the other two listings this one reorders what it shows, so the
+     * positions of the dated tasks are sorted rather than the tasks themselves.
+     * Sorting {@link #tasks} instead would answer the question just as well and
+     * quietly renumber the user's whole list as a side effect.
+     *
+     * <p>Fewer tasks than asked for are shown without complaint when the list does
+     * not hold that many, and the heading says how many are actually there.
+     *
+     * @param countText how many tasks to show, as the user typed it after {@code next}.
+     * @throws BobException if no count was given, or what was given is not a count
+     *                      of one or more.
+     */
+    private static void showNextTasks(String countText) throws BobException {
+        int wantedCount = requireCount(countText);
+        List<Integer> datedTaskIndexes = new ArrayList<>();
+        for (int i = 0; i < tasks.size(); i++) {
+            if (tasks.get(i).getScheduledDate().isPresent()) {
+                datedTaskIndexes.add(i);
+            }
+        }
+        if (datedTaskIndexes.isEmpty()) {
+            printLine("None of your tasks have a date on them yet.");
+            return;
+        }
+        // orElseThrow cannot fire: only tasks that have a date are in this list.
+        datedTaskIndexes.sort(Comparator.comparing(
+                index -> tasks.get(index).getScheduledDate().orElseThrow()));
+        int shownCount = Math.min(wantedCount, datedTaskIndexes.size());
+        printLine(shownCount == 1
+                ? "Here is your most urgent task:"
+                : "Here are your " + shownCount + " most urgent tasks, soonest first:");
+        for (int i = 0; i < shownCount; i++) {
+            printLine(formatNumberedTask(datedTaskIndexes.get(i)));
+        }
+    }
+
+    /**
+     * Prints the tasks the caller wants, or says there are none.
+     *
+     * <p>{@link Command#ON} and {@link Command#BEFORE} differ only in which tasks
+     * they want and what they call them, so the walking of the list and the choice
+     * between a listing and an "I found nothing" line are written here once.
+     *
+     * <p>Which tasks are wanted arrives as a {@link Predicate}: a question about a
+     * task that can be passed to a method and asked there. Passing the test itself
+     * is what lets one method serve both commands; the alternative — a flag saying
+     * which command called, and a {@code switch} on it here — would put each
+     * command's meaning somewhere other than in the command.
+     *
+     * @param heading      the line introducing the tasks, printed only if there are any.
+     * @param emptyMessage the line to print instead when no task matches.
+     * @param isWanted     the test a task has to pass to be listed.
+     */
+    private static void showMatchingTasks(String heading, String emptyMessage,
+            Predicate<Task> isWanted) {
+        List<String> matchingLines = new ArrayList<>();
+        for (int i = 0; i < tasks.size(); i++) {
+            if (isWanted.test(tasks.get(i))) {
+                matchingLines.add(formatNumberedTask(i));
+            }
+        }
+        if (matchingLines.isEmpty()) {
+            printLine(emptyMessage);
+            return;
+        }
+        printLine(heading);
+        for (String line : matchingLines) {
+            printLine(line);
+        }
+    }
+
+    /**
+     * Returns one task written as a line of a listing, for example
+     * {@code 2.[D][ ] return book (by: Dec 02 2026)}.
+     *
+     * <p>The number is the task's place in the whole list, not its place among the
+     * ones being shown. That is what makes a shortened listing useful: a number
+     * read off it can be typed straight into {@code mark}, {@code unmark} or
+     * {@code delete}, which is not true of numbers that count the matches.
+     *
+     * @param index the task's position in {@link #tasks}, counting from 0.
+     */
+    private static String formatNumberedTask(int index) {
+        // The user counts from 1, the list counts from 0.
+        return (index + 1) + "." + tasks.get(index);
+    }
+
+    /**
+     * Returns the day the user asked about, having checked that they named one and
+     * that it is a day this chatbot can read.
+     *
+     * <p>{@link Command#ON} and {@link Command#BEFORE} both take a day and reject
+     * the same two mistakes, so the checking lives here once. Only the example
+     * differs, and it is passed in so that each command is shown its own.
+     *
+     * @param dayText the day as the user typed it after the command word.
+     * @param example a well-formed use of the command that asked, to show the user.
+     * @return the day that text names.
+     * @throws BobException if nothing was typed after the command word, or what was
+     *                      typed is not a day.
+     */
+    private static LocalDate requireDay(String dayText, String example) throws BobException {
+        if (dayText.isEmpty()) {
+            throw new BobException("Which day should I look at?"
+                    + "\nFor example: " + example);
+        }
+        return TaskDate.parseDay(dayText);
+    }
+
+    /**
+     * Returns how many tasks {@link Command#NEXT} was asked for, having checked
+     * that the user named a number and that it is a number of tasks worth showing.
+     *
+     * <p>Zero and negative numbers are refused rather than quietly showing nothing,
+     * since a user who typed one has misunderstood the command and would learn
+     * nothing from an empty answer.
+     *
+     * @param countText the count as the user typed it after {@code next}.
+     * @return how many tasks to show, always one or more.
+     * @throws BobException if nothing was typed after {@code next}, or what was
+     *                      typed is not a whole number, or is less than one.
+     */
+    private static int requireCount(String countText) throws BobException {
+        if (countText.isEmpty()) {
+            throw new BobException("How many tasks should I show?"
+                    + "\nFor example: " + NEXT_EXAMPLE);
+        }
+        int count;
+        try {
+            count = Integer.parseInt(countText);
+        } catch (NumberFormatException e) {
+            throw new BobException("\"" + countText + "\" isn't a number of tasks."
+                    + "\nFor example: " + NEXT_EXAMPLE);
+        }
+        if (count < 1) {
+            throw new BobException("I can show you one task or more, but not " + count + "."
+                    + "\nFor example: " + NEXT_EXAMPLE);
+        }
+        return count;
     }
 
     /**

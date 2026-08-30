@@ -1,6 +1,8 @@
 package bob;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A task that runs from one point in time to another, for example
@@ -42,6 +44,30 @@ public class Event extends Task {
     @Override
     public String getTypeIcon() {
         return TYPE_ICON;
+    }
+
+    /**
+     * Returns the start, which is the date an event is pinned to: it is when the
+     * event first wants the user's attention, so it is what an event is ordered by
+     * and what {@link Command#BEFORE} measures.
+     */
+    @Override
+    public Optional<TaskDate> getScheduledDate() {
+        return Optional.of(from);
+    }
+
+    /**
+     * Returns whether the event is running on {@code day}, counting the day it
+     * starts and the day it ends as days it is running.
+     *
+     * <p>Widened from the inherited single-date test because an event, unlike a
+     * deadline, covers a stretch of time. Asking what is on the Wednesday of a
+     * week-long orientation should find it, and the inherited version — which
+     * compares only the start — would not.
+     */
+    @Override
+    public boolean occursOn(LocalDate day) {
+        return !from.isAfter(day) && !to.isBefore(day);
     }
 
     /**
