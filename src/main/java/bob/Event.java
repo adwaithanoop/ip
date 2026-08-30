@@ -51,7 +51,7 @@ public class Event extends Task {
     /**
      * Returns the start, which is the date an event is pinned to: it is when the
      * event first wants the user's attention, so it is what an event is ordered by
-     * and what {@link Command#BEFORE} and {@link Command#AFTER} measure.
+     * and what {@link CommandWord#BEFORE} and {@link CommandWord#AFTER} measure.
      */
     @Override
     public Optional<TaskDate> getScheduledDate() {

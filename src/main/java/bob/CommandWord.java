@@ -7,10 +7,16 @@ import java.util.StringJoiner;
  * The words the chatbot understands at the start of a line, and the rules for
  * recognizing each one.
  *
+ * <p>The name says <em>word</em> because a word is all this is. It holds the
+ * chatbot's vocabulary and the rules for recognizing one of those words at the
+ * start of a line — nothing about what is to be <em>done</em> once a word has
+ * been recognized. Keeping the two apart leaves the plainer name {@code Command}
+ * free for the classes that carry the doing.
+ *
  * <p>These were eight separate {@code String} constants in {@link Bob}. An enum
  * suits them better because they are a fixed, known-in-advance set of values
  * that belong together: the compiler now knows the whole set, so a command can
- * be passed around as a {@code Command} rather than as a {@code String} that
+ * be passed around as a {@code CommandWord} rather than as a {@code String} that
  * might hold any text at all, and a typo like {@code "delet"} becomes a
  * compile error instead of a command that silently never matches.
  *
@@ -22,7 +28,7 @@ import java.util.StringJoiner;
  * fall out of step with the commands that actually exist — which is exactly the
  * kind of mistake that is easy to make when adding a command.
  */
-public enum Command {
+public enum CommandWord {
 
     /** Adds a task with no date attached; used as {@code todo <description>}. */
     TODO("todo", true),
@@ -81,7 +87,7 @@ public enum Command {
      * @param keyword          the word the user types.
      * @param canTakeArguments whether text may follow that word.
      */
-    Command(String keyword, boolean canTakeArguments) {
+    CommandWord(String keyword, boolean canTakeArguments) {
         this.keyword = keyword;
         this.canTakeArguments = canTakeArguments;
     }
@@ -140,8 +146,8 @@ public enum Command {
      * @param line one whole line as the user typed it, with surrounding spaces removed.
      * @return the matching command, or an empty {@code Optional} if there is none.
      */
-    public static Optional<Command> of(String line) {
-        for (Command command : values()) {
+    public static Optional<CommandWord> of(String line) {
+        for (CommandWord command : values()) {
             if (command.matches(line)) {
                 return Optional.of(command);
             }
@@ -158,7 +164,7 @@ public enum Command {
      */
     public static String allKeywords() {
         StringJoiner keywords = new StringJoiner(", ");
-        for (Command command : values()) {
+        for (CommandWord command : values()) {
             keywords.add(command.keyword);
         }
         return keywords.toString();

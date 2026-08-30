@@ -17,7 +17,7 @@ import java.util.function.Predicate;
  * longer touches the list itself.
  *
  * <p>Positions matter here in a way they do not in an ordinary collection. The
- * user names a task by the number it has in {@link Command#LIST}, so a shortened
+ * user names a task by the number it has in {@link CommandWord#LIST}, so a shortened
  * listing is only useful if it shows each task under that same number — a number
  * counting the matches could not be typed into {@code mark} or {@code delete}.
  * That is why {@link #findIndexes} and {@link #findIndexesSoonestFirst} return
@@ -133,8 +133,8 @@ public class TaskList {
      *
      * <p>Which tasks are wanted arrives as a {@link Predicate}: a question about a
      * task that can be passed to a method and asked there. Passing the test itself
-     * is what lets this one method serve {@link Command#ON}, {@link Command#BEFORE}
-     * and {@link Command#AFTER} alike; the alternative — a flag saying which
+     * is what lets this one method serve {@link CommandWord#ON}, {@link CommandWord#BEFORE}
+     * and {@link CommandWord#AFTER} alike; the alternative — a flag saying which
      * command called, and a {@code switch} on it here — would put each command's
      * meaning somewhere other than in the command.
      *

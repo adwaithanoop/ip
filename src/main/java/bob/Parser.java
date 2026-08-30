@@ -44,14 +44,14 @@ public class Parser {
     private static final String TO_KEYWORD = "/to";
 
     /**
-     * Example of a well-formed {@link Command#DEADLINE} command, shown when one is malformed.
+     * Example of a well-formed {@link CommandWord#DEADLINE} command, shown when one is malformed.
      *
      * <p>The date in it is taken from {@link TaskDate}, which is the class that
      * decides how a date may be written, so this example cannot drift out of step
      * with the dates the chatbot actually accepts.
      */
     private static final String DEADLINE_EXAMPLE =
-            Command.DEADLINE.getKeyword() + " return book " + BY_KEYWORD + " " + TaskDate.EXAMPLE_DATE;
+            CommandWord.DEADLINE.getKeyword() + " return book " + BY_KEYWORD + " " + TaskDate.EXAMPLE_DATE;
 
     /**
      * The end time shown in {@link #EVENT_EXAMPLE}, two hours after the start.
@@ -63,17 +63,17 @@ public class Parser {
      */
     private static final String EVENT_EXAMPLE_END = "2026-12-02 2000";
 
-    /** Example of a well-formed {@link Command#EVENT} command, shown when one is malformed. */
+    /** Example of a well-formed {@link CommandWord#EVENT} command, shown when one is malformed. */
     private static final String EVENT_EXAMPLE =
-            Command.EVENT.getKeyword() + " project meeting " + FROM_KEYWORD + " "
+            CommandWord.EVENT.getKeyword() + " project meeting " + FROM_KEYWORD + " "
                     + TaskDate.EXAMPLE_DATE_TIME + " " + TO_KEYWORD + " " + EVENT_EXAMPLE_END;
 
     /** How many tasks {@link #NEXT_EXAMPLE} asks for. */
     private static final int NEXT_EXAMPLE_COUNT = 3;
 
-    /** Example of a well-formed {@link Command#NEXT} command, shown when one is malformed. */
+    /** Example of a well-formed {@link CommandWord#NEXT} command, shown when one is malformed. */
     private static final String NEXT_EXAMPLE =
-            Command.NEXT.getKeyword() + " " + NEXT_EXAMPLE_COUNT;
+            CommandWord.NEXT.getKeyword() + " " + NEXT_EXAMPLE_COUNT;
 
     /**
      * One line of the user's, made sense of: which command it is, and what was
@@ -89,13 +89,13 @@ public class Parser {
      * @param arguments everything written after the command word, trimmed, which
      *                  is an empty string when nothing was.
      */
-    public record ParsedCommand(Command command, String arguments) {
+    public record ParsedCommand(CommandWord command, String arguments) {
     }
 
     /**
      * Returns the command a line asks for, together with its arguments.
      *
-     * <p>Which word is which command is {@link Command}'s own business; what this
+     * <p>Which word is which command is {@link CommandWord}'s own business; what this
      * method adds is the two ways a line can fail to name one at all, each with
      * its own explanation rather than a shared "bad command".
      *
@@ -106,17 +106,17 @@ public class Parser {
     public static ParsedCommand parseCommand(String line) throws BobException {
         if (line.isEmpty()) {
             throw new BobException("You didn't type anything."
-                    + "\nTell me about a task, or type " + Command.LIST.getKeyword()
+                    + "\nTell me about a task, or type " + CommandWord.LIST.getKeyword()
                     + " to see the ones I already have.");
         }
         // orElseThrow unwraps the Optional when a command was recognized, and
         // throws the "I don't know what that means" error when none was.
-        Command command = Command.of(line).orElseThrow(() -> unknownCommand(line));
+        CommandWord command = CommandWord.of(line).orElseThrow(() -> unknownCommand(line));
         return new ParsedCommand(command, command.argumentsIn(line));
     }
 
     /**
-     * Returns the {@link Todo} described by the text following {@link Command#TODO}.
+     * Returns the {@link Todo} described by the text following {@link CommandWord#TODO}.
      * Everything the user typed is the description.
      *
      * @param arguments the text following the command word.
@@ -125,14 +125,14 @@ public class Parser {
     public static Todo parseTodo(String arguments) throws BobException {
         if (arguments.isEmpty()) {
             throw new BobException("A todo needs a description — tell me what to do."
-                    + "\nFor example: " + Command.TODO.getKeyword() + " borrow book");
+                    + "\nFor example: " + CommandWord.TODO.getKeyword() + " borrow book");
         }
         return new Todo(arguments);
     }
 
     /**
      * Returns the {@link Deadline} described by the text following
-     * {@link Command#DEADLINE}, which is the description and the due date
+     * {@link CommandWord#DEADLINE}, which is the description and the due date
      * separated by {@value #BY_KEYWORD}.
      *
      * <p>The three things that can be missing — the {@value #BY_KEYWORD} marker,
@@ -168,7 +168,7 @@ public class Parser {
 
     /**
      * Returns the {@link Event} described by the text following
-     * {@link Command#EVENT}, which is the description, then {@value #FROM_KEYWORD}
+     * {@link CommandWord#EVENT}, which is the description, then {@value #FROM_KEYWORD}
      * and the start, then {@value #TO_KEYWORD} and the end.
      *
      * <p>The end marker is looked for after the start marker, so that a
@@ -216,14 +216,14 @@ public class Parser {
 
     /**
      * Returns the task number the user typed, counting from 1 to match the
-     * numbering shown by {@link Command#LIST}.
+     * numbering shown by {@link CommandWord#LIST}.
      *
      * <p>Only the two mistakes that are visible in the text itself are caught
      * here: nothing typed after the command word, and something typed that is not
      * a number. Whether a number that <em>is</em> a number names a task the user
      * has is left to the caller, which is the one holding the list.
      *
-     * <p>The command is passed as a {@link Command} rather than as its keyword, so
+     * <p>The command is passed as a {@link CommandWord} rather than as its keyword, so
      * a caller cannot name a command in the message that does not exist. The
      * keyword is read off it here, where the message is written.
      *
@@ -233,9 +233,9 @@ public class Parser {
      * @throws BobException if no task number was given, or what was given is not
      *                      a number.
      */
-    public static int parseTaskNumber(String taskNumberText, Command command) throws BobException {
+    public static int parseTaskNumber(String taskNumberText, CommandWord command) throws BobException {
         String word = command.getKeyword();
-        String listCommand = Command.LIST.getKeyword();
+        String listCommand = CommandWord.LIST.getKeyword();
         if (taskNumberText.isEmpty()) {
             throw new BobException("Which task should I " + word + "?"
                     + "\nGive me its number from " + listCommand + ", for example: "
@@ -256,7 +256,7 @@ public class Parser {
      * Returns the day the user asked about, having checked that they named one and
      * that it is a day this chatbot can read.
      *
-     * <p>{@link Command#ON}, {@link Command#BEFORE} and {@link Command#AFTER} all
+     * <p>{@link CommandWord#ON}, {@link CommandWord#BEFORE} and {@link CommandWord#AFTER} all
      * take a day and reject the same two mistakes, so the checking is written here
      * once. Only the example differs, and it is built from the command that asked,
      * so each of the three is shown its own.
@@ -267,7 +267,7 @@ public class Parser {
      * @throws BobException if nothing was typed after the command word, or what was
      *                      typed is not a day.
      */
-    public static LocalDate parseDay(String dayText, Command command) throws BobException {
+    public static LocalDate parseDay(String dayText, CommandWord command) throws BobException {
         if (dayText.isEmpty()) {
             throw new BobException("Which day should I look at?"
                     + "\nFor example: " + dayExample(command));
@@ -276,7 +276,7 @@ public class Parser {
     }
 
     /**
-     * Returns how many tasks {@link Command#NEXT} was asked for, having checked
+     * Returns how many tasks {@link CommandWord#NEXT} was asked for, having checked
      * that the user named a number and that it is a number of tasks worth showing.
      *
      * <p>Zero and negative numbers are refused rather than quietly showing nothing,
@@ -316,7 +316,7 @@ public class Parser {
      * apiece would be three chances for one of them to be forgotten when a fourth
      * such command is added.
      */
-    private static String dayExample(Command command) {
+    private static String dayExample(CommandWord command) {
         return command.getKeyword() + " " + TaskDate.EXAMPLE_DATE;
     }
 
@@ -361,6 +361,6 @@ public class Parser {
      */
     private static BobException unknownCommand(String line) {
         return new BobException("Sorry, I don't know what \"" + line + "\" means."
-                + "\nTry one of: " + Command.allKeywords());
+                + "\nTry one of: " + CommandWord.allKeywords());
     }
 }

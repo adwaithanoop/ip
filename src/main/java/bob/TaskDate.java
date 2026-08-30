@@ -18,8 +18,8 @@ import java.util.Locale;
  * and two of them can be compared to answer questions such as which task is due
  * first — neither of which can be done with a string.
  *
- * <p>That comparing is what {@link Command#ON}, {@link Command#BEFORE},
- * {@link Command#AFTER} and {@link Command#NEXT} are built on. This class
+ * <p>That comparing is what {@link CommandWord#ON}, {@link CommandWord#BEFORE},
+ * {@link CommandWord#AFTER} and {@link CommandWord#NEXT} are built on. This class
  * implements {@link Comparable} so that a list of dates can be sorted, and offers
  * {@link #isOn}, {@link #isBefore} and {@link #isAfter} so that the code asking
  * the questions can stay in terms of days rather than reaching inside for the

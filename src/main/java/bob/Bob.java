@@ -12,7 +12,7 @@ import java.util.function.Predicate;
  *
  * <p>Tasks come in three kinds — {@link Todo}, {@link Deadline} and
  * {@link Event} — each added with its own command word. The words the chatbot
- * understands are listed in {@link Command}; making sense of a whole line
+ * understands are listed in {@link CommandWord}; making sense of a whole line
  * written with one of them is {@link Parser}'s work, and this class is left to
  * say what each command does once it has been understood.
  *
@@ -43,12 +43,12 @@ import java.util.function.Predicate;
  * lets a date be shown back in a friendlier form than it was typed in.
  *
  * <p>Because those dates are understood, the chatbot can be asked about them
- * rather than only told them: {@link Command#ON}, {@link Command#BEFORE} and
- * {@link Command#AFTER} pick out the tasks falling on, before, or after a given
- * day, and {@link Command#NEXT} shows the few with the soonest dates on them.
+ * rather than only told them: {@link CommandWord#ON}, {@link CommandWord#BEFORE} and
+ * {@link CommandWord#AFTER} pick out the tasks falling on, before, or after a given
+ * day, and {@link CommandWord#NEXT} shows the few with the soonest dates on them.
  * All four are views of the one task list — they change nothing, so nothing is
  * saved after them — and each shows a task with the number it has in
- * {@link Command#LIST}, so a task found this way can be marked or deleted
+ * {@link CommandWord#LIST}, so a task found this way can be marked or deleted
  * without looking it up again.
  *
  * <p>Anything the user types that cannot be carried out — an unknown command,
@@ -165,7 +165,7 @@ public class Bob {
      * Reads one command per line and responds to it in its own block,
      * stopping when the user types {@code bye}.
      *
-     * <p>{@link Command#BYE} is dealt with here rather than in
+     * <p>{@link CommandWord#BYE} is dealt with here rather than in
      * {@link #handleCommand} because it is the one command whose answer is not
      * printed as a block in the middle of the conversation: the farewell is
      * printed after the loop has ended.
@@ -186,7 +186,7 @@ public class Bob {
     private void handleCommandsUntilExit() {
         while (ui.hasNextCommand()) {
             String line = ui.readCommand();
-            if (Command.BYE.matches(line)) {
+            if (CommandWord.BYE.matches(line)) {
                 break;
             }
             ui.openBlock();
@@ -282,7 +282,7 @@ public class Bob {
      * see which task is gone rather than having to work it out from the numbering.
      *
      * <p>{@link TaskList#delete} closes the gap left behind, so the numbers shown
-     * by {@link Command#LIST} stay a run of 1, 2, 3 with nothing missing. That is
+     * by {@link CommandWord#LIST} stay a run of 1, 2, 3 with nothing missing. That is
      * why the confirmation shows the task itself: after a deletion the number the
      * user typed refers to a different task than it did before.
      *
@@ -291,7 +291,7 @@ public class Bob {
      *                      or if the shortened list could not be written to disk.
      */
     private void deleteTask(String taskNumberText) throws BobException {
-        int taskIndex = requireTaskIndex(taskNumberText, Command.DELETE);
+        int taskIndex = requireTaskIndex(taskNumberText, CommandWord.DELETE);
         // delete returns the task it took out, so it can be shown without
         // having to be fetched separately beforehand.
         Task removed = tasks.delete(taskIndex);
@@ -303,11 +303,11 @@ public class Bob {
 
     /**
      * Sets the done status of the task the user named and shows it back to them.
-     * Both {@link Command#MARK} and {@link Command#UNMARK} share this method,
+     * Both {@link CommandWord#MARK} and {@link CommandWord#UNMARK} share this method,
      * since they differ only in the status they set and the wording they report.
      *
      * @param taskNumberText the task number as the user typed it, counting from 1
-     *                       to match the numbering shown by {@link Command#LIST}.
+     *                       to match the numbering shown by {@link CommandWord#LIST}.
      * @param isDone         {@code true} to mark the task as done,
      *                       {@code false} to mark it as not done yet.
      * @throws BobException if no task number was given, if what was given is not a
@@ -315,7 +315,7 @@ public class Bob {
      *                      list could not be written to disk.
      */
     private void setTaskDone(String taskNumberText, boolean isDone) throws BobException {
-        Command command = isDone ? Command.MARK : Command.UNMARK;
+        CommandWord command = isDone ? CommandWord.MARK : CommandWord.UNMARK;
         Task task = tasks.get(requireTaskIndex(taskNumberText, command));
         if (isDone) {
             task.markAsDone();
@@ -336,20 +336,20 @@ public class Bob {
      * <p>Reading the number out of what the user typed is left to
      * {@link Parser#parseTaskNumber}. What is added here is the half of the
      * question that only the task list can answer: whether there is a task with
-     * that number to act on. {@link Command#MARK}, {@link Command#UNMARK} and
-     * {@link Command#DELETE} all need that check, so it is written here once
+     * that number to act on. {@link CommandWord#MARK}, {@link CommandWord#UNMARK} and
+     * {@link CommandWord#DELETE} all need that check, so it is written here once
      * instead of being repeated in each of them.
      *
      * @param taskNumberText the task number as the user typed it, counting from 1
-     *                       to match the numbering shown by {@link Command#LIST}.
+     *                       to match the numbering shown by {@link CommandWord#LIST}.
      * @param command        the command to name in any error message.
      * @return the position of that task in {@link #tasks}, counting from 0.
      * @throws BobException if no task number was given, if what was given is not a
      *                      number, or if no task has that number.
      */
-    private int requireTaskIndex(String taskNumberText, Command command) throws BobException {
+    private int requireTaskIndex(String taskNumberText, CommandWord command) throws BobException {
         String word = command.getKeyword();
-        String listCommand = Command.LIST.getKeyword();
+        String listCommand = CommandWord.LIST.getKeyword();
         int taskNumber = Parser.parseTaskNumber(taskNumberText, command);
         if (tasks.isEmpty()) {
             throw new BobException("There is nothing to " + word
@@ -388,7 +388,7 @@ public class Bob {
      * @throws BobException if no day was given, or what was given is not a day.
      */
     private void showTasksOn(String dayText) throws BobException {
-        LocalDate day = Parser.parseDay(dayText, Command.ON);
+        LocalDate day = Parser.parseDay(dayText, CommandWord.ON);
         String dayShown = TaskDate.formatDay(day);
         showMatchingTasks("Here is what you have on " + dayShown + ":",
                 "You have nothing on " + dayShown + ".",
@@ -406,7 +406,7 @@ public class Bob {
      * @throws BobException if no day was given, or what was given is not a day.
      */
     private void showTasksBefore(String dayText) throws BobException {
-        LocalDate day = Parser.parseDay(dayText, Command.BEFORE);
+        LocalDate day = Parser.parseDay(dayText, CommandWord.BEFORE);
         String dayShown = TaskDate.formatDay(day);
         showMatchingTasks("Here is what you have before " + dayShown + ":",
                 "You have nothing before " + dayShown + ".",
@@ -430,7 +430,7 @@ public class Bob {
      * @throws BobException if no day was given, or what was given is not a day.
      */
     private void showTasksAfter(String dayText) throws BobException {
-        LocalDate day = Parser.parseDay(dayText, Command.AFTER);
+        LocalDate day = Parser.parseDay(dayText, CommandWord.AFTER);
         String dayShown = TaskDate.formatDay(day);
         showMatchingTasks("Here is what you have after " + dayShown + ":",
                 "You have nothing after " + dayShown + ".",
@@ -469,7 +469,7 @@ public class Bob {
     /**
      * Prints the tasks the caller wants, or says there are none.
      *
-     * <p>{@link Command#ON}, {@link Command#BEFORE} and {@link Command#AFTER}
+     * <p>{@link CommandWord#ON}, {@link CommandWord#BEFORE} and {@link CommandWord#AFTER}
      * differ only in which tasks they want and what they call them, so the choice
      * between a listing and an "I found nothing" line is written here once. The
      * search itself belongs to the list, and is left to
