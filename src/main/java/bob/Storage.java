@@ -17,15 +17,16 @@ import java.util.StringJoiner;
  *
  * <pre>
  * T | 1 | read book
- * D | 0 | return book | June 6th
- * E | 0 | project meeting | Aug 6th 2pm | 4pm
+ * D | 0 | return book | 2026-06-06
+ * E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1600
  * </pre>
  *
  * <p>The first field says which kind of task it is, the second whether it has
  * been done, the third what it is, and any field after that holds a date that
- * kind of task carries. An event's start and end are kept as two fields rather
- * than as one {@code Aug 6th 2-4pm} field, so that reading them back does not
- * mean splitting up a date the user was free to write any way they liked.
+ * kind of task carries. Dates are written the way the user types them at the
+ * chatbot, which is the way {@link TaskDate} reads them back. An event's start
+ * and end are kept as two fields rather than as one, so that reading them back
+ * is a matter of taking two fields apart.
  *
  * <p>A vertical bar or a backslash inside what the user typed is written as
  * {@code \|} or {@code \\}. Without that, a task such as
@@ -260,7 +261,7 @@ public class Storage {
         requireFieldCount(fields, FIELD_COUNT_DEADLINE, "deadline");
         Deadline deadline = new Deadline(
                 requireNonEmpty(fields.get(2), "description"),
-                requireNonEmpty(fields.get(3), "due date"));
+                requireDate(fields.get(3), "due date"));
         setDone(deadline, fields.get(1));
         return deadline;
     }
@@ -270,8 +271,8 @@ public class Storage {
         requireFieldCount(fields, FIELD_COUNT_EVENT, "event");
         Event event = new Event(
                 requireNonEmpty(fields.get(2), "description"),
-                requireNonEmpty(fields.get(3), "start time"),
-                requireNonEmpty(fields.get(4), "end time"));
+                requireDate(fields.get(3), "start time"),
+                requireDate(fields.get(4), "end time"));
         setDone(event, fields.get(1));
         return event;
     }
@@ -319,6 +320,30 @@ public class Storage {
             throw new BobException("the " + fieldName + " is empty");
         }
         return field;
+    }
+
+    /**
+     * Returns the date written in a field, having checked that it is one.
+     *
+     * <p>{@link TaskDate#parse} already refuses text that is not a date, but its
+     * complaint is written for someone typing a command and runs to three lines
+     * of advice. It is replaced here by a shorter one, because these messages are
+     * listed alongside every other complaint about the file and are read by
+     * someone repairing it.
+     *
+     * @param field     the saved field that should hold a date.
+     * @param fieldName what to call it in a message, for example {@code due date}.
+     * @throws BobException if the field is empty or does not hold a date.
+     */
+    private static TaskDate requireDate(String field, String fieldName) throws BobException {
+        requireNonEmpty(field, fieldName);
+        try {
+            return TaskDate.parse(field);
+        } catch (BobException e) {
+            throw new BobException("the " + fieldName + " \"" + field + "\" isn't a date"
+                    + " (dates are saved as " + TaskDate.EXAMPLE_DATE + ", or "
+                    + TaskDate.EXAMPLE_DATE_TIME + " with a time)");
+        }
     }
 
     /**

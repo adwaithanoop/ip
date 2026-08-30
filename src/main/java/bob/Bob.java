@@ -19,10 +19,15 @@ import java.util.Scanner;
  * left them. All of that is done by {@link Storage}; this class only says when
  * to load and when to save.
  *
+ * <p>A deadline and an event carry dates the chatbot understands rather than
+ * text it merely repeats: each is read into a {@link TaskDate}, which is what
+ * lets a date be shown back in a friendlier form than it was typed in.
+ *
  * <p>Anything the user types that cannot be carried out — an unknown command,
- * a missing description, a task number that does not exist — is reported by
- * throwing a {@link BobException} carrying the explanation. The command loop
- * catches it and prints it, so a mistyped command never ends the conversation.
+ * a missing description, a task number that does not exist, a due date that is
+ * not a date — is reported by throwing a {@link BobException} carrying the
+ * explanation. The command loop catches it and prints it, so a mistyped command
+ * never ends the conversation.
  * A failure to save is reported the same way, so it is seen rather than passing
  * silently, and the conversation carries on.
  */
@@ -40,14 +45,30 @@ public class Bob {
     /** Marker separating an event's start from its end. */
     private static final String TO_KEYWORD = "/to";
 
-    /** Example of a well-formed {@link Command#DEADLINE} command, shown when one is malformed. */
+    /**
+     * Example of a well-formed {@link Command#DEADLINE} command, shown when one is malformed.
+     *
+     * <p>The date in it is taken from {@link TaskDate}, which is the class that
+     * decides how a date may be written, so this example cannot drift out of step
+     * with the dates the chatbot actually accepts.
+     */
     private static final String DEADLINE_EXAMPLE =
-            Command.DEADLINE.getKeyword() + " return book " + BY_KEYWORD + " Sunday";
+            Command.DEADLINE.getKeyword() + " return book " + BY_KEYWORD + " " + TaskDate.EXAMPLE_DATE;
+
+    /**
+     * The end time shown in {@link #EVENT_EXAMPLE}, two hours after the start.
+     *
+     * <p>Written out here rather than taken from {@link TaskDate}, which offers a
+     * single example date and not a pair of them. It is the one example date in
+     * this class that is spelled out, so if the accepted form of a date ever
+     * changes, this is the one line to change with it.
+     */
+    private static final String EVENT_EXAMPLE_END = "2026-12-02 2000";
 
     /** Example of a well-formed {@link Command#EVENT} command, shown when one is malformed. */
     private static final String EVENT_EXAMPLE =
-            Command.EVENT.getKeyword() + " project meeting " + FROM_KEYWORD
-                    + " Mon 2pm " + TO_KEYWORD + " 4pm";
+            Command.EVENT.getKeyword() + " project meeting " + FROM_KEYWORD + " "
+                    + TaskDate.EXAMPLE_DATE_TIME + " " + TO_KEYWORD + " " + EVENT_EXAMPLE_END;
 
     /** Leading whitespace that sets the chatbot's output apart from the user's input. */
     private static final String INDENT = "    ";
@@ -270,7 +291,12 @@ public class Bob {
      * the description before it, the date after it — are reported separately, so
      * the user is told which one to add rather than just that the command is wrong.
      *
-     * @throws BobException if the marker, the description or the due date is missing.
+     * <p>The due date is handed to {@link TaskDate#parse} rather than stored as
+     * typed, so a deadline is only added once its date has been understood. Text
+     * that is not a date is refused there, with its own explanation.
+     *
+     * @throws BobException if the marker, the description or the due date is
+     *                      missing, or if the due date is not a date.
      */
     private static void addDeadline(String arguments) throws BobException {
         int byIndex = arguments.indexOf(BY_KEYWORD);
@@ -288,7 +314,7 @@ public class Bob {
             throw new BobException("You wrote " + BY_KEYWORD + " but not when it is due."
                     + "\nFor example: " + DEADLINE_EXAMPLE);
         }
-        addTask(new Deadline(description, by));
+        addTask(new Deadline(description, TaskDate.parse(by)));
     }
 
     /**
@@ -300,7 +326,11 @@ public class Bob {
      * {@value #TO_KEYWORD} appearing earlier in the description is not
      * mistaken for the separator.
      *
-     * @throws BobException if a marker, the description, the start or the end is missing.
+     * <p>As with a deadline, both times are handed to {@link TaskDate#parse}, so
+     * an event is only added once the chatbot has understood when it runs.
+     *
+     * @throws BobException if a marker, the description, the start or the end is
+     *                      missing, or if the start or the end is not a date.
      */
     private static void addEvent(String arguments) throws BobException {
         int fromIndex = arguments.indexOf(FROM_KEYWORD);
@@ -325,7 +355,7 @@ public class Bob {
                     + FROM_KEYWORD + " and one after " + TO_KEYWORD + "."
                     + "\nFor example: " + EVENT_EXAMPLE);
         }
-        addTask(new Event(description, from, to));
+        addTask(new Event(description, TaskDate.parse(from), TaskDate.parse(to)));
     }
 
     /**
