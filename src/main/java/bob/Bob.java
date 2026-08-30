@@ -27,12 +27,13 @@ import java.util.function.Predicate;
  * lets a date be shown back in a friendlier form than it was typed in.
  *
  * <p>Because those dates are understood, the chatbot can be asked about them
- * rather than only told them: {@link Command#ON} and {@link Command#BEFORE} pick
- * out the tasks falling on, or before, a given day, and {@link Command#NEXT}
- * shows the few with the soonest dates on them. All three are views of the one
- * task list — they change nothing, so nothing is saved after them — and each
- * shows a task with the number it has in {@link Command#LIST}, so a task found
- * this way can be marked or deleted without looking it up again.
+ * rather than only told them: {@link Command#ON}, {@link Command#BEFORE} and
+ * {@link Command#AFTER} pick out the tasks falling on, before, or after a given
+ * day, and {@link Command#NEXT} shows the few with the soonest dates on them.
+ * All four are views of the one task list — they change nothing, so nothing is
+ * saved after them — and each shows a task with the number it has in
+ * {@link Command#LIST}, so a task found this way can be marked or deleted
+ * without looking it up again.
  *
  * <p>Anything the user types that cannot be carried out — an unknown command,
  * a missing description, a task number that does not exist, a due date that is
@@ -88,6 +89,10 @@ public class Bob {
     /** Example of a well-formed {@link Command#BEFORE} command, shown when one is malformed. */
     private static final String BEFORE_EXAMPLE =
             Command.BEFORE.getKeyword() + " " + TaskDate.EXAMPLE_DATE;
+
+    /** Example of a well-formed {@link Command#AFTER} command, shown when one is malformed. */
+    private static final String AFTER_EXAMPLE =
+            Command.AFTER.getKeyword() + " " + TaskDate.EXAMPLE_DATE;
 
     /** How many tasks {@link #NEXT_EXAMPLE} asks for. */
     private static final int NEXT_EXAMPLE_COUNT = 3;
@@ -283,6 +288,7 @@ public class Bob {
             case LIST -> showTasks();
             case ON -> showTasksOn(arguments);
             case BEFORE -> showTasksBefore(arguments);
+            case AFTER -> showTasksAfter(arguments);
             case NEXT -> showNextTasks(arguments);
             case MARK -> setTaskDone(arguments, true);
             case UNMARK -> setTaskDone(arguments, false);
@@ -581,6 +587,30 @@ public class Bob {
     }
 
     /**
+     * Prints the tasks falling after one day, in the order they appear in the list.
+     *
+     * <p>The mirror image of {@link #showTasksBefore}: the named day itself is left
+     * out here too, so a task pinned to an earlier day is found by {@code before},
+     * one pinned to a later day by {@code after}, and a task pinned to the day
+     * itself by neither — that one is what {@code on} is for.
+     *
+     * <p>An event is placed by its start, as everywhere else, so an event that has
+     * already begun is not listed as still to come even when it is running past the
+     * day asked about. {@code on} finds that event, which is the question it
+     * answers.
+     *
+     * @param dayText the day as the user typed it after {@code after}.
+     * @throws BobException if no day was given, or what was given is not a day.
+     */
+    private static void showTasksAfter(String dayText) throws BobException {
+        LocalDate day = requireDay(dayText, AFTER_EXAMPLE);
+        String dayShown = TaskDate.formatDay(day);
+        showMatchingTasks("Here is what you have after " + dayShown + ":",
+                "You have nothing after " + dayShown + ".",
+                task -> task.isAfter(day));
+    }
+
+    /**
      * Prints the tasks with the soonest dates on them, most urgent first.
      *
      * <p>Unlike the other two listings this one reorders what it shows, so the
@@ -622,15 +652,16 @@ public class Bob {
     /**
      * Prints the tasks the caller wants, or says there are none.
      *
-     * <p>{@link Command#ON} and {@link Command#BEFORE} differ only in which tasks
-     * they want and what they call them, so the walking of the list and the choice
-     * between a listing and an "I found nothing" line are written here once.
+     * <p>{@link Command#ON}, {@link Command#BEFORE} and {@link Command#AFTER}
+     * differ only in which tasks they want and what they call them, so the walking
+     * of the list and the choice between a listing and an "I found nothing" line
+     * are written here once.
      *
      * <p>Which tasks are wanted arrives as a {@link Predicate}: a question about a
      * task that can be passed to a method and asked there. Passing the test itself
-     * is what lets one method serve both commands; the alternative — a flag saying
-     * which command called, and a {@code switch} on it here — would put each
-     * command's meaning somewhere other than in the command.
+     * is what lets one method serve all three commands; the alternative — a flag
+     * saying which command called, and a {@code switch} on it here — would put
+     * each command's meaning somewhere other than in the command.
      *
      * @param heading      the line introducing the tasks, printed only if there are any.
      * @param emptyMessage the line to print instead when no task matches.
@@ -674,9 +705,10 @@ public class Bob {
      * Returns the day the user asked about, having checked that they named one and
      * that it is a day this chatbot can read.
      *
-     * <p>{@link Command#ON} and {@link Command#BEFORE} both take a day and reject
-     * the same two mistakes, so the checking lives here once. Only the example
-     * differs, and it is passed in so that each command is shown its own.
+     * <p>{@link Command#ON}, {@link Command#BEFORE} and {@link Command#AFTER} all
+     * take a day and reject the same two mistakes, so the checking lives here once.
+     * Only the example differs, and it is passed in so that each command is shown
+     * its own.
      *
      * @param dayText the day as the user typed it after the command word.
      * @param example a well-formed use of the command that asked, to show the user.

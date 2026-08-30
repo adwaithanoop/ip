@@ -57,11 +57,11 @@ public abstract class Task {
      * Returns the date this task is pinned to, or an empty {@link Optional} for a
      * task that is not pinned to any date.
      *
-     * <p>This is what lets {@link Command#ON}, {@link Command#BEFORE} and
-     * {@link Command#NEXT} work through one list holding all three kinds of task
-     * without asking what kind each one is: a {@link Deadline} answers with its
-     * due date, an {@link Event} with its start, and a {@link Todo} accepts this
-     * default and answers that it has none.
+     * <p>This is what lets {@link Command#ON}, {@link Command#BEFORE},
+     * {@link Command#AFTER} and {@link Command#NEXT} work through one list holding
+     * all three kinds of task without asking what kind each one is: a
+     * {@link Deadline} answers with its due date, an {@link Event} with its start,
+     * and a {@link Todo} accepts this default and answers that it has none.
      *
      * <p>An {@code Optional} is returned rather than {@code null} so that a caller
      * cannot forget the dateless case, exactly as in {@link Command#of}.
@@ -89,6 +89,18 @@ public abstract class Task {
      */
     public boolean isBefore(LocalDate day) {
         return getScheduledDate().filter(date -> date.isBefore(day)).isPresent();
+    }
+
+    /**
+     * Returns whether this task falls on a day later than {@code day}.
+     *
+     * <p>The mirror image of {@link #isBefore}, and dateless tasks are left out of
+     * both for the same reason. A task is placed by the one date it is pinned to,
+     * so an event is placed by its start: an event already running on {@code day}
+     * is not still to come, and {@link #occursOn} is what finds that one.
+     */
+    public boolean isAfter(LocalDate day) {
+        return getScheduledDate().filter(date -> date.isAfter(day)).isPresent();
     }
 
     /**

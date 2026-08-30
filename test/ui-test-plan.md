@@ -43,7 +43,7 @@ what is on the disk on either side of the run:
 A test case with neither block starts with no save file — the ordinary first
 run — and nothing is checked about what it saves. That is the case for TC1 to
 TC16 below, all of which were written before the chatbot saved anything, and
-for TC23 to TC26.
+for TC23 onward apart from TC27.
 
 ## How to run the tests
 
@@ -337,7 +337,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "borrow book" means.
-     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -569,7 +569,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "todolist" means.
-     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1164,17 +1164,17 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "bye now" means.
-     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
      Sorry, I don't know what "list foo" means.
-     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
      Sorry, I don't know what "BYE" means.
-     Try one of: todo, deadline, event, list, on, before, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1988,17 +1988,17 @@ bye
     ____________________________________________________________
 ```
 
-### TC27 - Bad arguments to on, before and next
+### TC27 - Bad arguments to on, before, after and next
 
-**Aim:** Check that each way of misusing the three new commands is answered with
-the explanation that fits it. `on` and `before` reject a missing day and text that
-is not a day, each naming the command that was typed in its example. They also
-reject a day with a time tacked on to it: these commands answer questions about
+**Aim:** Check that each way of misusing the four listing commands is answered with
+the explanation that fits it. `on`, `before` and `after` reject a missing day and
+text that is not a day, each naming the command that was typed in its example. They
+also reject a day with a time tacked on to it: these commands answer questions about
 whole days, and quietly ignoring the `1800` would hide that the question asked was
 not the question answered. `next` rejects a missing count, a count that is not a
 number, and counts of zero and below, which ask for nothing at all. The `list` at
 the end shows that no refused command stored anything, and the absent save file
-shows that these three commands write nothing to the disk — they only look at the
+shows that these four commands write nothing to the disk — they only look at the
 list, so there is never anything to save.
 
 **Input**
@@ -2009,6 +2009,8 @@ on someday
 on 2026-12-02 1800
 before
 before 2/12/2026
+after
+after someday
 next
 next lots
 next 0
@@ -2063,6 +2065,17 @@ bye
     ____________________________________________________________
 
     ____________________________________________________________
+     Which day should I look at?
+     For example: after 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't understand "someday" as a day.
+     Write the day as yyyy-mm-dd, with no time after it.
+     For example: 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
      How many tasks should I show?
      For example: next 3
     ____________________________________________________________
@@ -2095,4 +2108,97 @@ bye
 
 ```text
 (no file)
+```
+
+### TC28 - Tasks falling after a specific day
+
+**Aim:** Check that `after` lists what comes later than a day, and that the day
+named is itself excluded — `after 2026-12-02` must not show the deadline due on
+the 2nd, so `before`, `on` and `after` for one day never show the same deadline
+twice. Checked from both sides: the same task does appear once the day asked about
+is moved back before it. Also checks the one case where `after` and `on` disagree,
+which is the point of the design decision behind it: a task is placed by the one
+date it is pinned to, and an event is pinned to its start, so an event already
+running on the day asked about is not listed as still to come. The `on 2026-10-06`
+straight afterwards shows that same event, so the two answers can be read against
+each other. As with the other two listings, a todo has no date and so is never
+listed, and a day with nothing after it says so.
+
+**Input**
+
+```text
+deadline return book /by 2026-12-02
+event orientation week /from 2026-10-04 /to 2026-10-11
+todo read book
+after 2026-12-02
+after 2026-12-01
+after 2026-10-06
+on 2026-10-06
+after 2026-10-03
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: Dec 02 2026)
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You have nothing after Dec 02 2026.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have after Dec 01 2026:
+     1.[D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have after Oct 06 2026:
+     1.[D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have on Oct 06 2026:
+     2.[E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here is what you have after Oct 03 2026:
+     1.[D][ ] return book (by: Dec 02 2026)
+     2.[E][ ] orientation week (from: Oct 04 2026 to: Oct 11 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
 ```

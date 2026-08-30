@@ -42,6 +42,9 @@ public enum Command {
     /** Prints the tasks falling before one day; used as {@code before <date>}. */
     BEFORE("before", true),
 
+    /** Prints the tasks falling after one day; used as {@code after <date>}. */
+    AFTER("after", true),
+
     /** Prints the most urgent tasks, soonest first; used as {@code next <how many>}. */
     NEXT("next", true),
 
