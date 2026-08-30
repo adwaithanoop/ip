@@ -2202,3 +2202,76 @@ bye
      Bye. Hope to see you again soon!
     ____________________________________________________________
 ```
+
+### TC29 - An event cannot end before it starts
+
+**Aim:** Check that a pair of dates which are each perfectly readable, but which
+put the end of an event before its start, is refused rather than stored. Both
+dates are quoted back in the message, so a user who typed them the wrong way round
+can see which the chatbot read as which. Checked on two scales: a start and an end
+days apart, and a start and an end on the same day whose times are the wrong way
+round, which is the case a comparison of days alone would let through. An event
+starting and ending at the same moment is accepted, since that is a point in time
+rather than a contradiction, and it is the boundary the check is written against.
+The `list` at the end shows that only the well-formed events were stored.
+
+**Input**
+
+```text
+event conference /from 2026-12-05 /to 2026-12-02
+event workshop /from 2026-12-05 1800 /to 2026-12-05 0900
+event standup /from 2026-12-05 0900 /to 2026-12-05 0900
+event trip /from 2026-12-02 /to 2026-12-05
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     An event can't end before it starts.
+     You wrote /from Dec 05 2026 and /to Dec 02 2026 — check whether they are the wrong way round.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     An event can't end before it starts.
+     You wrote /from Dec 05 2026 18:00 and /to Dec 05 2026 09:00 — check whether they are the wrong way round.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] standup (from: Dec 05 2026 09:00 to: Dec 05 2026 09:00)
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] trip (from: Dec 02 2026 to: Dec 05 2026)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[E][ ] standup (from: Dec 05 2026 09:00 to: Dec 05 2026 09:00)
+     2.[E][ ] trip (from: Dec 02 2026 to: Dec 05 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```

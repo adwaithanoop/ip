@@ -362,10 +362,13 @@ public class Bob {
      * mistaken for the separator.
      *
      * <p>As with a deadline, both times are handed to {@link TaskDate#parse}, so
-     * an event is only added once the chatbot has understood when it runs.
+     * an event is only added once the chatbot has understood when it runs. Having
+     * understood both, it can also check that they make sense together, which is
+     * what {@link #requireEndNotBeforeStart} does.
      *
      * @throws BobException if a marker, the description, the start or the end is
-     *                      missing, or if the start or the end is not a date.
+     *                      missing, if the start or the end is not a date, or if
+     *                      the end comes before the start.
      */
     private static void addEvent(String arguments) throws BobException {
         int fromIndex = arguments.indexOf(FROM_KEYWORD);
@@ -379,18 +382,55 @@ public class Bob {
                     + " at the end." + "\nFor example: " + EVENT_EXAMPLE);
         }
         String description = arguments.substring(0, fromIndex).trim();
-        String from = arguments.substring(fromIndex + FROM_KEYWORD.length(), toIndex).trim();
-        String to = arguments.substring(toIndex + TO_KEYWORD.length()).trim();
+        String fromText = arguments.substring(fromIndex + FROM_KEYWORD.length(), toIndex).trim();
+        String toText = arguments.substring(toIndex + TO_KEYWORD.length()).trim();
         if (description.isEmpty()) {
             throw new BobException("An event needs a description, written before "
                     + FROM_KEYWORD + "." + "\nFor example: " + EVENT_EXAMPLE);
         }
-        if (from.isEmpty() || to.isEmpty()) {
+        if (fromText.isEmpty() || toText.isEmpty()) {
             throw new BobException("An event needs a time on both sides: one after "
                     + FROM_KEYWORD + " and one after " + TO_KEYWORD + "."
                     + "\nFor example: " + EVENT_EXAMPLE);
         }
-        addTask(new Event(description, TaskDate.parse(from), TaskDate.parse(to)));
+        TaskDate from = TaskDate.parse(fromText);
+        TaskDate to = TaskDate.parse(toText);
+        requireEndNotBeforeStart(from, to);
+        addTask(new Event(description, from, to));
+    }
+
+    /**
+     * Checks that an event does not end before it starts.
+     *
+     * <p>Two dates that are each perfectly readable can still be an impossible
+     * pair, and the pair is only worth checking once both have been understood —
+     * which is why this is a step of its own after {@link TaskDate#parse} rather
+     * than something the parsing could have caught.
+     *
+     * <p>Both dates are shown back in the message, so a user who typed them the
+     * wrong way round can see which the chatbot read as the start and which as the
+     * end. They are shown in the friendly form rather than as typed, since that is
+     * the form that makes the ordering plain.
+     *
+     * <p>An event that starts and ends at the same moment is allowed: it is a point
+     * in time rather than a contradiction, and refusing it would mean telling a user
+     * who meant it that they may not say so.
+     *
+     * <p>This is checked here, in the command that builds the event, rather than in
+     * {@link Event} itself, because here there is still a user to tell. An event
+     * read from a hand-edited save file is not checked, and so is loaded as written.
+     *
+     * @param from when the event starts.
+     * @param to   when it ends.
+     * @throws BobException if the end comes before the start.
+     */
+    private static void requireEndNotBeforeStart(TaskDate from, TaskDate to) throws BobException {
+        if (to.compareTo(from) >= 0) {
+            return;
+        }
+        throw new BobException("An event can't end before it starts."
+                + "\nYou wrote " + FROM_KEYWORD + " " + from + " and " + TO_KEYWORD + " " + to
+                + " — check whether they are the wrong way round.");
     }
 
     /**

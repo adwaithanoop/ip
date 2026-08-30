@@ -12,10 +12,12 @@ import java.util.Optional;
  * values rather than as the text the user typed, so both are dates the chatbot
  * has understood.
  *
- * <p>Nothing here checks that the end comes after the start. The requirements do
- * not ask for it, and it is a separate question from understanding dates; it
- * could be added later in the command that builds the event, which is where the
- * user can still be told to retype it.
+ * <p>Nothing here checks that the end comes after the start. That check lives in
+ * the command that builds the event, in {@link Bob}, because that is where there
+ * is still a user to tell about it: a class that could only throw would leave the
+ * caller to turn the failure into something worth reading. The consequence is that
+ * an event whose end comes first can still be built — by a hand-edited save file,
+ * which is the one route into this class that does not pass through the command.
  */
 public class Event extends Task {
 
