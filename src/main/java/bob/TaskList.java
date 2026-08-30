@@ -152,6 +152,20 @@ public class TaskList {
     }
 
     /**
+     * Returns the positions of every task, in the order they were added — what
+     * {@link CommandWord#LIST} shows.
+     *
+     * <p>Written in terms of {@link #findIndexes} with a test every task passes,
+     * so that a full listing and a shortened one are produced the same way and
+     * are shown by the same code.
+     *
+     * @return the positions of all the tasks, counting from 0.
+     */
+    public List<Integer> allIndexes() {
+        return findIndexes(task -> true);
+    }
+
+    /**
      * Returns the positions of the tasks that carry a date, most urgent first.
      *
      * <p>A todo has no date, so it is left out rather than sorted to one end:

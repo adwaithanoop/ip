@@ -3,7 +3,6 @@ package bob;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.function.Predicate;
 
 /**
  * A chatbot that greets the user, remembers the tasks the user types,
@@ -121,7 +120,7 @@ public class Bob {
      */
     public void run() {
         ui.showGreeting();
-        showLoadReport();
+        ui.showLoadReport(tasks.size(), loadMessages);
         handleCommandsUntilExit();
         ui.showFarewell();
     }
@@ -136,29 +135,6 @@ public class Bob {
      */
     public static void main(String[] args) {
         new Bob(Storage.DEFAULT_FILE_PATH).run();
-    }
-
-    /**
-     * Says what was picked up from the save file, and anything the user should
-     * know about reading it.
-     *
-     * <p>Nothing is printed on the two ordinary cases — no save file yet, or a
-     * save file that read cleanly and was empty — because a user who has nothing
-     * saved does not need to be told about a file they have never seen.
-     */
-    private void showLoadReport() {
-        if (tasks.isEmpty() && loadMessages.isEmpty()) {
-            return;
-        }
-        ui.openBlock();
-        if (!tasks.isEmpty()) {
-            ui.showLine("Welcome back! I've picked up " + tasks.size()
-                    + (tasks.size() == 1 ? " task" : " tasks") + " you saved earlier.");
-        }
-        for (String message : loadMessages) {
-            ui.showLine(message);
-        }
-        ui.closeBlock();
     }
 
     /**
@@ -255,9 +231,7 @@ public class Bob {
      */
     private void addTask(Task task) throws BobException {
         tasks.add(task);
-        ui.showLine("Got it. I've added this task:");
-        ui.showLine("  " + task);
-        ui.showLine("Now you have " + tasks.size() + " tasks in the list.");
+        ui.showAddedTask(task, tasks.size());
         saveTasks();
     }
 
@@ -295,9 +269,7 @@ public class Bob {
         // delete returns the task it took out, so it can be shown without
         // having to be fetched separately beforehand.
         Task removed = tasks.delete(taskIndex);
-        ui.showLine("Noted. I've removed this task:");
-        ui.showLine("  " + removed);
-        ui.showLine("Now you have " + tasks.size() + " tasks in the list.");
+        ui.showRemovedTask(removed, tasks.size());
         saveTasks();
     }
 
@@ -322,10 +294,7 @@ public class Bob {
         } else {
             task.markAsNotDone();
         }
-        ui.showLine(isDone
-                ? "Nice! I've marked this task as done:"
-                : "OK, I've marked this task as not done yet:");
-        ui.showLine("  " + task);
+        ui.showMarkedTask(task, isDone);
         saveTasks();
     }
 
@@ -366,14 +335,9 @@ public class Bob {
 
     /** Prints the stored tasks as a numbered list, counting from 1 for readability. */
     private void showTasks() {
-        if (tasks.isEmpty()) {
-            ui.showLine("You haven't told me about any tasks yet.");
-            return;
-        }
-        ui.showLine("Here are the tasks in your list:");
-        for (int i = 0; i < tasks.size(); i++) {
-            ui.showLine(formatNumberedTask(i));
-        }
+        ui.showTasks(tasks, tasks.allIndexes(),
+                "Here are the tasks in your list:",
+                "You haven't told me about any tasks yet.");
     }
 
     /**
@@ -390,9 +354,9 @@ public class Bob {
     private void showTasksOn(String dayText) throws BobException {
         LocalDate day = Parser.parseDay(dayText, CommandWord.ON);
         String dayShown = TaskDate.formatDay(day);
-        showMatchingTasks("Here is what you have on " + dayShown + ":",
-                "You have nothing on " + dayShown + ".",
-                task -> task.occursOn(day));
+        ui.showTasks(tasks, tasks.findIndexes(task -> task.occursOn(day)),
+                "Here is what you have on " + dayShown + ":",
+                "You have nothing on " + dayShown + ".");
     }
 
     /**
@@ -408,9 +372,9 @@ public class Bob {
     private void showTasksBefore(String dayText) throws BobException {
         LocalDate day = Parser.parseDay(dayText, CommandWord.BEFORE);
         String dayShown = TaskDate.formatDay(day);
-        showMatchingTasks("Here is what you have before " + dayShown + ":",
-                "You have nothing before " + dayShown + ".",
-                task -> task.isBefore(day));
+        ui.showTasks(tasks, tasks.findIndexes(task -> task.isBefore(day)),
+                "Here is what you have before " + dayShown + ":",
+                "You have nothing before " + dayShown + ".");
     }
 
     /**
@@ -432,9 +396,9 @@ public class Bob {
     private void showTasksAfter(String dayText) throws BobException {
         LocalDate day = Parser.parseDay(dayText, CommandWord.AFTER);
         String dayShown = TaskDate.formatDay(day);
-        showMatchingTasks("Here is what you have after " + dayShown + ":",
-                "You have nothing after " + dayShown + ".",
-                task -> task.isAfter(day));
+        ui.showTasks(tasks, tasks.findIndexes(task -> task.isAfter(day)),
+                "Here is what you have after " + dayShown + ":",
+                "You have nothing after " + dayShown + ".");
     }
 
     /**
@@ -453,62 +417,13 @@ public class Bob {
     private void showNextTasks(String countText) throws BobException {
         int wantedCount = Parser.parseCount(countText);
         List<Integer> datedTaskIndexes = tasks.findIndexesSoonestFirst();
-        if (datedTaskIndexes.isEmpty()) {
-            ui.showLine("None of your tasks have a date on them yet.");
-            return;
-        }
         int shownCount = Math.min(wantedCount, datedTaskIndexes.size());
-        ui.showLine(shownCount == 1
-                ? "Here is your most urgent task:"
-                : "Here are your " + shownCount + " most urgent tasks, soonest first:");
-        for (int i = 0; i < shownCount; i++) {
-            ui.showLine(formatNumberedTask(datedTaskIndexes.get(i)));
-        }
-    }
-
-    /**
-     * Prints the tasks the caller wants, or says there are none.
-     *
-     * <p>{@link CommandWord#ON}, {@link CommandWord#BEFORE} and {@link CommandWord#AFTER}
-     * differ only in which tasks they want and what they call them, so the choice
-     * between a listing and an "I found nothing" line is written here once. The
-     * search itself belongs to the list, and is left to
-     * {@link TaskList#findIndexes}.
-     *
-     * <p>Which tasks are wanted arrives as a {@link Predicate}, so each of the
-     * three commands says in its own method what it is looking for, and passes
-     * that question along rather than a flag naming itself.
-     *
-     * @param heading      the line introducing the tasks, printed only if there are any.
-     * @param emptyMessage the line to print instead when no task matches.
-     * @param isWanted     the test a task has to pass to be listed.
-     */
-    private void showMatchingTasks(String heading, String emptyMessage,
-            Predicate<Task> isWanted) {
-        List<Integer> matchingIndexes = tasks.findIndexes(isWanted);
-        if (matchingIndexes.isEmpty()) {
-            ui.showLine(emptyMessage);
-            return;
-        }
-        ui.showLine(heading);
-        for (int index : matchingIndexes) {
-            ui.showLine(formatNumberedTask(index));
-        }
-    }
-
-    /**
-     * Returns one task written as a line of a listing, for example
-     * {@code 2.[D][ ] return book (by: Dec 02 2026)}.
-     *
-     * <p>The number is the task's place in the whole list, not its place among the
-     * ones being shown. That is what makes a shortened listing useful: a number
-     * read off it can be typed straight into {@code mark}, {@code unmark} or
-     * {@code delete}, which is not true of numbers that count the matches.
-     *
-     * @param index the task's position in {@link #tasks}, counting from 0.
-     */
-    private String formatNumberedTask(int index) {
-        // The user counts from 1, the list counts from 0.
-        return (index + 1) + "." + tasks.get(index);
+        // When no task has a date the heading is built naming none, and never
+        // printed: an empty selection is shown as the message below it instead.
+        ui.showTasks(tasks, datedTaskIndexes.subList(0, shownCount),
+                shownCount == 1
+                        ? "Here is your most urgent task:"
+                        : "Here are your " + shownCount + " most urgent tasks, soonest first:",
+                "None of your tasks have a date on them yet.");
     }
 }

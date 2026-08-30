@@ -22,6 +22,18 @@ import java.util.Scanner;
  * know that the input happens to arrive on {@code System.in} through a
  * {@link Scanner}.
  *
+ * <p>What this class knows has since grown from the frame around the output to
+ * the output itself: how a task is written in a listing, how a listing is laid
+ * out, and the fixed wording of the confirmations. Those were composed line by
+ * line by whoever ran the command, which meant the numbering of a listing was
+ * written out afresh in each of the four commands that produce one. The wording
+ * that varies with the command — the heading naming a day, say — is still passed
+ * in, since only the command knows what it looked for.
+ *
+ * <p>That makes this class depend on {@link Task} and {@link TaskList}, which is
+ * the right way round: what shows the tasks may know what a task is, while a
+ * task knows nothing about being shown.
+ *
  * <p>Output is built up as a <em>block</em>: {@link #openBlock()}, then one
  * {@link #showLine} per line, then {@link #closeBlock()}. The block is what
  * separates one answer from the next on screen, and letting the caller print its
@@ -137,6 +149,111 @@ public class Ui {
         for (String line : message.split("\n")) {
             showLine(line);
         }
+    }
+
+    /**
+     * Prints what was picked up from the save file, and anything the user should
+     * know about reading it, as one block.
+     *
+     * <p>Nothing is printed on the two ordinary cases — no save file yet, or a
+     * save file that read cleanly and was empty — because a user who has nothing
+     * saved does not need to be told about a file they have never seen.
+     *
+     * @param taskCount how many tasks were read back.
+     * @param messages  what {@link Storage} had to say about reading them, which
+     *                  is empty when it had nothing to report.
+     */
+    public void showLoadReport(int taskCount, List<String> messages) {
+        if (taskCount == 0 && messages.isEmpty()) {
+            return;
+        }
+        openBlock();
+        if (taskCount > 0) {
+            showLine("Welcome back! I've picked up " + taskCount
+                    + (taskCount == 1 ? " task" : " tasks") + " you saved earlier.");
+        }
+        for (String message : messages) {
+            showLine(message);
+        }
+        closeBlock();
+    }
+
+    /**
+     * Confirms a task just added, showing it back and saying how long the list
+     * now is.
+     *
+     * @param task      the task that was added.
+     * @param taskCount how many tasks there are now.
+     */
+    public void showAddedTask(Task task, int taskCount) {
+        showLine("Got it. I've added this task:");
+        showLine("  " + task);
+        showLine("Now you have " + taskCount + " tasks in the list.");
+    }
+
+    /**
+     * Confirms a task just removed, showing it one last time so the user can see
+     * which one is gone rather than working it out from the new numbering.
+     *
+     * @param task      the task that was removed.
+     * @param taskCount how many tasks are left.
+     */
+    public void showRemovedTask(Task task, int taskCount) {
+        showLine("Noted. I've removed this task:");
+        showLine("  " + task);
+        showLine("Now you have " + taskCount + " tasks in the list.");
+    }
+
+    /**
+     * Confirms a task just marked done, or just marked not done again.
+     *
+     * @param task   the task whose status changed.
+     * @param isDone the status it now has.
+     */
+    public void showMarkedTask(Task task, boolean isDone) {
+        showLine(isDone
+                ? "Nice! I've marked this task as done:"
+                : "OK, I've marked this task as not done yet:");
+        showLine("  " + task);
+    }
+
+    /**
+     * Prints a numbered listing of some of the tasks, or says there are none.
+     *
+     * <p>Which tasks to show arrives as their positions rather than as the tasks
+     * themselves, because the number shown against each one is its place in the
+     * whole list. That is what makes a shortened listing useful: a number read off
+     * it can be typed straight into {@code mark}, {@code unmark} or
+     * {@code delete}, which would not be true of numbers counting the matches.
+     *
+     * <p>The two lines of wording are passed in because they are the part that
+     * belongs to the command that asked — a heading naming a day, or naming how
+     * many urgent tasks were found, is not something this class could write.
+     *
+     * @param tasks        the list the positions refer to.
+     * @param indexes      the positions of the tasks to show, counting from 0.
+     * @param heading      the line introducing them, printed only if there are any.
+     * @param emptyMessage the line to print instead when there are none.
+     */
+    public void showTasks(TaskList tasks, List<Integer> indexes, String heading,
+            String emptyMessage) {
+        if (indexes.isEmpty()) {
+            showLine(emptyMessage);
+            return;
+        }
+        showLine(heading);
+        for (int index : indexes) {
+            showLine(formatNumberedTask(tasks, index));
+        }
+    }
+
+    /**
+     * Returns one task written as a line of a listing, for example
+     * {@code 2.[D][ ] return book (by: Dec 02 2026)}.
+     */
+    private static String formatNumberedTask(TaskList tasks, int index) {
+        // The user counts from 1, the list counts from 0.
+        return (index + 1) + "." + tasks.get(index);
     }
 
     /** Starts a block of output with a divider. */
