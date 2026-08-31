@@ -1,4 +1,4 @@
-package bob;
+package bob.command;
 
 import java.util.Optional;
 import java.util.StringJoiner;
@@ -13,7 +13,7 @@ import java.util.StringJoiner;
  * been recognized. Keeping the two apart leaves the plainer name {@code Command}
  * free for the classes that carry the doing.
  *
- * <p>These were eight separate {@code String} constants in {@link Bob}. An enum
+ * <p>These were eight separate {@code String} constants in {@link bob.Bob Bob}. An enum
  * suits them better because they are a fixed, known-in-advance set of values
  * that belong together: the compiler now knows the whole set, so a command can
  * be passed around as a {@code CommandWord} rather than as a {@code String} that

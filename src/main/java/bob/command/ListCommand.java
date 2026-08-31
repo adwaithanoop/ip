@@ -1,4 +1,8 @@
-package bob;
+package bob.command;
+
+import bob.storage.Storage;
+import bob.task.TaskList;
+import bob.ui.Ui;
 
 /**
  * Prints every task, numbered from 1.

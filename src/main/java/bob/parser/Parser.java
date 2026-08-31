@@ -1,11 +1,28 @@
-package bob;
+package bob.parser;
 
 import java.time.LocalDate;
+
+import bob.BobException;
+import bob.command.AddCommand;
+import bob.command.AfterCommand;
+import bob.command.BeforeCommand;
+import bob.command.Command;
+import bob.command.CommandWord;
+import bob.command.DeleteCommand;
+import bob.command.ExitCommand;
+import bob.command.ListCommand;
+import bob.command.MarkCommand;
+import bob.command.NextCommand;
+import bob.command.OnCommand;
+import bob.task.Deadline;
+import bob.task.Event;
+import bob.task.TaskDate;
+import bob.task.Todo;
 
 /**
  * Turns the lines the user types into the things the chatbot acts on.
  *
- * <p>This was spread through {@link Bob}, where each command began by picking its
+ * <p>This was spread through {@link bob.Bob Bob}, where each command began by picking its
  * own arguments apart before doing anything with them. Adding a deadline, for
  * instance, was one method that found {@value #BY_KEYWORD}, complained about the
  * three ways the text around it could be wrong, read the date, and only then
@@ -17,7 +34,7 @@ import java.time.LocalDate;
  * and the wording of every "that isn't a date" complaint now live together, so
  * changing what the chatbot accepts is a change here and nowhere else. What is
  * left in {@code Bob} is a set of methods that are handed a finished
- * {@link Task}, or a number, or a day, and get on with using it.
+ * {@link bob.task.Task Task}, or a number, or a day, and get on with using it.
  *
  * <p>This class makes sense of <em>text</em>, and of nothing else. Whether the
  * number 7 names a task that exists is a fact about the task list rather than
@@ -26,8 +43,8 @@ import java.time.LocalDate;
  * {@code mark seven} is refused here, {@code mark 7} with four tasks is refused
  * there.
  *
- * <p>Every method is {@code static}, unlike {@link Ui}, {@link Storage} and
- * {@link TaskList}, which are all made and kept. There is nothing for a parser to
+ * <p>Every method is {@code static}, unlike {@link bob.ui.Ui Ui}, {@link bob.storage.Storage Storage} and
+ * {@link bob.task.TaskList TaskList}, which are all made and kept. There is nothing for a parser to
  * remember between one line and the next — each line is understood on its own —
  * so an instance of this class would carry no state and be no more useful than
  * the class itself.

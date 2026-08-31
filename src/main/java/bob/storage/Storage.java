@@ -1,4 +1,4 @@
-package bob;
+package bob.storage;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -7,6 +7,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
+
+import bob.BobException;
+import bob.task.Deadline;
+import bob.task.Event;
+import bob.task.Task;
+import bob.task.TaskDate;
+import bob.task.Todo;
 
 /**
  * Keeps the task list on the hard disk, so the tasks typed in one run of the
@@ -41,7 +48,7 @@ import java.util.StringJoiner;
  *
  * <p>Nothing in this class prints anything. Whatever the user needs to be told
  * is either returned in a {@link LoadResult} or thrown as a {@link BobException},
- * leaving {@link Bob} as the only class that writes to the console.
+ * leaving {@link bob.Bob Bob} as the only class that writes to the console.
  */
 public class Storage {
 

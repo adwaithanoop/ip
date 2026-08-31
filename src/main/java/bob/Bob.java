@@ -3,14 +3,20 @@ package bob;
 import java.nio.file.Path;
 import java.util.List;
 
+import bob.command.Command;
+import bob.parser.Parser;
+import bob.storage.Storage;
+import bob.task.TaskList;
+import bob.ui.Ui;
+
 /**
  * A chatbot that greets the user, remembers the tasks the user types,
  * lists them back on request, marks them as done, removes the ones the user
  * no longer wants, and exits when the user types {@code bye}.
  *
- * <p>Tasks come in three kinds — {@link Todo}, {@link Deadline} and
- * {@link Event} — each added with its own command word. The words the chatbot
- * understands are listed in {@link CommandWord}; making sense of a whole line
+ * <p>Tasks come in three kinds — {@link bob.task.Todo Todo}, {@link bob.task.Deadline Deadline} and
+ * {@link bob.task.Event Event} — each added with its own command word. The words the chatbot
+ * understands are listed in {@link bob.command.CommandWord CommandWord}; making sense of a whole line
  * written with one of them is {@link Parser}'s work, and this class is left to
  * say what each command does once it has been understood.
  *
@@ -37,16 +43,18 @@ import java.util.List;
  * to load and when to save.
  *
  * <p>A deadline and an event carry dates the chatbot understands rather than
- * text it merely repeats: each is read into a {@link TaskDate}, which is what
+ * text it merely repeats: each is read into a {@link bob.task.TaskDate TaskDate}, which is what
  * lets a date be shown back in a friendlier form than it was typed in.
  *
  * <p>Because those dates are understood, the chatbot can be asked about them
- * rather than only told them: {@link CommandWord#ON}, {@link CommandWord#BEFORE} and
- * {@link CommandWord#AFTER} pick out the tasks falling on, before, or after a given
- * day, and {@link CommandWord#NEXT} shows the few with the soonest dates on them.
+ * rather than only told them: {@link bob.command.CommandWord#ON CommandWord.ON},
+ * {@link bob.command.CommandWord#BEFORE CommandWord.BEFORE} and
+ * {@link bob.command.CommandWord#AFTER CommandWord.AFTER} pick out the tasks falling on, before,
+ * or after a given day, and {@link bob.command.CommandWord#NEXT CommandWord.NEXT} shows the few
+ * with the soonest dates on them.
  * All four are views of the one task list — they change nothing, so nothing is
  * saved after them — and each shows a task with the number it has in
- * {@link CommandWord#LIST}, so a task found this way can be marked or deleted
+ * {@link bob.command.CommandWord#LIST CommandWord.LIST}, so a task found this way can be marked or deleted
  * without looking it up again.
  *
  * <p>Anything the user types that cannot be carried out — an unknown command,
@@ -136,7 +144,7 @@ public class Bob {
      * <p>The loop ends either because a command said it was the last one, or
      * because the input ran out — which happens when it is piped in from a file
      * with no {@code bye} on the end. Only the first prints a farewell of its
-     * own, through {@link ExitCommand}, so the second is given one here. A user
+     * own, through {@link bob.command.ExitCommand ExitCommand}, so the second is given one here. A user
      * whose input simply stopped is still owed a sign-off.
      */
     public void run() {

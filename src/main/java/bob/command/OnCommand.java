@@ -1,13 +1,18 @@
-package bob;
+package bob.command;
 
 import java.time.LocalDate;
+
+import bob.storage.Storage;
+import bob.task.TaskDate;
+import bob.task.TaskList;
+import bob.ui.Ui;
 
 /**
  * Prints the tasks falling on one day, in the order they appear in the list.
  *
  * <p>A deadline falls on the day it is due and an event on any day it is
  * running; a todo, having no date, never appears here. Which of those is which
- * is decided by each kind of task in {@link Task#occursOn}, so this command only
+ * is decided by each kind of task in {@link bob.task.Task#occursOn Task.occursOn}, so this command only
  * has to ask.
  *
  * <p>This command, {@link BeforeCommand} and {@link AfterCommand} are written as

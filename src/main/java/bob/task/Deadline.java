@@ -1,4 +1,4 @@
-package bob;
+package bob.task;
 
 import java.util.List;
 import java.util.Optional;

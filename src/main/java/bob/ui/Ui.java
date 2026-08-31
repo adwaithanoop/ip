@@ -1,12 +1,15 @@
-package bob;
+package bob.ui;
 
 import java.util.List;
 import java.util.Scanner;
 
+import bob.task.Task;
+import bob.task.TaskList;
+
 /**
  * Everything the chatbot says to the user and everything it hears back.
  *
- * <p>This was part of {@link Bob}, mixed in with the code that decides what each
+ * <p>This was part of {@link bob.Bob Bob}, mixed in with the code that decides what each
  * command does. Two quite different questions were being answered in the one
  * class: <em>what</em> to tell the user, and <em>how</em> a line of chatbot
  * output looks on screen. This class now answers the second one alone.
@@ -14,7 +17,7 @@ import java.util.Scanner;
  * <p>What that buys is that the shape of the conversation is stated in one
  * place. The indent, the horizontal rules framing each block, the banner and the
  * greeting all live here, so changing how the chatbot looks is a change to this
- * file and to no other. {@link Bob} is left saying what it wants said, in lines
+ * file and to no other. {@link bob.Bob Bob} is left saying what it wants said, in lines
  * of plain text, and never touches {@code System.out} itself.
  *
  * <p>Reading the user's input belongs here for the same reason: it is the other
@@ -165,7 +168,7 @@ public class Ui {
      * saved does not need to be told about a file they have never seen.
      *
      * @param taskCount how many tasks were read back.
-     * @param messages  what {@link Storage} had to say about reading them, which
+     * @param messages  what {@link bob.storage.Storage Storage} had to say about reading them, which
      *                  is empty when it had nothing to report.
      */
     public void showLoadReport(int taskCount, List<String> messages) {

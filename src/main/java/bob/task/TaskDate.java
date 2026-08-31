@@ -1,10 +1,12 @@
-package bob;
+package bob.task;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
+
+import bob.BobException;
 
 /**
  * A point in time attached to a task: the day it falls on, and the time of day
@@ -18,8 +20,10 @@ import java.util.Locale;
  * and two of them can be compared to answer questions such as which task is due
  * first — neither of which can be done with a string.
  *
- * <p>That comparing is what {@link CommandWord#ON}, {@link CommandWord#BEFORE},
- * {@link CommandWord#AFTER} and {@link CommandWord#NEXT} are built on. This class
+ * <p>That comparing is what {@link bob.command.CommandWord#ON CommandWord.ON},
+ * {@link bob.command.CommandWord#BEFORE CommandWord.BEFORE},
+ * {@link bob.command.CommandWord#AFTER CommandWord.AFTER} and
+ * {@link bob.command.CommandWord#NEXT CommandWord.NEXT} are built on. This class
  * implements {@link Comparable} so that a list of dates can be sorted, and offers
  * {@link #isOn}, {@link #isBefore} and {@link #isAfter} so that the code asking
  * the questions can stay in terms of days rather than reaching inside for the
@@ -186,7 +190,7 @@ public class TaskDate implements Comparable<TaskDate> {
     }
 
     /**
-     * Returns this date as the single field {@link Storage} writes to the save file.
+     * Returns this date as the single field {@link bob.storage.Storage Storage} writes to the save file.
      *
      * <p>It is saved in the same form the user types it, rather than in the
      * friendlier form {@link #toString()} prints. The saved text is read back by

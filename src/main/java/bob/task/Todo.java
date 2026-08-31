@@ -1,4 +1,4 @@
-package bob;
+package bob.task;
 
 /**
  * A task with no date or time attached to it, for example
@@ -11,7 +11,7 @@ public class Todo extends Task {
      * The letter that stands for a todo, both in the box shown in a listing and
      * in the first field of a saved line.
      *
-     * <p>Named as a constant so that {@link Storage}, which has to recognize the
+     * <p>Named as a constant so that {@link bob.storage.Storage Storage}, which has to recognize the
      * letter when reading a saved line back, can say {@code Todo.TYPE_ICON}
      * rather than repeating {@code "T"} and leaving two places to keep in step.
      */
