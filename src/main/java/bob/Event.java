@@ -1,24 +1,34 @@
 package bob;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A task that runs from one point in time to another, for example
- * {@code project meeting (from: Mon 2pm to: 4pm)}.
+ * {@code project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)}.
  *
- * <p>As with {@link Deadline}, the start and end are kept as the plain text the
- * user typed; the current requirements do not ask for real dates.
+ * <p>As with {@link Deadline}, the start and the end are kept as {@link TaskDate}
+ * values rather than as the text the user typed, so both are dates the chatbot
+ * has understood.
+ *
+ * <p>Nothing here checks that the end comes after the start. That check lives in
+ * the command that builds the event, in {@link Bob}, because that is where there
+ * is still a user to tell about it: a class that could only throw would leave the
+ * caller to turn the failure into something worth reading. The consequence is that
+ * an event whose end comes first can still be built — by a hand-edited save file,
+ * which is the one route into this class that does not pass through the command.
  */
 public class Event extends Task {
 
     /** The letter that stands for an event, as {@link Todo#TYPE_ICON} does for a todo. */
     public static final String TYPE_ICON = "E";
 
-    /** When the event starts, exactly as the user typed it after {@code /from}. */
-    protected String from;
+    /** When the event starts. */
+    protected TaskDate from;
 
-    /** When the event ends, exactly as the user typed it after {@code /to}. */
-    protected String to;
+    /** When the event ends. */
+    protected TaskDate to;
 
     /**
      * Creates an event that is not done yet.
@@ -27,7 +37,7 @@ public class Event extends Task {
      * @param from        when it starts.
      * @param to          when it ends.
      */
-    public Event(String description, String from, String to) {
+    public Event(String description, TaskDate from, TaskDate to) {
         super(description);
         this.from = from;
         this.to = to;
@@ -38,7 +48,34 @@ public class Event extends Task {
         return TYPE_ICON;
     }
 
-    /** Returns for example {@code [E][ ] project meeting (from: Mon 2pm to: 4pm)}. */
+    /**
+     * Returns the start, which is the date an event is pinned to: it is when the
+     * event first wants the user's attention, so it is what an event is ordered by
+     * and what {@link Command#BEFORE} and {@link Command#AFTER} measure.
+     */
+    @Override
+    public Optional<TaskDate> getScheduledDate() {
+        return Optional.of(from);
+    }
+
+    /**
+     * Returns whether the event is running on {@code day}, counting the day it
+     * starts and the day it ends as days it is running.
+     *
+     * <p>Widened from the inherited single-date test because an event, unlike a
+     * deadline, covers a stretch of time. Asking what is on the Wednesday of a
+     * week-long orientation should find it, and the inherited version — which
+     * compares only the start — would not.
+     */
+    @Override
+    public boolean occursOn(LocalDate day) {
+        return !from.isAfter(day) && !to.isBefore(day);
+    }
+
+    /**
+     * Returns for example
+     * {@code [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)}.
+     */
     @Override
     public String toString() {
         return super.toString() + " (from: " + from + " to: " + to + ")";
@@ -49,13 +86,13 @@ public class Event extends Task {
      *
      * <p>They are added as two fields rather than joined into one, so that reading
      * them back is a matter of taking two fields apart rather than of splitting a
-     * time the user was free to write any way they liked.
+     * single field down the middle.
      */
     @Override
     public List<String> toSaveFields() {
         List<String> fields = super.toSaveFields();
-        fields.add(from);
-        fields.add(to);
+        fields.add(from.toSaveField());
+        fields.add(to.toSaveField());
         return fields;
     }
 }

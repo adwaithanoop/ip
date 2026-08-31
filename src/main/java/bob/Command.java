@@ -36,6 +36,18 @@ public enum Command {
     /** Prints everything stored so far; used on its own. */
     LIST("list", false),
 
+    /** Prints the tasks falling on one day; used as {@code on <date>}. */
+    ON("on", true),
+
+    /** Prints the tasks falling before one day; used as {@code before <date>}. */
+    BEFORE("before", true),
+
+    /** Prints the tasks falling after one day; used as {@code after <date>}. */
+    AFTER("after", true),
+
+    /** Prints the most urgent tasks, soonest first; used as {@code next <how many>}. */
+    NEXT("next", true),
+
     /** Marks a task as done; used as {@code mark <task number>}. */
     MARK("mark", true),
 

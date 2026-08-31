@@ -1,7 +1,9 @@
 package bob;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A single task the chatbot remembers: what the user wants to do,
@@ -50,6 +52,56 @@ public abstract class Task {
      * the work: the listing code stays the same however many kinds of task exist.
      */
     public abstract String getTypeIcon();
+
+    /**
+     * Returns the date this task is pinned to, or an empty {@link Optional} for a
+     * task that is not pinned to any date.
+     *
+     * <p>This is what lets {@link Command#ON}, {@link Command#BEFORE},
+     * {@link Command#AFTER} and {@link Command#NEXT} work through one list holding
+     * all three kinds of task without asking what kind each one is: a
+     * {@link Deadline} answers with its due date, an {@link Event} with its start,
+     * and a {@link Todo} accepts this default and answers that it has none.
+     *
+     * <p>An {@code Optional} is returned rather than {@code null} so that a caller
+     * cannot forget the dateless case, exactly as in {@link Command#of}.
+     */
+    public Optional<TaskDate> getScheduledDate() {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns whether this task falls on {@code day}.
+     *
+     * <p>A task with no date never does. A task with one does when its date is on
+     * that day; {@link Event} widens this to the whole stretch it runs for.
+     */
+    public boolean occursOn(LocalDate day) {
+        return getScheduledDate().filter(date -> date.isOn(day)).isPresent();
+    }
+
+    /**
+     * Returns whether this task falls on a day earlier than {@code day}.
+     *
+     * <p>A task with no date never does, so a todo is left out of a listing of
+     * what is coming up rather than being counted as overdue since the beginning
+     * of time.
+     */
+    public boolean isBefore(LocalDate day) {
+        return getScheduledDate().filter(date -> date.isBefore(day)).isPresent();
+    }
+
+    /**
+     * Returns whether this task falls on a day later than {@code day}.
+     *
+     * <p>The mirror image of {@link #isBefore}, and dateless tasks are left out of
+     * both for the same reason. A task is placed by the one date it is pinned to,
+     * so an event is placed by its start: an event already running on {@code day}
+     * is not still to come, and {@link #occursOn} is what finds that one.
+     */
+    public boolean isAfter(LocalDate day) {
+        return getScheduledDate().filter(date -> date.isAfter(day)).isPresent();
+    }
 
     /**
      * Returns the single character shown inside the status box of a listing:
