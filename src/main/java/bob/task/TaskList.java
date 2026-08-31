@@ -1,4 +1,4 @@
-package bob;
+package bob.task;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -9,7 +9,7 @@ import java.util.function.Predicate;
  * The tasks the user has told the chatbot about, in the order they were added,
  * together with the operations the chatbot performs on them.
  *
- * <p>This was a bare {@link ArrayList} field in {@link Bob}, reached into
+ * <p>This was a bare {@link ArrayList} field in {@link bob.Bob Bob}, reached into
  * directly by every command. Every one of them therefore had to know that the
  * tasks were kept in a list, that the list counts from 0 while the user counts
  * from 1, and how to walk it. Wrapping the list in a class of its own gives that
@@ -17,15 +17,16 @@ import java.util.function.Predicate;
  * longer touches the list itself.
  *
  * <p>Positions matter here in a way they do not in an ordinary collection. The
- * user names a task by the number it has in {@link CommandWord#LIST}, so a shortened
- * listing is only useful if it shows each task under that same number — a number
+ * user names a task by the number it has in
+ * {@link bob.command.CommandWord#LIST CommandWord.LIST}, so a shortened listing
+ * is only useful if it shows each task under that same number — a number
  * counting the matches could not be typed into {@code mark} or {@code delete}.
  * That is why {@link #findIndexes} and {@link #findIndexesSoonestFirst} return
  * positions in this list rather than the tasks they found: the position is the
  * part the user needs, and the task can be fetched with {@link #get}.
  *
  * <p>Nothing here validates what the user typed and nothing here prints. A task
- * number that names no task is refused by {@link Bob}, which is where there is
+ * number that names no task is refused by {@link bob.Bob Bob}, which is where there is
  * still a user to explain it to; this class assumes it is given a position that
  * exists, exactly as a plain list would.
  */
@@ -57,7 +58,7 @@ public class TaskList {
 
     /**
      * Creates a task list holding the given tasks, in the order given — used to
-     * take up the tasks {@link Storage} read back from the save file.
+     * take up the tasks {@link bob.storage.Storage Storage} read back from the save file.
      *
      * <p>The tasks are copied into a list of this class's own rather than the
      * given list being kept and added to. The list handed in may be one that
@@ -116,7 +117,7 @@ public class TaskList {
     }
 
     /**
-     * Returns the tasks as a plain list, for {@link Storage} to write out.
+     * Returns the tasks as a plain list, for {@link bob.storage.Storage Storage} to write out.
      *
      * <p>A copy is returned rather than the list itself, so that saving cannot
      * alter what is saved. {@code Storage} is given a {@code List<Task>} rather
@@ -133,8 +134,9 @@ public class TaskList {
      *
      * <p>Which tasks are wanted arrives as a {@link Predicate}: a question about a
      * task that can be passed to a method and asked there. Passing the test itself
-     * is what lets this one method serve {@link CommandWord#ON}, {@link CommandWord#BEFORE}
-     * and {@link CommandWord#AFTER} alike; the alternative — a flag saying which
+     * is what lets this one method serve {@link bob.command.CommandWord#ON CommandWord.ON},
+     * {@link bob.command.CommandWord#BEFORE CommandWord.BEFORE} and
+     * {@link bob.command.CommandWord#AFTER CommandWord.AFTER} alike; the alternative — a flag saying which
      * command called, and a {@code switch} on it here — would put each command's
      * meaning somewhere other than in the command.
      *
@@ -153,7 +155,7 @@ public class TaskList {
 
     /**
      * Returns the positions of every task, in the order they were added — what
-     * {@link CommandWord#LIST} shows.
+     * {@link bob.command.CommandWord#LIST CommandWord.LIST} shows.
      *
      * <p>Written in terms of {@link #findIndexes} with a test every task passes,
      * so that a full listing and a shortened one are produced the same way and

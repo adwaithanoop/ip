@@ -1,4 +1,10 @@
-package bob;
+package bob.command;
+
+import bob.BobException;
+import bob.storage.Storage;
+import bob.task.Task;
+import bob.task.TaskList;
+import bob.ui.Ui;
 
 /**
  * Marks one task as done, or as not done again.

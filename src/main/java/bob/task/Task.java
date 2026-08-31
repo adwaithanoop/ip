@@ -1,4 +1,4 @@
-package bob;
+package bob.task;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -57,14 +57,16 @@ public abstract class Task {
      * Returns the date this task is pinned to, or an empty {@link Optional} for a
      * task that is not pinned to any date.
      *
-     * <p>This is what lets {@link CommandWord#ON}, {@link CommandWord#BEFORE},
-     * {@link CommandWord#AFTER} and {@link CommandWord#NEXT} work through one list holding
-     * all three kinds of task without asking what kind each one is: a
+     * <p>This is what lets {@link bob.command.CommandWord#ON CommandWord.ON},
+     * {@link bob.command.CommandWord#BEFORE CommandWord.BEFORE},
+     * {@link bob.command.CommandWord#AFTER CommandWord.AFTER} and
+     * {@link bob.command.CommandWord#NEXT CommandWord.NEXT} work through one list holding all three
+     * kinds of task without asking what kind each one is: a
      * {@link Deadline} answers with its due date, an {@link Event} with its start,
      * and a {@link Todo} accepts this default and answers that it has none.
      *
      * <p>An {@code Optional} is returned rather than {@code null} so that a caller
-     * cannot forget the dateless case, exactly as in {@link CommandWord#of}.
+     * cannot forget the dateless case, exactly as in {@link bob.command.CommandWord#of CommandWord.of}.
      */
     public Optional<TaskDate> getScheduledDate() {
         return Optional.empty();
@@ -122,7 +124,7 @@ public abstract class Task {
     }
 
     /**
-     * Returns the task as the list of fields that {@link Storage} writes to the
+     * Returns the task as the list of fields that {@link bob.storage.Storage Storage} writes to the
      * save file: the kind of task, whether it has been done, and what it is.
      *
      * <p>Subclasses that remember more than that — a deadline's due date, an
@@ -132,7 +134,7 @@ public abstract class Task {
      *
      * <p>The fields are returned separately rather than as one finished line of
      * text. Joining them, and protecting a field that itself contains the
-     * separator, is then left to {@link Storage}, which is the one class that
+     * separator, is then left to {@link bob.storage.Storage Storage}, which is the one class that
      * knows the layout of the file.
      */
     public List<String> toSaveFields() {

@@ -1,11 +1,14 @@
-package bob;
+package bob.command;
+
+import bob.BobException;
+import bob.task.TaskList;
 
 /**
  * A command that acts on the one task the user named by its number.
  *
  * <p>{@link MarkCommand} and {@link DeleteCommand} both take a number, and both
  * have to answer the same question before they can do anything: is there a task
- * with that number? {@link Parser} cannot answer it, because it reads text and
+ * with that number? {@link bob.parser.Parser Parser} cannot answer it, because it reads text and
  * has no list to count; so the check belongs to the commands, and being the same
  * check in both it belongs to a parent they share.
  *

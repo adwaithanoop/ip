@@ -1,10 +1,15 @@
-package bob;
+package bob.command;
+
+import bob.BobException;
+import bob.storage.Storage;
+import bob.task.TaskList;
+import bob.ui.Ui;
 
 /**
  * One thing the user has asked the chatbot to do, ready to be carried out.
  *
  * <p>What each command does used to be a branch of a {@code switch} in
- * {@link Bob}, and the arguments each one needed were picked apart in a method
+ * {@link bob.Bob Bob}, and the arguments each one needed were picked apart in a method
  * of its own beside it. Adding a command meant editing {@code Bob} in three
  * places, and the whole of the chatbot's behavior sat in one class that grew
  * with every command added.
@@ -12,7 +17,7 @@ package bob;
  * <p>Each command is now a class, and carrying one out is a call to
  * {@link #execute}. Which class it is decides what happens, so {@code Bob} no
  * longer has to ask: it is handed a {@code Command} and runs it. Adding a
- * command is now writing a class and naming it in one line of {@link Parser},
+ * command is now writing a class and naming it in one line of {@link bob.parser.Parser Parser},
  * rather than editing the body of the class that runs the conversation.
  *
  * <p>Every command is given the same three things to work with, whether it

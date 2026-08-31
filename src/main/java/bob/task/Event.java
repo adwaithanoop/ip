@@ -1,4 +1,4 @@
-package bob;
+package bob.task;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.Optional;
  * has understood.
  *
  * <p>Nothing here checks that the end comes after the start. That check lives in
- * the command that builds the event, in {@link Bob}, because that is where there
+ * the command that builds the event, in {@link bob.Bob Bob}, because that is where there
  * is still a user to tell about it: a class that could only throw would leave the
  * caller to turn the failure into something worth reading. The consequence is that
  * an event whose end comes first can still be built — by a hand-edited save file,
@@ -51,7 +51,8 @@ public class Event extends Task {
     /**
      * Returns the start, which is the date an event is pinned to: it is when the
      * event first wants the user's attention, so it is what an event is ordered by
-     * and what {@link CommandWord#BEFORE} and {@link CommandWord#AFTER} measure.
+     * and what {@link bob.command.CommandWord#BEFORE CommandWord.BEFORE} and
+     * {@link bob.command.CommandWord#AFTER CommandWord.AFTER} measure.
      */
     @Override
     public Optional<TaskDate> getScheduledDate() {
