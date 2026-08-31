@@ -2275,3 +2275,51 @@ bye
      Bye. Hope to see you again soon!
     ____________________________________________________________
 ```
+
+### TC30 - Input that ends without bye
+
+**Aim:** Check that the chatbot still signs off when the input simply runs out
+instead of ending with `bye`, which is what happens when commands are piped in
+from a file. The farewell is printed by the `bye` command itself, so this test
+case covers the other way the conversation can end — the one where no command
+prints it.
+
+**Input**
+
+```text
+todo read book
+list
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```

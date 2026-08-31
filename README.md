@@ -33,13 +33,19 @@ course's [policy on citing AI-generated/assisted work](https://nus-cs2103-ay2627
 
 * **Tool used:** Claude Code (Anthropic), models Claude Opus 5.
 * **Used by:** Adwaith Anoop, the sole author of this project.
-* **Extent:** AI assistance was used across most increments from Level 1 to Level 6.
-  It contributed to the Java sources under `src/main/java/`, the commit
-  messages, and the UI test plan in `test/ui-test-plan.md`. Where the assistance was confined to a
-  specific method or block, it is also noted in a comment at that point in the code.
-* **How it was used:** "For earlier levels I practised using the course's suggested prompts. Later on,
-  I described the increment, reviewed the AI's implementation line by line, and revised
-  it before committing" (level AI-5).
+* **Extent:** AI assistance was used across most increments from Level 1 to Level 8,
+  and for the A-MoreOOP increment. It contributed to the Java sources under
+  `src/main/java/`, the UI test plan in
+  `test/ui-test-plan.md`. Where the assistance was confined to a specific method or
+  block, it is also noted in a comment at that point in the code. AI was also used 
+  significantly in A-MoreOOP. 
+* **How it was used:** "For earlier levels I practised using the course's suggested
+  prompts. Later on, I described the increment, reviewed the AI's implementation line
+  by line, and revised it before committing" (level AI-5). For A-MoreOOP I gave the
+  increment's requirements and asked for the work to proceed one self-contained step
+  at a time, each step tested against `test/ui-test-plan.md` and committed separately,
+  with the assistant explaining its design choices and the trade-offs so I could
+  accept or challenge them.
 * **What I checked:** I reviewed the changes made line by line and ran test cases in `test/ui-test-plan.md`
   after every change. I am also actively revisiting past commits and comparing with coding principles I have learnt
   from CS2030S and week 1's pre-req material.

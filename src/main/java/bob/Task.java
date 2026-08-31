@@ -57,14 +57,14 @@ public abstract class Task {
      * Returns the date this task is pinned to, or an empty {@link Optional} for a
      * task that is not pinned to any date.
      *
-     * <p>This is what lets {@link Command#ON}, {@link Command#BEFORE},
-     * {@link Command#AFTER} and {@link Command#NEXT} work through one list holding
+     * <p>This is what lets {@link CommandWord#ON}, {@link CommandWord#BEFORE},
+     * {@link CommandWord#AFTER} and {@link CommandWord#NEXT} work through one list holding
      * all three kinds of task without asking what kind each one is: a
      * {@link Deadline} answers with its due date, an {@link Event} with its start,
      * and a {@link Todo} accepts this default and answers that it has none.
      *
      * <p>An {@code Optional} is returned rather than {@code null} so that a caller
-     * cannot forget the dateless case, exactly as in {@link Command#of}.
+     * cannot forget the dateless case, exactly as in {@link CommandWord#of}.
      */
     public Optional<TaskDate> getScheduledDate() {
         return Optional.empty();
