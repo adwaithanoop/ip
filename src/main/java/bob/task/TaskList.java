@@ -163,7 +163,7 @@ public class TaskList {
      *
      * @return the positions of all the tasks, counting from 0.
      */
-    public List<Integer> allIndexes() {
+    public List<Integer> getAllIndexes() {
         return findIndexes(task -> true);
     }
 

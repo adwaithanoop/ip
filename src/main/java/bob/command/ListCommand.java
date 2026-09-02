@@ -14,7 +14,7 @@ public class ListCommand extends Command {
 
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) {
-        ui.showTasks(tasks, tasks.allIndexes(),
+        ui.showTasks(tasks, tasks.getAllIndexes(),
                 "Here are the tasks in your list:",
                 "You haven't told me about any tasks yet.");
     }

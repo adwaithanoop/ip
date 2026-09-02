@@ -84,20 +84,20 @@ public class CommandWordTest {
 
     @Test
     public void argumentsIn_argumentsGiven_returnedWithoutSurroundingSpaces() {
-        assertEquals("2", CommandWord.MARK.argumentsIn("mark 2"));
-        assertEquals("read book", CommandWord.TODO.argumentsIn("todo    read book   "));
+        assertEquals("2", CommandWord.MARK.getArgumentsIn("mark 2"));
+        assertEquals("read book", CommandWord.TODO.getArgumentsIn("todo    read book   "));
     }
 
     @Test
     public void argumentsIn_spacesInsideTheArguments_keptAsTyped() {
         // Only the ends are trimmed; what is between words is the user's text.
-        assertEquals("read  book", CommandWord.TODO.argumentsIn("todo read  book"));
+        assertEquals("read  book", CommandWord.TODO.getArgumentsIn("todo read  book"));
     }
 
     @Test
     public void argumentsIn_nothingAfterTheKeyword_emptyString() {
-        assertEquals("", CommandWord.MARK.argumentsIn("mark"));
-        assertEquals("", CommandWord.TODO.argumentsIn("todo "));
+        assertEquals("", CommandWord.MARK.getArgumentsIn("mark"));
+        assertEquals("", CommandWord.TODO.getArgumentsIn("todo "));
     }
 
     @Test
@@ -108,7 +108,7 @@ public class CommandWordTest {
 
     @Test
     public void allKeywords_calledOnce_listsEveryCommandInDeclarationOrder() {
-        String keywords = CommandWord.allKeywords();
+        String keywords = CommandWord.getAllKeywords();
 
         assertEquals("todo, deadline, event, list, on, before, after, next, mark, unmark,"
                 + " delete, bye", keywords);
@@ -118,7 +118,7 @@ public class CommandWordTest {
     public void allKeywords_calledOnce_namesEveryConstantThatExists() {
         // Built from values(), so a command added to the enum cannot be left out
         // of the list the chatbot offers a puzzled user.
-        String keywords = CommandWord.allKeywords();
+        String keywords = CommandWord.getAllKeywords();
 
         for (CommandWord command : CommandWord.values()) {
             assertTrue(keywords.contains(command.getKeyword()));
