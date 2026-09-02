@@ -14,11 +14,15 @@ import bob.ui.Ui;
  */
 public class ExitCommand extends Command {
 
+    /**
+     * Prints the farewell. The list is left as it was, so there is nothing to save.
+     */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) {
         ui.showFarewell();
     }
 
+    /** Returns {@code true}: this is the one command that ends the conversation. */
     @Override
     public boolean isExit() {
         return true;

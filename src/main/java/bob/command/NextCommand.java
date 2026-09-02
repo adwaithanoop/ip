@@ -29,6 +29,10 @@ public class NextCommand extends Command {
         this.wantedCount = wantedCount;
     }
 
+    /**
+     * Prints up to the requested number of dated tasks, soonest first, or says that
+     * no task has a date on it yet.
+     */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) {
         List<Integer> datedTaskIndexes = tasks.findIndexesSoonestFirst();

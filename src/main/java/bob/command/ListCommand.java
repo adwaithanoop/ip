@@ -12,6 +12,10 @@ import bob.ui.Ui;
  */
 public class ListCommand extends Command {
 
+    /**
+     * Prints every task in the list, numbered from 1, or says that nothing has been
+     * added yet.
+     */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) {
         ui.showTasks(tasks, tasks.allIndexes(),

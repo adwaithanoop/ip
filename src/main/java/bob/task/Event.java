@@ -43,6 +43,7 @@ public class Event extends Task {
         this.to = to;
     }
 
+    /** Returns {@link #TYPE_ICON}, the {@code E} that marks an event. */
     @Override
     public String getTypeIcon() {
         return TYPE_ICON;

@@ -35,6 +35,10 @@ public class OnCommand extends Command {
         this.day = day;
     }
 
+    /**
+     * Prints the tasks falling on the day this command was built with, or says that
+     * there are none.
+     */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) {
         String dayShown = TaskDate.formatDay(day);
