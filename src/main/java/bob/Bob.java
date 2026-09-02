@@ -52,7 +52,10 @@ import bob.ui.Ui;
  * {@link bob.command.CommandWord#AFTER CommandWord.AFTER} pick out the tasks falling on, before,
  * or after a given day, and {@link bob.command.CommandWord#NEXT CommandWord.NEXT} shows the few
  * with the soonest dates on them.
- * All four are views of the one task list — they change nothing, so nothing is
+ * A fifth view asks about the words rather than the dates:
+ * {@link bob.command.CommandWord#FIND CommandWord.FIND} picks out the tasks whose description
+ * mentions a keyword, which is how a long list is searched rather than read through.
+ * All five are views of the one task list — they change nothing, so nothing is
  * saved after them — and each shows a task with the number it has in
  * {@link bob.command.CommandWord#LIST CommandWord.LIST}, so a task found this way can be marked or deleted
  * without looking it up again.

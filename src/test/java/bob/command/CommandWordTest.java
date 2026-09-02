@@ -110,8 +110,8 @@ public class CommandWordTest {
     public void allKeywords_calledOnce_listsEveryCommandInDeclarationOrder() {
         String keywords = CommandWord.allKeywords();
 
-        assertEquals("todo, deadline, event, list, on, before, after, next, mark, unmark,"
-                + " delete, bye", keywords);
+        assertEquals("todo, deadline, event, list, on, before, after, next, find, mark,"
+                + " unmark, delete, bye", keywords);
     }
 
     @Test

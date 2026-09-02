@@ -18,6 +18,7 @@ import bob.command.BeforeCommand;
 import bob.command.Command;
 import bob.command.DeleteCommand;
 import bob.command.ExitCommand;
+import bob.command.FindCommand;
 import bob.command.ListCommand;
 import bob.command.MarkCommand;
 import bob.command.NextCommand;
@@ -97,6 +98,7 @@ public class ParserTest {
         assertInstanceOf(BeforeCommand.class, Parser.parse("before 2026-12-02"));
         assertInstanceOf(AfterCommand.class, Parser.parse("after 2026-12-02"));
         assertInstanceOf(NextCommand.class, Parser.parse("next 3"));
+        assertInstanceOf(FindCommand.class, Parser.parse("find book"));
         assertInstanceOf(MarkCommand.class, Parser.parse("mark 2"));
         assertInstanceOf(MarkCommand.class, Parser.parse("unmark 2"));
         assertInstanceOf(DeleteCommand.class, Parser.parse("delete 2"));
@@ -282,6 +284,28 @@ public class ParserTest {
     public void parseCount_oneOrMore_accepted() throws BobException {
         assertInstanceOf(NextCommand.class, Parser.parse("next 1"));
         assertInstanceOf(NextCommand.class, Parser.parse("next 100"));
+    }
+
+    @Test
+    public void parseKeyword_noKeyword_exceptionThrown() {
+        // Matching every task would be a listing the user already has in "list".
+        BobException exception = assertThrows(BobException.class, () -> Parser.parse("find"));
+
+        assertTrue(exception.getMessage().contains("What should I look for?"));
+    }
+
+    @Test
+    public void parseKeyword_severalWords_acceptedAsOnePhrase() throws BobException {
+        // Everything after the command word is the keyword, so a phrase is a
+        // search the user may make.
+        assertInstanceOf(FindCommand.class, Parser.parse("find sports club"));
+    }
+
+    @Test
+    public void parseKeyword_textThatMatchesNothing_accepted() throws BobException {
+        // Whether anything matches is a fact about the list, not about the text,
+        // so a search that finds nothing is answered rather than refused here.
+        assertInstanceOf(FindCommand.class, Parser.parse("find zzz"));
     }
 
     /**
