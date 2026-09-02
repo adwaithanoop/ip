@@ -123,8 +123,8 @@ public class Parser {
         }
         // orElseThrow unwraps the Optional when a command was recognized, and
         // throws the "I don't know what that means" error when none was.
-        CommandWord word = CommandWord.of(line).orElseThrow(() -> unknownCommand(line));
-        String arguments = word.argumentsIn(line);
+        CommandWord word = CommandWord.of(line).orElseThrow(() -> createUnknownCommandError(line));
+        String arguments = word.getArgumentsIn(line);
         return switch (word) {
             case TODO -> new AddCommand(parseTodo(arguments));
             case DEADLINE -> new AddCommand(parseDeadline(arguments));
@@ -296,7 +296,7 @@ public class Parser {
     private static LocalDate parseDay(String dayText, CommandWord command) throws BobException {
         if (dayText.isEmpty()) {
             throw new BobException("Which day should I look at?"
-                    + "\nFor example: " + dayExample(command));
+                    + "\nFor example: " + getDayExample(command));
         }
         return TaskDate.parseDay(dayText);
     }
@@ -342,7 +342,7 @@ public class Parser {
      * apiece would be three chances for one of them to be forgotten when a fourth
      * such command is added.
      */
-    private static String dayExample(CommandWord command) {
+    private static String getDayExample(CommandWord command) {
         return command.getKeyword() + " " + TaskDate.EXAMPLE_DATE;
     }
 
@@ -385,8 +385,8 @@ public class Parser {
      * Returns the error to throw for a line that is not one of the commands the
      * chatbot knows, listing the ones it does know so the user can pick one.
      */
-    private static BobException unknownCommand(String line) {
+    private static BobException createUnknownCommandError(String line) {
         return new BobException("Sorry, I don't know what \"" + line + "\" means."
-                + "\nTry one of: " + CommandWord.allKeywords());
+                + "\nTry one of: " + CommandWord.getAllKeywords());
     }
 }

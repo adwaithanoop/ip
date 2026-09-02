@@ -123,7 +123,7 @@ public class TaskDate implements Comparable<TaskDate> {
     public static TaskDate parse(String text) throws BobException {
         String[] parts = text.trim().split("\\s+");
         if (parts.length > 2) {
-            throw cannotRead(text);
+            throw createUnreadableDateError(text);
         }
         try {
             // LocalDate reads the yyyy-mm-dd form by itself, and refuses a day
@@ -134,7 +134,7 @@ public class TaskDate implements Comparable<TaskDate> {
                     : null;
             return new TaskDate(date, time);
         } catch (DateTimeParseException e) {
-            throw cannotRead(text);
+            throw createUnreadableDateError(text);
         }
     }
 
@@ -183,7 +183,7 @@ public class TaskDate implements Comparable<TaskDate> {
      * <p>The text is quoted back so that a user who mistyped one character can see
      * which of several dates on the line was not understood.
      */
-    private static BobException cannotRead(String text) {
+    private static BobException createUnreadableDateError(String text) {
         return new BobException("I don't understand \"" + text + "\" as a date."
                 + "\nWrite the day as yyyy-mm-dd, and add a 24-hour time if the hour matters."
                 + "\nFor example: " + EXAMPLE_DATE + " or " + EXAMPLE_DATE_TIME);

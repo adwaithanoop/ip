@@ -78,7 +78,7 @@ public class Ui {
      * but any code could still overwrite an element. An immutable list cannot be
      * changed at all, so the name is honest about what it holds.
      */
-    private static final List<String> BANNER = List.of(
+    private static final List<String> BANNER_LINES = List.of(
             "  .        *         .        .        *        .",
             "      *         .         +        .       <]==-     .",
             "   .        +        ____        __      .        *",
@@ -101,7 +101,7 @@ public class Ui {
     /** Prints the banner and welcome message as one block. */
     public void showGreeting() {
         openBlock();
-        for (String bannerLine : BANNER) {
+        for (String bannerLine : BANNER_LINES) {
             showLine(bannerLine);
         }
         showLine("Hello! I'm " + NAME + ".");

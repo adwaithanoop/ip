@@ -23,7 +23,7 @@ import java.util.StringJoiner;
  * <p>Two things follow from the set being known in one place. {@link #of} finds
  * the command a line begins with by walking {@link #values()}, so recognizing a
  * command is no longer a chain of {@code else if} branches that has to be
- * extended by hand. And {@link #allKeywords} builds the list of commands shown
+ * extended by hand. And {@link #getAllKeywords} builds the list of commands shown
  * to a user who typed something unrecognized, so that message can no longer
  * fall out of step with the commands that actually exist — which is exactly the
  * kind of mistake that is easy to make when adding a command.
@@ -126,7 +126,7 @@ public enum CommandWord {
      *
      * @param line a line that {@link #matches} has already accepted.
      */
-    public String argumentsIn(String line) {
+    public String getArgumentsIn(String line) {
         if (line.length() <= keyword.length()) {
             return "";
         }
@@ -162,7 +162,7 @@ public enum CommandWord {
      * <p>Built from {@link #values()} rather than written out by hand, so adding
      * a command to this enum is all it takes for the chatbot to start offering it.
      */
-    public static String allKeywords() {
+    public static String getAllKeywords() {
         StringJoiner keywords = new StringJoiner(", ");
         for (CommandWord command : values()) {
             keywords.add(command.keyword);

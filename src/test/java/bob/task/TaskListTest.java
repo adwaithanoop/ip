@@ -123,12 +123,12 @@ public class TaskListTest {
     public void allIndexes_severalTasks_everyPositionInOrder() {
         TaskList tasks = listOf(new Todo("first"), new Todo("second"), new Todo("third"));
 
-        assertEquals(List.of(0, 1, 2), tasks.allIndexes());
+        assertEquals(List.of(0, 1, 2), tasks.getAllIndexes());
     }
 
     @Test
     public void allIndexes_emptyList_emptyList() {
-        assertEquals(List.of(), new TaskList().allIndexes());
+        assertEquals(List.of(), new TaskList().getAllIndexes());
     }
 
     @Test
