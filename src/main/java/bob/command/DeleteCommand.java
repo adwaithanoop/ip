@@ -26,6 +26,10 @@ public class DeleteCommand extends TaskNumberCommand {
         super(taskNumber, CommandWord.DELETE);
     }
 
+    /**
+     * Removes the numbered task from the list, shows which task was removed along
+     * with how many tasks are left, and saves the changed list.
+     */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) throws BobException {
         // delete returns the task it took out, so it can be shown without

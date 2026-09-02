@@ -31,6 +31,10 @@ public class MarkCommand extends TaskNumberCommand {
         this.isDone = isDone;
     }
 
+    /**
+     * Sets the numbered task's done status, shows the task back with its new
+     * status, and saves the changed list.
+     */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) throws BobException {
         Task task = tasks.get(requireTaskIndex(tasks));

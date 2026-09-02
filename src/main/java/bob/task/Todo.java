@@ -26,6 +26,7 @@ public class Todo extends Task {
         super(description);
     }
 
+    /** Returns {@link #TYPE_ICON}, the {@code T} that marks a todo. */
     @Override
     public String getTypeIcon() {
         return TYPE_ICON;

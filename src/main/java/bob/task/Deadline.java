@@ -33,6 +33,7 @@ public class Deadline extends Task {
         this.by = by;
     }
 
+    /** Returns {@link #TYPE_ICON}, the {@code D} that marks a deadline. */
     @Override
     public String getTypeIcon() {
         return TYPE_ICON;

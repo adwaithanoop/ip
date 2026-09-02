@@ -30,6 +30,10 @@ public class AddCommand extends Command {
         this.task = task;
     }
 
+    /**
+     * Adds the task to the list, shows it back along with how many tasks there now
+     * are, and saves the changed list.
+     */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) throws BobException {
         tasks.add(task);
