@@ -337,7 +337,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "borrow book" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -569,7 +569,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "todolist" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1164,17 +1164,17 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "bye now" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
      Sorry, I don't know what "list foo" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
      Sorry, I don't know what "BYE" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -2317,6 +2317,122 @@ list
     ____________________________________________________________
      Here are the tasks in your list:
      1.[T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+### TC31 - Finding tasks by a keyword
+
+**Aim:** Check that `find` picks out the tasks whose description mentions a word
+and leaves the rest alone. All three kinds of task are searched, since every task
+has a description — unlike `on`, `before` and `after`, this listing does not pass
+over a todo. The search ignores case, so `find BOOK` finds the same tasks as
+`find book`, and it matches part of a word, so `find clu` finds both `book club`
+and `sports club` — that is what makes typing half a word worth doing. As with
+the other shortened listings, the numbers shown are the tasks' numbers in the
+full list rather than 1, 2, 3 counting the matches, which is why the marked
+tasks below keep the numbers `list` would give them. A keyword nothing mentions
+says so and quotes the keyword back, rather than printing an empty listing, and
+a `find` with nothing after it asks for a word instead of matching every task.
+
+**Input**
+
+```text
+todo read book
+deadline return book /by 2026-06-06
+event book club /from 2026-07-01 1900 /to 2026-07-01 2000
+todo join sports club
+mark 1
+mark 2
+find book
+find BOOK
+find clu
+find swimming
+find
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: Jun 06 2026)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] book club (from: Jul 01 2026 19:00 to: Jul 01 2026 20:00)
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] join sports club
+     Now you have 4 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [T][X] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Nice! I've marked this task as done:
+       [D][X] return book (by: Jun 06 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the matching tasks in your list:
+     1.[T][X] read book
+     2.[D][X] return book (by: Jun 06 2026)
+     3.[E][ ] book club (from: Jul 01 2026 19:00 to: Jul 01 2026 20:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the matching tasks in your list:
+     1.[T][X] read book
+     2.[D][X] return book (by: Jun 06 2026)
+     3.[E][ ] book club (from: Jul 01 2026 19:00 to: Jul 01 2026 20:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the matching tasks in your list:
+     3.[E][ ] book club (from: Jul 01 2026 19:00 to: Jul 01 2026 20:00)
+     4.[T][ ] join sports club
+    ____________________________________________________________
+
+    ____________________________________________________________
+     No task of yours mentions "swimming".
+    ____________________________________________________________
+
+    ____________________________________________________________
+     What should I look for?
+     Give me a word from the task, for example: find book
     ____________________________________________________________
 
     ____________________________________________________________

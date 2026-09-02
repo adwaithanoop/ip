@@ -206,6 +206,21 @@ public class TaskListTest {
         assertEquals(List.of(), tasks.findIndexes(task -> task.isAfter(day)));
     }
 
+    @Test
+    public void findIndexes_keywordTest_usedByTheFindCommand() throws BobException {
+        TaskList tasks = listOf(
+                new Todo("read book"),
+                deadlineOn("return book", "2026-12-02"),
+                new Todo("join sports club"),
+                eventFrom("book club", "2026-12-01", "2026-12-01"));
+
+        // Unlike the day tests above, this one finds todos too: every task has a
+        // description, so no kind of task is left out of a search.
+        assertEquals(List.of(0, 1, 3), tasks.findIndexes(task -> task.matchesKeyword("book")));
+        assertEquals(List.of(2, 3), tasks.findIndexes(task -> task.matchesKeyword("club")));
+        assertEquals(List.of(), tasks.findIndexes(task -> task.matchesKeyword("swim")));
+    }
+
     /** Returns a task list holding the given tasks, in the order given. */
     private static TaskList listOf(Task... tasks) {
         return new TaskList(List.of(tasks));

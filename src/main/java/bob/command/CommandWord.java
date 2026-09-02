@@ -54,6 +54,9 @@ public enum CommandWord {
     /** Prints the most urgent tasks, soonest first; used as {@code next <how many>}. */
     NEXT("next", true),
 
+    /** Prints the tasks whose description contains a word; used as {@code find <keyword>}. */
+    FIND("find", true),
+
     /** Marks a task as done; used as {@code mark <task number>}. */
     MARK("mark", true),
 

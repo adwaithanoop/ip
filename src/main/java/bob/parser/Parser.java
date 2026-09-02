@@ -10,6 +10,7 @@ import bob.command.Command;
 import bob.command.CommandWord;
 import bob.command.DeleteCommand;
 import bob.command.ExitCommand;
+import bob.command.FindCommand;
 import bob.command.ListCommand;
 import bob.command.MarkCommand;
 import bob.command.NextCommand;
@@ -92,6 +93,9 @@ public class Parser {
     private static final String NEXT_EXAMPLE =
             CommandWord.NEXT.getKeyword() + " " + NEXT_EXAMPLE_COUNT;
 
+    /** Example of a well-formed {@link CommandWord#FIND} command, shown when one is malformed. */
+    private static final String FIND_EXAMPLE = CommandWord.FIND.getKeyword() + " book";
+
     /**
      * Returns the command one line of the user's asks for, ready to be run.
      *
@@ -134,6 +138,7 @@ public class Parser {
             case BEFORE -> new BeforeCommand(parseDay(arguments, word));
             case AFTER -> new AfterCommand(parseDay(arguments, word));
             case NEXT -> new NextCommand(parseCount(arguments));
+            case FIND -> new FindCommand(parseKeyword(arguments));
             case MARK -> new MarkCommand(parseTaskNumber(arguments, word), true);
             case UNMARK -> new MarkCommand(parseTaskNumber(arguments, word), false);
             case DELETE -> new DeleteCommand(parseTaskNumber(arguments, word));
@@ -331,6 +336,27 @@ public class Parser {
                     + "\nFor example: " + NEXT_EXAMPLE);
         }
         return count;
+    }
+
+    /**
+     * Returns the text {@link CommandWord#FIND} was asked to search for, having
+     * checked that the user typed something to search for at all.
+     *
+     * <p>Everything after the command word is the keyword, spaces and all, so a
+     * user may search for a phrase such as {@code find sports club}. Nothing else
+     * is checked: any text at all is a search someone might mean, and one that
+     * matches nothing is answered by the command rather than refused here.
+     *
+     * @param keywordText the text as the user typed it after {@code find}.
+     * @return the text to look for in each description.
+     * @throws BobException if nothing was typed after {@code find}.
+     */
+    private static String parseKeyword(String keywordText) throws BobException {
+        if (keywordText.isEmpty()) {
+            throw new BobException("What should I look for?"
+                    + "\nGive me a word from the task, for example: " + FIND_EXAMPLE);
+        }
+        return keywordText;
     }
 
     /**

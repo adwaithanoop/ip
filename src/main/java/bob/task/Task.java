@@ -3,6 +3,7 @@ package bob.task;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -103,6 +104,32 @@ public abstract class Task {
      */
     public boolean isAfter(LocalDate day) {
         return getScheduledDate().filter(date -> date.isAfter(day)).isPresent();
+    }
+
+    /**
+     * Returns whether this task's description contains {@code keyword}.
+     *
+     * <p>Case is ignored, so a user searching for {@code Book} still finds a task
+     * they wrote as {@code read book}. Comparing the text exactly as typed would
+     * be marginally simpler, but it would make a search fail for the one reason a
+     * user is least likely to think of.
+     *
+     * <p>The keyword is looked for anywhere in the description rather than as a
+     * whole word of its own, so {@code book} finds {@code bookshop} too. That is
+     * what makes a partial word worth typing: a whole-word search would need the
+     * description split into words first, and would then refuse to find the very
+     * tasks a user typing half a word is reaching for.
+     *
+     * <p>Unlike the date questions above, every kind of task answers this the same
+     * way, because every task has a description. There is nothing here for a
+     * subclass to override.
+     *
+     * @param keyword the text to look for, as the user typed it.
+     */
+    public boolean matchesKeyword(String keyword) {
+        // Locale.ROOT rather than the machine's own locale, so that lowercasing
+        // means the same thing wherever the chatbot is run.
+        return description.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
     }
 
     /**

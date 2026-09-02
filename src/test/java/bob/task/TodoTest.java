@@ -128,4 +128,44 @@ public class TodoTest {
         assertFalse(todo.isBefore(SOME_DAY));
         assertFalse(todo.isAfter(SOME_DAY));
     }
+
+    @Test
+    public void matchesKeyword_wordInTheDescription_returnsTrue() {
+        Todo todo = new Todo("read book");
+
+        assertTrue(todo.matchesKeyword("read"));
+        assertTrue(todo.matchesKeyword("book"));
+    }
+
+    @Test
+    public void matchesKeyword_wordNotInTheDescription_returnsFalse() {
+        assertFalse(new Todo("read book").matchesKeyword("swim"));
+    }
+
+    @Test
+    public void matchesKeyword_differentCase_returnsTrue() {
+        Todo todo = new Todo("Read Book");
+
+        // Neither side's capitalization is the user's problem when searching.
+        assertTrue(todo.matchesKeyword("read book"));
+        assertTrue(new Todo("read book").matchesKeyword("BOOK"));
+    }
+
+    @Test
+    public void matchesKeyword_partOfAWord_returnsTrue() {
+        // Half a word is a search someone means, so the keyword is looked for
+        // anywhere in the description rather than as a whole word.
+        assertTrue(new Todo("visit the bookshop").matchesKeyword("book"));
+        assertTrue(new Todo("read book").matchesKeyword("ad bo"));
+    }
+
+    @Test
+    public void matchesKeyword_todoFoundUnlikeInTheDateListings_returnsTrue() {
+        Todo todo = new Todo("read book");
+
+        // A todo has no date and so is left out of on, before and after; it has
+        // a description like any other task, so find must not leave it out too.
+        assertFalse(todo.occursOn(SOME_DAY));
+        assertTrue(todo.matchesKeyword("read"));
+    }
 }
