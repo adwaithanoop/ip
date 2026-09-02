@@ -1,0 +1,75 @@
+/*
+ * How the chatbot's window is colored and spaced.
+ *
+ * Kept apart from the FXML for the same reason the FXML is kept apart from the
+ * Java: this is the part most often changed simply because it did not look
+ * right, and a change here needs no recompiling and touches nothing else.
+ *
+ * The colors pick up the night sky of the chatbot's console banner, so the two
+ * front ends look like the same program.
+ */
+
+.root {
+    -fx-background-color: #1b2145;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", sans-serif;
+    -fx-font-size: 13px;
+}
+
+/* The scrolling conversation sits directly on the window's background. */
+.scroll-pane,
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.scroll-pane {
+    -fx-padding: 6 0 6 0;
+}
+
+/*
+ * A speech bubble. The bubble is the label rather than the row holding it, so
+ * that it is only as wide as what was said instead of stretching across the
+ * window; the row takes care of pushing it to the correct side.
+ */
+.dialog-bubble {
+    -fx-background-color: #4d7cc7;
+    -fx-background-radius: 14 14 2 14;
+    -fx-text-fill: #ffffff;
+    -fx-padding: 9 13 9 13;
+    -fx-line-spacing: 2;
+}
+
+/* The chatbot's bubbles: the other color, and the tail on the other corner. */
+.bob-bubble {
+    -fx-background-color: #f0ece3;
+    -fx-background-radius: 14 14 14 2;
+    -fx-text-fill: #1b2145;
+}
+
+.text-field {
+    -fx-background-color: #2b3266;
+    -fx-background-radius: 8;
+    -fx-text-fill: #ffffff;
+    -fx-prompt-text-fill: #8d96c4;
+    -fx-padding: 0 12 0 12;
+}
+
+.text-field:focused {
+    -fx-background-color: #354079;
+}
+
+.button {
+    -fx-background-color: #f2a65a;
+    -fx-background-radius: 8;
+    -fx-text-fill: #1b2145;
+    -fx-font-weight: bold;
+}
+
+.button:hover {
+    -fx-background-color: #f7b877;
+}
+
+.button:disabled,
+.text-field:disabled {
+    -fx-opacity: 0.5;
+}

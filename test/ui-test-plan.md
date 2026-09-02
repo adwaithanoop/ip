@@ -11,6 +11,20 @@ adding a test case here is all that is needed to have it run.
 - **Source directory:** `src/main/java`
 - **Data file:** `data/duke.txt`
 
+The chatbot now has two front ends, and this plan tests the console one. The
+main class above is therefore `bob.Bob`, which still holds the whole
+conversation at a console, and not the `bob.Launcher` that `./gradlew run` and
+the packaged jar start — that one opens a window, which prints nothing for a
+test case to compare against.
+
+Both front ends run every command through the same method, so what the chatbot
+*says* is the same in either; only where it is shown differs. That is what makes
+this plan worth as much as it was before the window existed: a change that
+breaks an answer breaks it here too. What this plan cannot see is anything about
+the window itself — the speech bubbles, the input box, the scrolling — and the
+methods the window talks through, which print nothing and so are covered by
+`BobTest` instead.
+
 The program is compiled fresh into a temporary directory before the session
 starts, and is started again for each test case, so no test case can be
 affected by tasks left over from an earlier one.

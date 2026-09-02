@@ -37,7 +37,20 @@ test {
 }
 
 application {
-    mainClass = 'bob.Bob'
+    // The windowed chatbot. The console one is still there and still works: it is
+    // started by running bob.Bob, which is what the text UI test runner does.
+    //
+    // JavaFX itself is not listed as a dependency because this project builds on a
+    // JDK that already carries it (Zulu 25 FX, per AGENTS.md), where javafx.controls
+    // and javafx.fxml are modules of the platform. Adding the org.openjfx jars on
+    // top would put a second copy of JavaFX on the class path, which the modules in
+    // the JDK would shadow anyway.
+    mainClass = 'bob.Launcher'
+
+    // JavaFX loads its own native libraries, which Java now warns about unless the
+    // module doing it is named as allowed to. The warning says nothing the user of
+    // a chatbot can act on, so it is silenced rather than printed at every start.
+    applicationDefaultJvmArgs = ['--enable-native-access=javafx.graphics']
 }
 
 jar {

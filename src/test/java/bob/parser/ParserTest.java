@@ -315,7 +315,9 @@ public class ParserTest {
     private Task firstTaskFrom(String line) throws BobException {
         Command command = Parser.parse(line);
         TaskList tasks = new TaskList();
-        command.execute(tasks, new Ui(), new Storage(tempDirectory.resolve("duke.txt")));
+        // The collecting Ui, so that running the command leaves the test session's
+        // own output alone. What it says is not what is being tested here.
+        command.execute(tasks, Ui.forGui(), new Storage(tempDirectory.resolve("duke.txt")));
         return tasks.get(0);
     }
 }
