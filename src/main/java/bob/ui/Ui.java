@@ -37,6 +37,15 @@ import bob.task.TaskList;
  * the right way round: what shows the tasks may know what a task is, while a
  * task knows nothing about being shown.
  *
+ * <p>There are now two places that output can go, because the chatbot has two
+ * front ends: the console it started with, and a window that shows the same
+ * conversation in speech bubbles.
+ * Rather than a second class saying all the same things a different way, one
+ * {@code Ui} comes in two shapes — {@link #forConsole()} and {@link #forGui()} —
+ * and every caller says what it wants said in exactly the same way whichever
+ * shape it holds. Only the handful of methods that actually touch the screen ask
+ * which shape they are, and what they do about it is set out on each of them.
+ *
  * <p>Output is built up as a <em>block</em>: {@link #openBlock()}, then one
  * {@link #showLine} per line, then {@link #closeBlock()}. The block is what
  * separates one answer from the next on screen, and letting the caller print its
@@ -95,14 +104,79 @@ public class Ui {
      * <p>Made once and kept, rather than a new one per line: a {@link Scanner}
      * reads ahead into a buffer of its own, so a second one made partway through
      * the conversation could find the text it wants already taken by the first.
+     *
+     * <p>A {@code Scanner} reads nothing until it is asked to, so the one belonging
+     * to a window — which takes its input from a text field and never asks — costs
+     * nothing beyond the object itself.
      */
     private final Scanner scanner = new Scanner(System.in);
 
-    /** Prints the banner and welcome message as one block. */
+    /**
+     * Whether output is printed to the console, rather than collected for
+     * whoever asked to show it themselves.
+     *
+     * <p>The two front ends want the same words in different shapes. A console
+     * wants them printed as they are decided, indented and framed by dividers; a
+     * window wants them handed back as one piece of text to put in a speech
+     * bubble, with no framing at all, because the bubble is the frame.
+     *
+     * <p>Which of the two this is, is settled when the {@code Ui} is made and never
+     * changes afterwards, so every method below has only to ask.
+     */
+    private final boolean isPrintingToConsole;
+
+    /**
+     * What has been shown since {@link #consumeShownText()} was last called.
+     *
+     * <p>Filled only when this {@code Ui} is not printing: a console has already
+     * shown its lines and has no reason to hold on to them.
+     */
+    private final StringBuilder shownText = new StringBuilder();
+
+    /**
+     * Creates a {@code Ui} in one of its two shapes.
+     *
+     * <p>Private, because a caller that passed the wrong {@code true} or
+     * {@code false} would get a chatbot talking to nobody. The two factory methods
+     * below name the shapes instead, so the choice is made by picking a name
+     * rather than by remembering which way round the flag goes.
+     */
+    private Ui(boolean isPrintingToConsole) {
+        this.isPrintingToConsole = isPrintingToConsole;
+    }
+
+    /**
+     * Returns a {@code Ui} that prints what it is told to the console, and reads
+     * the user's replies back from the keyboard.
+     */
+    public static Ui forConsole() {
+        return new Ui(true);
+    }
+
+    /**
+     * Returns a {@code Ui} that collects what it is told, for a graphical front end
+     * to fetch with {@link #consumeShownText()} and show in its own way.
+     *
+     * <p>Nothing is printed and nothing is read: a window supplies both halves of
+     * the conversation itself.
+     */
+    public static Ui forGui() {
+        return new Ui(false);
+    }
+
+    /**
+     * Shows the banner and welcome message as one block.
+     *
+     * <p>The banner is console-only. It is drawn by lining characters up in
+     * columns, which holds together only in a fixed-width font; a window shows its
+     * text in a proportional one, where the same lines come out ragged.
+     */
     public void showGreeting() {
         openBlock();
-        for (String bannerLine : BANNER_LINES) {
-            showLine(bannerLine);
+        if (isPrintingToConsole) {
+            for (String bannerLine : BANNER_LINES) {
+                showLine(bannerLine);
+            }
         }
         showLine("Hello! I'm " + NAME + ".");
         showLine("What can I do for you?");
@@ -264,24 +338,66 @@ public class Ui {
         return (index + 1) + "." + tasks.get(index);
     }
 
-    /** Starts a block of output with a divider. */
+    /**
+     * Starts a block of output with a divider.
+     *
+     * <p>Does nothing when the output is being collected rather than printed. A
+     * window separates one answer from the next by putting each in a speech bubble
+     * of its own, so a rule drawn in text would only be a second frame inside the
+     * first.
+     */
     public void openBlock() {
-        System.out.println(INDENT + DIVIDER);
+        if (isPrintingToConsole) {
+            System.out.println(INDENT + DIVIDER);
+        }
     }
 
     /**
-     * Prints one indented line of chatbot output.
+     * Shows one line of chatbot output: printed with the usual indent at the
+     * console, or added to the text being collected for a window.
      *
      * @param text what the line should say, without any indent of its own.
      */
     public void showLine(String text) {
-        System.out.println(INDENT + " " + text);
+        if (isPrintingToConsole) {
+            System.out.println(INDENT + " " + text);
+        } else {
+            shownText.append(text).append('\n');
+        }
     }
 
-    /** Ends a block with a divider, plus a blank line before whatever comes next. */
+    /**
+     * Ends a block with a divider, plus a blank line before whatever comes next.
+     *
+     * <p>Does nothing when the output is being collected, for the reason given on
+     * {@link #openBlock()}.
+     */
     public void closeBlock() {
-        System.out.println(INDENT + DIVIDER);
-        System.out.println();
+        if (isPrintingToConsole) {
+            System.out.println(INDENT + DIVIDER);
+            System.out.println();
+        }
+    }
+
+    /**
+     * Returns everything shown since this was last called, and forgets it, so that
+     * the next call returns only what is said next.
+     *
+     * <p>This is how a graphical front end collects an answer. It runs a command,
+     * which tells this {@code Ui} its lines one at a time exactly as it would at a
+     * console, and then asks here for the lot as the one piece of text that goes
+     * into a speech bubble.
+     *
+     * <p>Always empty on a {@code Ui} made by {@link #forConsole()}, which prints
+     * its lines rather than keeping them.
+     *
+     * @return the lines shown since the last call, separated by newlines, with no
+     *         blank line at either end.
+     */
+    public String consumeShownText() {
+        String text = shownText.toString().strip();
+        shownText.setLength(0);
+        return text;
     }
 
     /**
