@@ -43,7 +43,7 @@ import bob.ui.Ui;
  * to load and when to save.
  *
  * <p>A deadline and an event carry dates the chatbot understands rather than
- * text it merely repeats: each is read into a {@link bob.task.TaskDate TaskDate}, which is what
+ * text it merely repeats: each is read into a {@link bob.task.TaskDateTime TaskDateTime}, which is what
  * lets a date be shown back in a friendlier form than it was typed in.
  *
  * <p>Because those dates are understood, the chatbot can be asked about them

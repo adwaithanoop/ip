@@ -17,7 +17,7 @@ import bob.command.NextCommand;
 import bob.command.OnCommand;
 import bob.task.Deadline;
 import bob.task.Event;
-import bob.task.TaskDate;
+import bob.task.TaskDateTime;
 import bob.task.Todo;
 
 /**
@@ -64,17 +64,18 @@ public class Parser {
     /**
      * Example of a well-formed {@link CommandWord#DEADLINE} command, shown when one is malformed.
      *
-     * <p>The date in it is taken from {@link TaskDate}, which is the class that
+     * <p>The date in it is taken from {@link TaskDateTime}, which is the class that
      * decides how a date may be written, so this example cannot drift out of step
      * with the dates the chatbot actually accepts.
      */
     private static final String DEADLINE_EXAMPLE =
-            CommandWord.DEADLINE.getKeyword() + " return book " + BY_KEYWORD + " " + TaskDate.EXAMPLE_DATE;
+            CommandWord.DEADLINE.getKeyword() + " return book " + BY_KEYWORD + " "
+                    + TaskDateTime.EXAMPLE_DATE;
 
     /**
      * The end time shown in {@link #EVENT_EXAMPLE}, two hours after the start.
      *
-     * <p>Written out here rather than taken from {@link TaskDate}, which offers a
+     * <p>Written out here rather than taken from {@link TaskDateTime}, which offers a
      * single example date and not a pair of them. It is the one example date in
      * this class that is spelled out, so if the accepted form of a date ever
      * changes, this is the one line to change with it.
@@ -84,7 +85,7 @@ public class Parser {
     /** Example of a well-formed {@link CommandWord#EVENT} command, shown when one is malformed. */
     private static final String EVENT_EXAMPLE =
             CommandWord.EVENT.getKeyword() + " project meeting " + FROM_KEYWORD + " "
-                    + TaskDate.EXAMPLE_DATE_TIME + " " + TO_KEYWORD + " " + EVENT_EXAMPLE_END;
+                    + TaskDateTime.EXAMPLE_DATE_TIME + " " + TO_KEYWORD + " " + EVENT_EXAMPLE_END;
 
     /** How many tasks {@link #NEXT_EXAMPLE} asks for. */
     private static final int NEXT_EXAMPLE_COUNT = 3;
@@ -127,7 +128,7 @@ public class Parser {
         }
         // orElseThrow unwraps the Optional when a command was recognized, and
         // throws the "I don't know what that means" error when none was.
-        CommandWord word = CommandWord.of(line).orElseThrow(() -> createUnknownCommandError(line));
+        CommandWord word = CommandWord.parse(line).orElseThrow(() -> createUnknownCommandError(line));
         String arguments = word.getArgumentsIn(line);
         return switch (word) {
             case TODO -> new AddCommand(parseTodo(arguments));
@@ -170,7 +171,7 @@ public class Parser {
      * the description before it, the date after it — are reported separately, so
      * the user is told which one to add rather than just that the command is wrong.
      *
-     * <p>The due date is handed to {@link TaskDate#parse} rather than stored as
+     * <p>The due date is handed to {@link TaskDateTime#parse} rather than stored as
      * typed, so a deadline is only built once its date has been understood. Text
      * that is not a date is refused there, with its own explanation.
      *
@@ -194,7 +195,7 @@ public class Parser {
             throw new BobException("You wrote " + BY_KEYWORD + " but not when it is due."
                     + "\nFor example: " + DEADLINE_EXAMPLE);
         }
-        return new Deadline(description, TaskDate.parse(by));
+        return new Deadline(description, TaskDateTime.parse(by));
     }
 
     /**
@@ -206,7 +207,7 @@ public class Parser {
      * {@value #TO_KEYWORD} appearing earlier in the description is not
      * mistaken for the separator.
      *
-     * <p>As with a deadline, both times are handed to {@link TaskDate#parse}, so
+     * <p>As with a deadline, both times are handed to {@link TaskDateTime#parse}, so
      * an event is only built once the chatbot has understood when it runs. Having
      * understood both, it can also check that they make sense together, which is
      * what {@link #requireEndNotBeforeStart} does.
@@ -239,8 +240,8 @@ public class Parser {
                     + FROM_KEYWORD + " and one after " + TO_KEYWORD + "."
                     + "\nFor example: " + EVENT_EXAMPLE);
         }
-        TaskDate from = TaskDate.parse(fromText);
-        TaskDate to = TaskDate.parse(toText);
+        TaskDateTime from = TaskDateTime.parse(fromText);
+        TaskDateTime to = TaskDateTime.parse(toText);
         requireEndNotBeforeStart(from, to);
         return new Event(description, from, to);
     }
@@ -303,7 +304,7 @@ public class Parser {
             throw new BobException("Which day should I look at?"
                     + "\nFor example: " + getDayExample(command));
         }
-        return TaskDate.parseDay(dayText);
+        return TaskDateTime.parseDay(dayText);
     }
 
     /**
@@ -369,7 +370,7 @@ public class Parser {
      * such command is added.
      */
     private static String getDayExample(CommandWord command) {
-        return command.getKeyword() + " " + TaskDate.EXAMPLE_DATE;
+        return command.getKeyword() + " " + TaskDateTime.EXAMPLE_DATE;
     }
 
     /**
@@ -377,7 +378,7 @@ public class Parser {
      *
      * <p>Two dates that are each perfectly readable can still be an impossible
      * pair, and the pair is only worth checking once both have been understood —
-     * which is why this is a step of its own after {@link TaskDate#parse} rather
+     * which is why this is a step of its own after {@link TaskDateTime#parse} rather
      * than something the parsing could have caught.
      *
      * <p>Both dates are shown back in the message, so a user who typed them the
@@ -398,7 +399,7 @@ public class Parser {
      * @param to   when it ends.
      * @throws BobException if the end comes before the start.
      */
-    private static void requireEndNotBeforeStart(TaskDate from, TaskDate to) throws BobException {
+    private static void requireEndNotBeforeStart(TaskDateTime from, TaskDateTime to) throws BobException {
         if (to.compareTo(from) >= 0) {
             return;
         }

@@ -7,12 +7,12 @@ import java.util.Optional;
  * A task that has to be done before a given point in time, for example
  * {@code return book (by: Dec 02 2026)}.
  *
- * <p>The due date is kept as a {@link TaskDate} rather than as the text the user
+ * <p>The due date is kept as a {@link TaskDateTime} rather than as the text the user
  * typed, so the chatbot understands when the task is due instead of merely
  * repeating what it was told. That is what lets the date be shown back in a
  * friendlier form than it was typed in, and what would let two deadlines be
  * compared. The text the user typed is not kept: everything about the date that
- * matters is in the {@code TaskDate}.
+ * matters is in the {@code TaskDateTime}.
  */
 public class Deadline extends Task {
 
@@ -20,7 +20,7 @@ public class Deadline extends Task {
     public static final String TYPE_ICON = "D";
 
     /** When the task is due. */
-    protected TaskDate by;
+    protected TaskDateTime by;
 
     /**
      * Creates a deadline that is not done yet.
@@ -28,7 +28,7 @@ public class Deadline extends Task {
      * @param description what the user has to do.
      * @param by          when it has to be done by.
      */
-    public Deadline(String description, TaskDate by) {
+    public Deadline(String description, TaskDateTime by) {
         super(description);
         this.by = by;
     }
@@ -45,7 +45,7 @@ public class Deadline extends Task {
      * ordered by.
      */
     @Override
-    public Optional<TaskDate> getScheduledDate() {
+    public Optional<TaskDateTime> getScheduledDate() {
         return Optional.of(by);
     }
 

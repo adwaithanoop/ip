@@ -8,7 +8,7 @@ import java.util.Optional;
  * A task that runs from one point in time to another, for example
  * {@code project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)}.
  *
- * <p>As with {@link Deadline}, the start and the end are kept as {@link TaskDate}
+ * <p>As with {@link Deadline}, the start and the end are kept as {@link TaskDateTime}
  * values rather than as the text the user typed, so both are dates the chatbot
  * has understood.
  *
@@ -25,10 +25,10 @@ public class Event extends Task {
     public static final String TYPE_ICON = "E";
 
     /** When the event starts. */
-    protected TaskDate from;
+    protected TaskDateTime from;
 
     /** When the event ends. */
-    protected TaskDate to;
+    protected TaskDateTime to;
 
     /**
      * Creates an event that is not done yet.
@@ -37,7 +37,7 @@ public class Event extends Task {
      * @param from        when it starts.
      * @param to          when it ends.
      */
-    public Event(String description, TaskDate from, TaskDate to) {
+    public Event(String description, TaskDateTime from, TaskDateTime to) {
         super(description);
         this.from = from;
         this.to = to;
@@ -56,7 +56,7 @@ public class Event extends Task {
      * {@link bob.command.CommandWord#AFTER CommandWord.AFTER} measure.
      */
     @Override
-    public Optional<TaskDate> getScheduledDate() {
+    public Optional<TaskDateTime> getScheduledDate() {
         return Optional.of(from);
     }
 

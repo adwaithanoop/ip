@@ -67,9 +67,10 @@ public abstract class Task {
      * and a {@link Todo} accepts this default and answers that it has none.
      *
      * <p>An {@code Optional} is returned rather than {@code null} so that a caller
-     * cannot forget the dateless case, exactly as in {@link bob.command.CommandWord#of CommandWord.of}.
+     * cannot forget the dateless case, exactly as in
+     * {@link bob.command.CommandWord#parse CommandWord.parse}.
      */
-    public Optional<TaskDate> getScheduledDate() {
+    public Optional<TaskDateTime> getScheduledDate() {
         return Optional.empty();
     }
 
