@@ -12,7 +12,7 @@ import bob.BobException;
 import bob.task.Deadline;
 import bob.task.Event;
 import bob.task.Task;
-import bob.task.TaskDate;
+import bob.task.TaskDateTime;
 import bob.task.Todo;
 
 /**
@@ -31,7 +31,7 @@ import bob.task.Todo;
  * <p>The first field says which kind of task it is, the second whether it has
  * been done, the third what it is, and any field after that holds a date that
  * kind of task carries. Dates are written the way the user types them at the
- * chatbot, which is the way {@link TaskDate} reads them back. An event's start
+ * chatbot, which is the way {@link TaskDateTime} reads them back. An event's start
  * and end are kept as two fields rather than as one, so that reading them back
  * is a matter of taking two fields apart.
  *
@@ -332,7 +332,7 @@ public class Storage {
     /**
      * Returns the date written in a field, having checked that it is one.
      *
-     * <p>{@link TaskDate#parse} already refuses text that is not a date, but its
+     * <p>{@link TaskDateTime#parse} already refuses text that is not a date, but its
      * complaint is written for someone typing a command and runs to three lines
      * of advice. It is replaced here by a shorter one, because these messages are
      * listed alongside every other complaint about the file and are read by
@@ -342,14 +342,14 @@ public class Storage {
      * @param fieldName what to call it in a message, for example {@code due date}.
      * @throws BobException if the field is empty or does not hold a date.
      */
-    private static TaskDate requireDate(String field, String fieldName) throws BobException {
+    private static TaskDateTime requireDate(String field, String fieldName) throws BobException {
         requireNonEmpty(field, fieldName);
         try {
-            return TaskDate.parse(field);
+            return TaskDateTime.parse(field);
         } catch (BobException e) {
             throw new BobException("the " + fieldName + " \"" + field + "\" isn't a date"
-                    + " (dates are saved as " + TaskDate.EXAMPLE_DATE + ", or "
-                    + TaskDate.EXAMPLE_DATE_TIME + " with a time)");
+                    + " (dates are saved as " + TaskDateTime.EXAMPLE_DATE + ", or "
+                    + TaskDateTime.EXAMPLE_DATE_TIME + " with a time)");
         }
     }
 

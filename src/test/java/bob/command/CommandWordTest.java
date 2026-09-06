@@ -22,47 +22,47 @@ import org.junit.jupiter.api.Test;
 public class CommandWordTest {
 
     @Test
-    public void of_keywordAlone_commandFound() {
-        assertEquals(Optional.of(CommandWord.LIST), CommandWord.of("list"));
-        assertEquals(Optional.of(CommandWord.BYE), CommandWord.of("bye"));
-        assertEquals(Optional.of(CommandWord.MARK), CommandWord.of("mark"));
+    public void parse_keywordAlone_commandFound() {
+        assertEquals(Optional.of(CommandWord.LIST), CommandWord.parse("list"));
+        assertEquals(Optional.of(CommandWord.BYE), CommandWord.parse("bye"));
+        assertEquals(Optional.of(CommandWord.MARK), CommandWord.parse("mark"));
     }
 
     @Test
-    public void of_keywordWithArguments_commandFound() {
-        assertEquals(Optional.of(CommandWord.TODO), CommandWord.of("todo read book"));
-        assertEquals(Optional.of(CommandWord.DELETE), CommandWord.of("delete 2"));
-        assertEquals(Optional.of(CommandWord.ON), CommandWord.of("on 2026-12-02"));
+    public void parse_keywordWithArguments_commandFound() {
+        assertEquals(Optional.of(CommandWord.TODO), CommandWord.parse("todo read book"));
+        assertEquals(Optional.of(CommandWord.DELETE), CommandWord.parse("delete 2"));
+        assertEquals(Optional.of(CommandWord.ON), CommandWord.parse("on 2026-12-02"));
     }
 
     @Test
-    public void of_keywordRunTogetherWithItsArgument_noCommandFound() {
+    public void parse_keywordRunTogetherWithItsArgument_noCommandFound() {
         // Requiring the space is what keeps "todolist" from being read as "todo"
         // with the description "list".
-        assertEquals(Optional.empty(), CommandWord.of("todolist"));
-        assertEquals(Optional.empty(), CommandWord.of("marked 2"));
+        assertEquals(Optional.empty(), CommandWord.parse("todolist"));
+        assertEquals(Optional.empty(), CommandWord.parse("marked 2"));
     }
 
     @Test
-    public void of_argumentAfterACommandThatTakesNone_noCommandFound() {
-        assertEquals(Optional.empty(), CommandWord.of("bye now"));
-        assertEquals(Optional.empty(), CommandWord.of("list everything"));
+    public void parse_argumentAfterACommandThatTakesNone_noCommandFound() {
+        assertEquals(Optional.empty(), CommandWord.parse("bye now"));
+        assertEquals(Optional.empty(), CommandWord.parse("list everything"));
     }
 
     @Test
-    public void of_emptyLine_noCommandFound() {
-        assertEquals(Optional.empty(), CommandWord.of(""));
+    public void parse_emptyLine_noCommandFound() {
+        assertEquals(Optional.empty(), CommandWord.parse(""));
     }
 
     @Test
-    public void of_wordInCapitals_noCommandFound() {
-        assertEquals(Optional.empty(), CommandWord.of("List"));
-        assertEquals(Optional.empty(), CommandWord.of("TODO read book"));
+    public void parse_wordInCapitals_noCommandFound() {
+        assertEquals(Optional.empty(), CommandWord.parse("List"));
+        assertEquals(Optional.empty(), CommandWord.parse("TODO read book"));
     }
 
     @Test
-    public void of_wordThatIsNotACommand_noCommandFound() {
-        assertEquals(Optional.empty(), CommandWord.of("blah"));
+    public void parse_wordThatIsNotACommand_noCommandFound() {
+        assertEquals(Optional.empty(), CommandWord.parse("blah"));
     }
 
     @Test

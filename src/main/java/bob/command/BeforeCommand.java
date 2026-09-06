@@ -3,7 +3,7 @@ package bob.command;
 import java.time.LocalDate;
 
 import bob.storage.Storage;
-import bob.task.TaskDate;
+import bob.task.TaskDateTime;
 import bob.task.TaskList;
 import bob.ui.Ui;
 
@@ -34,7 +34,7 @@ public class BeforeCommand extends Command {
      */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) {
-        String dayShown = TaskDate.formatDay(day);
+        String dayShown = TaskDateTime.formatDay(day);
         ui.showTasks(tasks, tasks.findIndexes(task -> task.isBefore(day)),
                 "Here is what you have before " + dayShown + ":",
                 "You have nothing before " + dayShown + ".");

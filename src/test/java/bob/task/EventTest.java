@@ -107,7 +107,7 @@ public class EventTest {
     @Test
     public void toString_newEvent_showsBothEndsInTheFriendlyForm() throws BobException {
         Event event = new Event("project meeting",
-                TaskDate.parse("2026-12-02 1800"), TaskDate.parse("2026-12-02 2000"));
+                TaskDateTime.parse("2026-12-02 1800"), TaskDateTime.parse("2026-12-02 2000"));
 
         assertEquals("[E][ ] project meeting (from: Dec 02 2026 18:00 to: Dec 02 2026 20:00)",
                 event.toString());
@@ -124,7 +124,7 @@ public class EventTest {
     @Test
     public void toSaveFields_anyEvent_addsStartAndEndAsTwoFields() throws BobException {
         Event event = new Event("project meeting",
-                TaskDate.parse("2026-12-02 1800"), TaskDate.parse("2026-12-02 2000"));
+                TaskDateTime.parse("2026-12-02 1800"), TaskDateTime.parse("2026-12-02 2000"));
 
         // Two fields rather than one, so reading them back is a matter of taking
         // two fields apart rather than splitting one down the middle.
@@ -142,6 +142,6 @@ public class EventTest {
 
     /** Returns an event called {@code orientation} running between two dates. */
     private static Event eventFrom(String from, String to) throws BobException {
-        return new Event("orientation", TaskDate.parse(from), TaskDate.parse(to));
+        return new Event("orientation", TaskDateTime.parse(from), TaskDateTime.parse(to));
     }
 }
