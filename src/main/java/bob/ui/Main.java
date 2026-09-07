@@ -1,6 +1,9 @@
 package bob.ui;
 
+import java.awt.Taskbar;
 import java.io.IOException;
+
+import javax.imageio.ImageIO;
 
 import bob.Bob;
 import bob.storage.Storage;
@@ -63,11 +66,48 @@ public class Main extends Application {
             stage.setTitle("Bob");
             stage.setMinWidth(MIN_WIDTH);
             stage.setMinHeight(MIN_HEIGHT);
+            stage.getIcons().add(Images.BOB);
+            showBobInTheDock();
             stage.show();
         } catch (IOException e) {
             // The FXML is packaged with the program, so failing to read it means a
             // broken build rather than anything the user could put right.
             throw new IllegalStateException("Could not load the chatbot's window layout", e);
+        }
+    }
+
+    /**
+     * Puts the chatbot's picture on the program's icon in the dock or task bar,
+     * where the operating system will take one.
+     *
+     * <p>{@link Stage#getIcons()} above is enough on Windows and on most Linux
+     * desktops, where the window carries its own icon and the task bar shows it.
+     * macOS works the other way round: its windows have no icon at all, and the one
+     * in the dock belongs to the program rather than to any window, so it is set
+     * here instead. Without this the chatbot sits in the dock under the generic
+     * coffee cup, looking like a stray copy of Java rather than like Bob.
+     *
+     * <p>{@link Taskbar} is one of the older AWT classes rather than a JavaFX one,
+     * because JavaFX has nothing for this; that is also why the picture is read
+     * again through {@link ImageIO} rather than reusing {@link Images#BOB}, which is
+     * a JavaFX image and not a kind AWT understands.
+     *
+     * <p>Nothing here is worth failing over. A desktop that does not offer this —
+     * and every check below is a desktop that might not — simply keeps the icon it
+     * would have had, which costs the user nothing.
+     */
+    private static void showBobInTheDock() {
+        try {
+            if (!Taskbar.isTaskbarSupported()) {
+                return;
+            }
+            Taskbar taskbar = Taskbar.getTaskbar();
+            if (!taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) {
+                return;
+            }
+            taskbar.setIconImage(ImageIO.read(Main.class.getResource(Images.BOB_PATH)));
+        } catch (IOException | RuntimeException e) {
+            // An unusual desktop, or none at all. The default icon will do.
         }
     }
 }
