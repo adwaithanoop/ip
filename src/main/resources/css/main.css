@@ -46,6 +46,25 @@
     -fx-text-fill: #1b2145;
 }
 
+/*
+ * A bubble holding a complaint rather than an answer, so that a mistyped command
+ * is obvious without being read.
+ *
+ * Written after .bob-bubble rather than before it: both name a single class, so
+ * neither outweighs the other and the later of the two is the one that takes
+ * effect. Only the two colors are given here, which leaves the bubble the shape
+ * and the tail it already has — an error is still the chatbot speaking, and
+ * should not look like a different kind of thing on the screen.
+ *
+ * A washed-out red rather than a strong one. The message is an explanation of
+ * what to type instead, not a warning, and it has to stay comfortable to read
+ * against the dark background around it.
+ */
+.error-bubble {
+    -fx-background-color: #f6dada;
+    -fx-text-fill: #7c2020;
+}
+
 .text-field {
     -fx-background-color: #2b3266;
     -fx-background-radius: 8;

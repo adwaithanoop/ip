@@ -45,6 +45,14 @@ import javafx.scene.shape.Circle;
  */
 public class DialogBox extends HBox {
 
+    /**
+     * What a bubble of the chatbot's shows while its answer is still being waited
+     * for. Three dots because that is what an unfinished sentence looks like, and
+     * because it is short enough that the bubble is plainly a placeholder rather
+     * than something worth reading.
+     */
+    private static final String TYPING_TEXT = "...";
+
     /** What was said. */
     @FXML
     private Label dialog;
@@ -128,5 +136,45 @@ public class DialogBox extends HBox {
         DialogBox dialogBox = new DialogBox(text, image);
         dialogBox.flip();
         return dialogBox;
+    }
+
+    /**
+     * Returns an empty bubble of the chatbot's, showing only that it is about to
+     * say something, for {@link #showResponse} to fill in a moment later.
+     *
+     * <p>The bubble is put in the conversation the instant the user presses Enter,
+     * before the answer is shown, so that a pause before the answer reads as the
+     * chatbot composing it rather than as the window having missed the key.
+     *
+     * <p>Taking the place in the conversation straight away is also what keeps the
+     * order right. A user who types a second line while the first is still being
+     * answered would otherwise see the two answers arrive after both questions;
+     * because each question's bubble is already sitting where its answer will go,
+     * the conversation reads in the order it happened however fast it is typed.
+     *
+     * @param image the chatbot's picture.
+     */
+    public static DialogBox getTypingBobDialog(Image image) {
+        return getBobDialog(TYPING_TEXT, image);
+    }
+
+    /**
+     * Replaces the placeholder from {@link #getTypingBobDialog} with what the
+     * chatbot actually had to say.
+     *
+     * <p>A bubble holding a complaint is colored differently from one holding an
+     * answer, so that a mistyped command is obvious at a glance rather than having
+     * to be read for. That is the whole of the difference: it is still the chatbot
+     * speaking, in a bubble on the same side with the same picture beside it.
+     *
+     * @param text    what the chatbot said, which may run to several lines.
+     * @param isError whether that text explains why the command could not be
+     *                carried out, rather than reporting that it was.
+     */
+    public void showResponse(String text, boolean isError) {
+        dialog.setText(text);
+        if (isError) {
+            dialog.getStyleClass().add("error-bubble");
+        }
     }
 }

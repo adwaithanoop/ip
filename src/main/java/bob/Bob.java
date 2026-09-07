@@ -75,7 +75,8 @@ import bob.ui.Ui;
  * holds the conversation at a console, reading lines and printing answers until
  * the user says goodbye. A window instead drives the conversation itself, handing
  * over one line at a time and being given the answer back as text, through
- * {@link #getGreeting()}, {@link #getResponse} and {@link #isExit()}. Both go
+ * {@link #getGreeting()}, {@link #getResponse}, {@link #isExit()} and
+ * {@link #isLastResponseError()}. Both go
  * through the same {@link #handleCommand}, so neither front end can drift into
  * answering differently from the other; which of the two a chatbot is for is
  * settled when it is made, by {@code new Bob(...)} or by {@link #forGui}.
@@ -112,6 +113,21 @@ public class Bob {
      * end reads it through {@link #isExit()} to know when to close its window.
      */
     private boolean isExit = false;
+
+    /**
+     * Whether the last command carried out could not be, and was answered with an
+     * explanation instead of with what was asked for.
+     *
+     * <p>Remembered for the same reason {@link #isExit} is: it is something about
+     * the conversation rather than about the tasks, and a window reads it through
+     * {@link #isLastResponseError()} to decide how to show the answer. A complaint
+     * looks like every other answer unless the window is told which it is, and an
+     * error that reads like a confirmation is one the user can miss.
+     *
+     * <p>The console front end never asks. It has no second way of showing a line,
+     * so an explanation there is simply the text of the answer.
+     */
+    private boolean isLastResponseError = false;
 
     /**
      * Creates a chatbot that keeps its tasks in one named file, picking up
@@ -226,14 +242,21 @@ public class Bob {
      * cannot be carried out reports itself by throwing, the message is shown here
      * as the answer, and the caller carries on — so a mistake costs the user a
      * line, not the whole conversation.
+     *
+     * <p>Because it is the one place, it is also where {@link #isLastResponseError}
+     * is settled: the {@code catch} below is reached by every answer that is a
+     * complaint and by no answer that is not, so nothing else has to be consulted
+     * to know which of the two the user is about to be given.
      */
     private void handleCommand(String fullCommand) {
+        isLastResponseError = false;
         try {
             Command command = Parser.parse(fullCommand);
             command.execute(tasks, ui, storage);
             isExit = command.isExit();
         } catch (BobException e) {
             ui.showError(e.getMessage());
+            isLastResponseError = true;
         }
     }
 
@@ -278,6 +301,18 @@ public class Bob {
      */
     public boolean isExit() {
         return isExit;
+    }
+
+    /**
+     * Returns whether the last line given to {@link #getResponse} could not be
+     * carried out, so that a window can show the explanation as a complaint rather
+     * than as an ordinary answer.
+     *
+     * <p>Asked after {@link #getResponse}, in the way {@link #isExit()} is, and
+     * describing the same answer that call returned.
+     */
+    public boolean isLastResponseError() {
+        return isLastResponseError;
     }
 
     /**

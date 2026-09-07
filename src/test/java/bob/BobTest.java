@@ -14,8 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Tests the three methods a window holds its conversation through —
- * {@link Bob#getGreeting()}, {@link Bob#getResponse} and {@link Bob#isExit()}.
+ * Tests the four methods a window holds its conversation through —
+ * {@link Bob#getGreeting()}, {@link Bob#getResponse}, {@link Bob#isExit()} and
+ * {@link Bob#isLastResponseError()}.
  *
  * <p>The rest of this class is tested through the text UI test plan, which runs
  * the console chatbot end to end and checks everything it prints. These three
@@ -91,6 +92,63 @@ public class BobTest {
         // the answer and the conversation carries on.
         assertTrue(response.contains("sing"));
         assertFalse(bob.isExit());
+    }
+
+    @Test
+    public void isLastResponseError_commandThatCannotBeCarriedOut_reportedAsAnError() {
+        Bob bob = bobWithSavedLines();
+
+        bob.getResponse("sing me a song");
+
+        // The window colors a complaint differently from an answer, and this is the
+        // only thing telling it which it has been given: the text of the two is
+        // just as much a line of English either way.
+        assertTrue(bob.isLastResponseError());
+    }
+
+    @Test
+    public void isLastResponseError_commandThatWorked_notReportedAsAnError() {
+        Bob bob = bobWithSavedLines();
+
+        bob.getResponse("todo read book");
+
+        assertFalse(bob.isLastResponseError());
+    }
+
+    @Test
+    public void isLastResponseError_errorThenGoodCommand_forgottenOnTheNextAnswer() {
+        Bob bob = bobWithSavedLines();
+        bob.getResponse("sing me a song");
+
+        bob.getResponse("list");
+
+        // The flag describes the answer just given, not the worst answer so far.
+        // Were it never cleared, every bubble after the user's first typing mistake
+        // would be colored as a complaint for the rest of the conversation.
+        assertFalse(bob.isLastResponseError());
+    }
+
+    @Test
+    public void isLastResponseError_beforeAnyCommand_notAnError() {
+        Bob bob = bobWithSavedLines();
+
+        // The greeting is not an answer to anything, so there is nothing to
+        // complain about yet.
+        bob.getGreeting();
+
+        assertFalse(bob.isLastResponseError());
+    }
+
+    @Test
+    public void isLastResponseError_taskNumberThatNamesNoTask_reportedAsAnError() {
+        Bob bob = bobWithSavedLines("T | 0 | read book");
+
+        // Not every error comes from the parser: this one is only an error because
+        // of how long the list happens to be, so it is thrown further in. It has to
+        // reach the window colored the same as any other.
+        bob.getResponse("mark 7");
+
+        assertTrue(bob.isLastResponseError());
     }
 
     @Test
