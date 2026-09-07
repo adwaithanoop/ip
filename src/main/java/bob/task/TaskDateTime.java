@@ -38,10 +38,10 @@ import bob.BobException;
  *
  * <p>This class is immutable: both fields are {@code final} and neither
  * {@link LocalDate} nor {@link LocalTime} can be changed after it is made. A
- * {@code TaskDate} can therefore be passed around freely, with no risk of one
+ * {@code TaskDateTime} can therefore be passed around freely, with no risk of one
  * holder of it seeing another holder's change.
  */
-public class TaskDate implements Comparable<TaskDate> {
+public class TaskDateTime implements Comparable<TaskDateTime> {
 
     /** A day on its own, written the way the user types it. */
     public static final String EXAMPLE_DATE = "2026-12-02";
@@ -93,13 +93,13 @@ public class TaskDate implements Comparable<TaskDate> {
      * Creates a date from parts that have already been checked.
      *
      * <p>Private, so that {@link #parse} is the only way in: every
-     * {@code TaskDate} that exists has therefore come from text this class was
+     * {@code TaskDateTime} that exists has therefore come from text this class was
      * able to understand.
      *
      * @param date the day this falls on.
      * @param time the time of day, or {@code null} if there is none.
      */
-    private TaskDate(LocalDate date, LocalTime time) {
+    private TaskDateTime(LocalDate date, LocalTime time) {
         this.date = date;
         this.time = time;
     }
@@ -120,7 +120,7 @@ public class TaskDate implements Comparable<TaskDate> {
      *                      form — including a day that does not exist, such as
      *                      {@code 2026-02-30}.
      */
-    public static TaskDate parse(String text) throws BobException {
+    public static TaskDateTime parse(String text) throws BobException {
         String[] parts = text.trim().split("\\s+");
         if (parts.length > 2) {
             throw createUnreadableDateError(text);
@@ -132,7 +132,7 @@ public class TaskDate implements Comparable<TaskDate> {
             LocalTime time = (parts.length == 2)
                     ? LocalTime.parse(parts[1], INPUT_TIME_FORMAT)
                     : null;
-            return new TaskDate(date, time);
+            return new TaskDateTime(date, time);
         } catch (DateTimeParseException e) {
             throw createUnreadableDateError(text);
         }
@@ -169,7 +169,7 @@ public class TaskDate implements Comparable<TaskDate> {
      *
      * <p>Static, and taking a plain {@link LocalDate}, so that a day the user asked
      * about can be echoed in the same form as the dates on the tasks listed under
-     * it, without having to be wrapped in a {@code TaskDate} first.
+     * it, without having to be wrapped in a {@code TaskDateTime} first.
      *
      * @param day the day to write out.
      */
@@ -235,7 +235,7 @@ public class TaskDate implements Comparable<TaskDate> {
      *         the same point in time, a positive number if this date is later.
      */
     @Override
-    public int compareTo(TaskDate other) {
+    public int compareTo(TaskDateTime other) {
         int dayComparison = date.compareTo(other.date);
         if (dayComparison != 0) {
             return dayComparison;

@@ -89,7 +89,7 @@ public class DeadlineTest {
 
     @Test
     public void toSaveFields_anyDeadline_addsTheDueDateAsTheFourthField() throws BobException {
-        // Saved as the user types it, which is the form TaskDate reads back.
+        // Saved as the user types it, which is the form TaskDateTime reads back.
         assertEquals(List.of("D", Task.NOT_DONE_FLAG, "return book", "2026-12-02"),
                 deadlineOn("2026-12-02").toSaveFields());
     }
@@ -105,6 +105,6 @@ public class DeadlineTest {
 
     /** Returns a deadline called {@code return book} due at {@code date}. */
     private static Deadline deadlineOn(String date) throws BobException {
-        return new Deadline("return book", TaskDate.parse(date));
+        return new Deadline("return book", TaskDateTime.parse(date));
     }
 }

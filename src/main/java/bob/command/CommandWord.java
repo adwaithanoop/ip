@@ -20,13 +20,13 @@ import java.util.StringJoiner;
  * might hold any text at all, and a typo like {@code "delet"} becomes a
  * compile error instead of a command that silently never matches.
  *
- * <p>Two things follow from the set being known in one place. {@link #of} finds
- * the command a line begins with by walking {@link #values()}, so recognizing a
- * command is no longer a chain of {@code else if} branches that has to be
- * extended by hand. And {@link #getAllKeywords} builds the list of commands shown
- * to a user who typed something unrecognized, so that message can no longer
- * fall out of step with the commands that actually exist — which is exactly the
- * kind of mistake that is easy to make when adding a command.
+ * <p>Two things follow from the set being known in one place. {@link #parse}
+ * finds the command a line begins with by walking {@link #values()}, so
+ * recognizing a command is no longer a chain of {@code else if} branches that
+ * has to be extended by hand. And {@link #getAllKeywords} builds the list of
+ * commands shown to a user who typed something unrecognized, so that message can
+ * no longer fall out of step with the commands that actually exist — which is
+ * exactly the kind of mistake that is easy to make when adding a command.
  */
 public enum CommandWord {
 
@@ -149,7 +149,7 @@ public enum CommandWord {
      * @param line one whole line as the user typed it, with surrounding spaces removed.
      * @return the matching command, or an empty {@code Optional} if there is none.
      */
-    public static Optional<CommandWord> of(String line) {
+    public static Optional<CommandWord> parse(String line) {
         for (CommandWord command : values()) {
             if (command.matches(line)) {
                 return Optional.of(command);

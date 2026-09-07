@@ -16,7 +16,7 @@ import bob.BobException;
 import bob.task.Deadline;
 import bob.task.Event;
 import bob.task.Task;
-import bob.task.TaskDate;
+import bob.task.TaskDateTime;
 import bob.task.Todo;
 
 /**
@@ -201,7 +201,7 @@ public class StorageTest {
         Todo todo = new Todo("read book");
         todo.markAsDone();
 
-        storage.save(List.of(todo, new Deadline("return book", TaskDate.parse("2026-12-02"))));
+        storage.save(List.of(todo, new Deadline("return book", TaskDateTime.parse("2026-12-02"))));
 
         assertEquals(List.of("T | 1 | read book", "D | 0 | return book | 2026-12-02"),
                 Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
@@ -265,8 +265,8 @@ public class StorageTest {
     public void saveThenLoad_everyKindOfTask_readBackUnchanged() throws BobException {
         Storage storage = storageAt("duke.txt");
         Event event = new Event("project meeting",
-                TaskDate.parse("2026-12-02 1800"), TaskDate.parse("2026-12-03 2000"));
-        Deadline deadline = new Deadline("return book", TaskDate.parse("2026-12-02"));
+                TaskDateTime.parse("2026-12-02 1800"), TaskDateTime.parse("2026-12-03 2000"));
+        Deadline deadline = new Deadline("return book", TaskDateTime.parse("2026-12-02"));
         deadline.markAsDone();
         List<Task> saved = List.of(new Todo("read book"), deadline, event);
 

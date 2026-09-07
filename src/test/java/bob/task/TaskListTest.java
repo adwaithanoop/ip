@@ -228,11 +228,11 @@ public class TaskListTest {
 
     /** Returns a deadline due at {@code date}, written as the user would type it. */
     private static Deadline deadlineOn(String description, String date) throws BobException {
-        return new Deadline(description, TaskDate.parse(date));
+        return new Deadline(description, TaskDateTime.parse(date));
     }
 
     /** Returns an event running from {@code from} to {@code to}. */
     private static Event eventFrom(String description, String from, String to) throws BobException {
-        return new Event(description, TaskDate.parse(from), TaskDate.parse(to));
+        return new Event(description, TaskDateTime.parse(from), TaskDateTime.parse(to));
     }
 }
