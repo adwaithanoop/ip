@@ -7,7 +7,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
@@ -35,6 +34,20 @@ import javafx.util.Duration;
  */
 public class MainWindow extends AnchorPane {
 
+    /**
+     * How long the chatbot appears to think before its answer appears.
+     *
+     * <p>The answer is ready the moment the user presses Enter — nothing here waits
+     * on anything — so this pause buys nothing but the impression of one. That is
+     * the point: an answer that appears in the same instant as the question reads
+     * as a lookup, and a conversation is what this window is meant to look like.
+     *
+     * <p>Short enough not to be a delay the user has to sit through. Much longer
+     * and a chatbot that answers instantly would have been made to feel slow, which
+     * is a worse trade than the one being made here.
+     */
+    private static final Duration TYPING_PAUSE = Duration.seconds(0.4);
+
     /** How long the farewell stays on screen before the window closes itself. */
     private static final Duration FAREWELL_PAUSE = Duration.seconds(1.5);
 
@@ -56,12 +69,6 @@ public class MainWindow extends AnchorPane {
 
     /** The chatbot this window is talking to, handed over by {@link Main}. */
     private Bob bob;
-
-    /** The picture shown beside everything the user says. */
-    private final Image userImage = new Image(getClass().getResourceAsStream("/images/DaUser.png"));
-
-    /** The picture shown beside everything the chatbot says. */
-    private final Image bobImage = new Image(getClass().getResourceAsStream("/images/DaBob.png"));
 
     /**
      * Prepares the window once JavaFX has built it from the FXML.
@@ -93,7 +100,7 @@ public class MainWindow extends AnchorPane {
      */
     public void setBob(Bob bob) {
         this.bob = bob;
-        dialogContainer.getChildren().add(DialogBox.getBobDialog(bob.getGreeting(), bobImage));
+        dialogContainer.getChildren().add(DialogBox.getBobDialog(bob.getGreeting(), Images.BOB));
     }
 
     /**
@@ -111,11 +118,22 @@ public class MainWindow extends AnchorPane {
      * nothing but spaces is left properly empty — showing its prompt again — rather
      * than looking blank while quietly refusing to send.
      *
+     * <p>The chatbot's bubble appears straight away but empty, and is filled in
+     * after {@link #TYPING_PAUSE}, so that the answer looks composed rather than
+     * looked up. What the chatbot said is settled before either bubble is shown —
+     * the pause is in the showing, not in the answering — which is why the answer
+     * and everything about it are read out of {@link Bob} here rather than inside
+     * the lambda: by the time that runs, the chatbot may have been asked something
+     * else and be describing that instead.
+     *
+     * <p>An answer the chatbot could not give is colored differently, so that a
+     * mistyped command does not look like a command that worked.
+     *
      * <p>Saying goodbye closes the window, but not at once. The farewell is shown
      * first and the window closes a moment later, so the user sees the chatbot
      * answer rather than the window vanishing as they press the key. Typing is
-     * disabled in the meantime, so nothing can be sent to a chatbot that has
-     * already said goodbye.
+     * disabled from the moment the goodbye is understood, so nothing can be sent to
+     * a chatbot that has already said goodbye.
      */
     @FXML
     private void handleUserInput() {
@@ -126,16 +144,37 @@ public class MainWindow extends AnchorPane {
         }
 
         String response = bob.getResponse(input);
-        dialogContainer.getChildren().addAll(
-                DialogBox.getUserDialog(input, userImage),
-                DialogBox.getBobDialog(response, bobImage));
+        boolean isError = bob.isLastResponseError();
+        boolean isExiting = bob.isExit();
 
-        if (bob.isExit()) {
+        DialogBox reply = DialogBox.getTypingBobDialog(Images.BOB);
+        dialogContainer.getChildren().addAll(DialogBox.getUserDialog(input, Images.USER), reply);
+
+        if (isExiting) {
             userInput.setDisable(true);
             sendButton.setDisable(true);
-            PauseTransition farewellPause = new PauseTransition(FAREWELL_PAUSE);
-            farewellPause.setOnFinished(event -> Platform.exit());
-            farewellPause.play();
         }
+
+        PauseTransition typingPause = new PauseTransition(TYPING_PAUSE);
+        typingPause.setOnFinished(event -> {
+            reply.showResponse(response, isError);
+            if (isExiting) {
+                closeAfterFarewell();
+            }
+        });
+        typingPause.play();
+    }
+
+    /**
+     * Closes the window once the farewell has been on screen long enough to read.
+     *
+     * <p>Closing the instant the chatbot says goodbye would take the goodbye with
+     * it, and the user would be left unsure whether the command had worked or the
+     * program had fallen over.
+     */
+    private void closeAfterFarewell() {
+        PauseTransition farewellPause = new PauseTransition(FAREWELL_PAUSE);
+        farewellPause.setOnFinished(event -> Platform.exit());
+        farewellPause.play();
     }
 }
