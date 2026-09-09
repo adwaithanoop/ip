@@ -24,11 +24,18 @@ public class Event extends Task {
     /** The letter that stands for an event, as {@link Todo#TYPE_ICON} does for a todo. */
     public static final String TYPE_ICON = "E";
 
-    /** When the event starts. */
-    protected TaskDateTime from;
+    /**
+     * When the event starts.
+     *
+     * <p>Private and {@code final}, as {@link Deadline}'s due date is. It matters
+     * a little more here, because the two dates are only meaningful as a pair — an
+     * event that ended before it started would be nonsense — and a pair that cannot
+     * be half-changed cannot fall into that state after being checked.
+     */
+    private final TaskDateTime from;
 
     /** When the event ends. */
-    protected TaskDateTime to;
+    private final TaskDateTime to;
 
     /**
      * Creates an event that is not done yet.
