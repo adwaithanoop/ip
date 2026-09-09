@@ -125,6 +125,9 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
         if (parts.length > 2) {
             throw createUnreadableDateError(text);
         }
+        // split always returns at least one part, and the check above has ruled out
+        // more than two, so the two cases read below are the only ones left.
+        assert parts.length == 1 || parts.length == 2 : "Unexpected " + parts.length + " parts";
         try {
             // LocalDate reads the yyyy-mm-dd form by itself, and refuses a day
             // that never happened, such as the 30th of February.

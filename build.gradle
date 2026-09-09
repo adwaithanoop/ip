@@ -68,7 +68,9 @@ application {
     // JavaFX loads its own native libraries, which Java now warns about unless the
     // module doing it is named as allowed to. The warning says nothing the user of
     // a chatbot can act on, so it is silenced rather than printed at every start.
-    applicationDefaultJvmArgs = ['--enable-native-access=javafx.graphics']
+    // -ea turns the assert statements on. They are off by default in Java, and an
+    // assertion that never runs documents an assumption without ever checking it.
+    applicationDefaultJvmArgs = ['-ea', '--enable-native-access=javafx.graphics']
 }
 
 jar {
