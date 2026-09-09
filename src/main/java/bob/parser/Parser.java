@@ -33,13 +33,14 @@ import bob.task.Todo;
  * <p>Separating them puts every rule about how a command is <em>written</em> in
  * one file. The markers, the examples quoted back when a command is malformed,
  * and the wording of every "that isn't a date" complaint now live together, so
- * changing what the chatbot accepts is a change here and nowhere else. What is
- * left in {@code Bob} is a set of methods that are handed a finished
- * {@link bob.task.Task Task}, or a number, or a day, and get on with using it.
+ * changing what the chatbot accepts is a change here and nowhere else. What those
+ * methods became is the {@link bob.command.Command Command} classes, each handed a finished
+ * {@link bob.task.Task Task}, or a number, or a day, and getting on with using it.
  *
  * <p>This class makes sense of <em>text</em>, and of nothing else. Whether the
  * number 7 names a task that exists is a fact about the task list rather than
- * about what the user typed, so that check stays in {@code Bob}. The dividing
+ * about what the user typed, so that check belongs to
+ * {@link bob.command.TaskNumberCommand TaskNumberCommand}, which is given the list. The dividing
  * line is worth stating because both kinds of complaint read alike to the user:
  * {@code mark seven} is refused here, {@code mark 7} with four tasks is refused
  * there.

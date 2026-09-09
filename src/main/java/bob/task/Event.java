@@ -13,11 +13,12 @@ import java.util.Optional;
  * has understood.
  *
  * <p>Nothing here checks that the end comes after the start. That check lives in
- * the command that builds the event, in {@link bob.Bob Bob}, because that is where there
- * is still a user to tell about it: a class that could only throw would leave the
- * caller to turn the failure into something worth reading. The consequence is that
- * an event whose end comes first can still be built — by a hand-edited save file,
- * which is the one route into this class that does not pass through the command.
+ * {@link bob.parser.Parser Parser}, which reads the line the event was typed on, because that is
+ * where there is still a user to tell about it: a class that could only throw
+ * would leave the caller to turn the failure into something worth reading. The
+ * consequence is that an event whose end comes first can still be built — by a
+ * hand-edited save file, which is the one route into this class that does not
+ * pass through the parser.
  */
 public class Event extends Task {
 

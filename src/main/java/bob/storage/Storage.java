@@ -48,7 +48,7 @@ import bob.task.Todo;
  *
  * <p>Nothing in this class prints anything. Whatever the user needs to be told
  * is either returned in a {@link LoadResult} or thrown as a {@link BobException},
- * leaving {@link bob.Bob Bob} as the only class that writes to the console.
+ * leaving {@link bob.ui.Ui Ui} as the only class that writes to the console.
  */
 public class Storage {
 
