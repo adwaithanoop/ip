@@ -154,8 +154,7 @@ public class Storage {
      */
     private LoadResult readTasks(List<String> lines) {
         List<Task> loadedTasks = new ArrayList<>();
-        List<String> messages = new ArrayList<>();
-        int badLineCount = 0;
+        List<String> badLineReports = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             if (line.isEmpty()) {
@@ -164,32 +163,52 @@ public class Storage {
             try {
                 loadedTasks.add(parseTask(line));
             } catch (BobException e) {
-                badLineCount++;
-                // Only the first few are quoted, so a thoroughly damaged file
-                // does not bury the greeting under hundreds of lines.
-                if (badLineCount <= MAX_REPORTED_BAD_LINES) {
-                    // The user counts lines from 1, the list counts from 0.
-                    messages.add("Line " + (i + 1) + " of " + filePath
-                            + " isn't a task I can read: " + e.getMessage() + ".");
-                }
+                // The user counts lines from 1, the list counts from 0.
+                badLineReports.add("Line " + (i + 1) + " of " + filePath
+                        + " isn't a task I can read: " + e.getMessage() + ".");
             }
         }
-        if (badLineCount > MAX_REPORTED_BAD_LINES) {
-            messages.add("...and " + (badLineCount - MAX_REPORTED_BAD_LINES)
-                    + " more lines I couldn't read.");
+        return new LoadResult(loadedTasks, summarizeBadLines(badLineReports));
+    }
+
+    /**
+     * Returns what the user should be told about the lines of the save file that
+     * could not be read, given a report on each of them.
+     *
+     * <p>Kept apart from {@link #readTasks}, which walks the file, because this is
+     * different work: deciding how many of the reports to quote, and how to word
+     * what is said about the rest. With both in one method, the cap on quoting sat
+     * three blocks deep inside the loop, and a reader following how the file is
+     * walked had the wording of the summary to read past.
+     *
+     * @param badLineReports one report per unreadable line, in the order the lines
+     *                       appear in the file.
+     * @return the messages to show, which are none at all when every line was read.
+     */
+    private static List<String> summarizeBadLines(List<String> badLineReports) {
+        int badLineCount = badLineReports.size();
+        if (badLineCount == 0) {
+            return List.of();
         }
-        if (badLineCount > 0) {
-            boolean isSingleBadLine = badLineCount == 1;
-            messages.add(isSingleBadLine
-                    ? "I've left that line out of your list."
-                    : "I've left those " + badLineCount + " lines out of your list.");
-            // Said plainly, because the next command that changes the list rewrites
-            // the whole file, and these lines are not in it to be rewritten.
-            messages.add(isSingleBadLine
-                    ? "It will be lost the next time the list changes — fix the file to keep it."
-                    : "They will be lost the next time the list changes — fix the file to keep them.");
+
+        // Only the first few are quoted, so a thoroughly damaged file
+        // does not bury the greeting under hundreds of lines.
+        int quotedCount = Math.min(badLineCount, MAX_REPORTED_BAD_LINES);
+        List<String> messages = new ArrayList<>(badLineReports.subList(0, quotedCount));
+        if (badLineCount > quotedCount) {
+            messages.add("...and " + (badLineCount - quotedCount) + " more lines I couldn't read.");
         }
-        return new LoadResult(loadedTasks, messages);
+
+        boolean isSingleBadLine = badLineCount == 1;
+        messages.add(isSingleBadLine
+                ? "I've left that line out of your list."
+                : "I've left those " + badLineCount + " lines out of your list.");
+        // Said plainly, because the next command that changes the list rewrites
+        // the whole file, and these lines are not in it to be rewritten.
+        messages.add(isSingleBadLine
+                ? "It will be lost the next time the list changes — fix the file to keep it."
+                : "They will be lost the next time the list changes — fix the file to keep them.");
+        return messages;
     }
 
     /**
