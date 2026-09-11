@@ -157,8 +157,8 @@ public class Parser {
      */
     private static Todo parseTodo(String arguments) throws BobException {
         if (arguments.isEmpty()) {
-            throw new BobException("A todo needs a description — tell me what to do."
-                    + "\nFor example: " + CommandWord.TODO.getKeyword() + " borrow book");
+            throw BobException.withExample("A todo needs a description — tell me what to do.",
+                    CommandWord.TODO.getKeyword() + " borrow book");
         }
         return new Todo(arguments);
     }
@@ -183,18 +183,18 @@ public class Parser {
     private static Deadline parseDeadline(String arguments) throws BobException {
         int byIndex = arguments.indexOf(BY_KEYWORD);
         if (byIndex < 0) {
-            throw new BobException("A deadline needs a due date, written after " + BY_KEYWORD + "."
-                    + "\nFor example: " + DEADLINE_EXAMPLE);
+            throw BobException.withExample("A deadline needs a due date, written after "
+                    + BY_KEYWORD + ".", DEADLINE_EXAMPLE);
         }
         String description = arguments.substring(0, byIndex).trim();
         String by = arguments.substring(byIndex + BY_KEYWORD.length()).trim();
         if (description.isEmpty()) {
-            throw new BobException("A deadline needs a description, written before "
-                    + BY_KEYWORD + "." + "\nFor example: " + DEADLINE_EXAMPLE);
+            throw BobException.withExample("A deadline needs a description, written before "
+                    + BY_KEYWORD + ".", DEADLINE_EXAMPLE);
         }
         if (by.isEmpty()) {
-            throw new BobException("You wrote " + BY_KEYWORD + " but not when it is due."
-                    + "\nFor example: " + DEADLINE_EXAMPLE);
+            throw BobException.withExample("You wrote " + BY_KEYWORD + " but not when it is due.",
+                    DEADLINE_EXAMPLE);
         }
         return new Deadline(description, TaskDateTime.parse(by));
     }
@@ -221,25 +221,24 @@ public class Parser {
     private static Event parseEvent(String arguments) throws BobException {
         int fromIndex = arguments.indexOf(FROM_KEYWORD);
         if (fromIndex < 0) {
-            throw new BobException("An event needs a start time, written after " + FROM_KEYWORD + "."
-                    + "\nFor example: " + EVENT_EXAMPLE);
+            throw BobException.withExample("An event needs a start time, written after "
+                    + FROM_KEYWORD + ".", EVENT_EXAMPLE);
         }
         int toIndex = arguments.indexOf(TO_KEYWORD, fromIndex);
         if (toIndex < 0) {
-            throw new BobException("An event needs an end time, written after " + TO_KEYWORD
-                    + " at the end." + "\nFor example: " + EVENT_EXAMPLE);
+            throw BobException.withExample("An event needs an end time, written after " + TO_KEYWORD
+                    + " at the end.", EVENT_EXAMPLE);
         }
         String description = arguments.substring(0, fromIndex).trim();
         String fromText = arguments.substring(fromIndex + FROM_KEYWORD.length(), toIndex).trim();
         String toText = arguments.substring(toIndex + TO_KEYWORD.length()).trim();
         if (description.isEmpty()) {
-            throw new BobException("An event needs a description, written before "
-                    + FROM_KEYWORD + "." + "\nFor example: " + EVENT_EXAMPLE);
+            throw BobException.withExample("An event needs a description, written before "
+                    + FROM_KEYWORD + ".", EVENT_EXAMPLE);
         }
         if (fromText.isEmpty() || toText.isEmpty()) {
-            throw new BobException("An event needs a time on both sides: one after "
-                    + FROM_KEYWORD + " and one after " + TO_KEYWORD + "."
-                    + "\nFor example: " + EVENT_EXAMPLE);
+            throw BobException.withExample("An event needs a time on both sides: one after "
+                    + FROM_KEYWORD + " and one after " + TO_KEYWORD + ".", EVENT_EXAMPLE);
         }
         TaskDateTime from = TaskDateTime.parse(fromText);
         TaskDateTime to = TaskDateTime.parse(toText);
@@ -302,8 +301,7 @@ public class Parser {
      */
     private static LocalDate parseDay(String dayText, CommandWord command) throws BobException {
         if (dayText.isEmpty()) {
-            throw new BobException("Which day should I look at?"
-                    + "\nFor example: " + getDayExample(command));
+            throw BobException.withExample("Which day should I look at?", getDayExample(command));
         }
         return TaskDateTime.parseDay(dayText);
     }
@@ -323,19 +321,18 @@ public class Parser {
      */
     private static int parseCount(String countText) throws BobException {
         if (countText.isEmpty()) {
-            throw new BobException("How many tasks should I show?"
-                    + "\nFor example: " + NEXT_EXAMPLE);
+            throw BobException.withExample("How many tasks should I show?", NEXT_EXAMPLE);
         }
         int count;
         try {
             count = Integer.parseInt(countText);
         } catch (NumberFormatException e) {
-            throw new BobException("\"" + countText + "\" isn't a number of tasks."
-                    + "\nFor example: " + NEXT_EXAMPLE);
+            throw BobException.withExample("\"" + countText + "\" isn't a number of tasks.",
+                    NEXT_EXAMPLE);
         }
         if (count < 1) {
-            throw new BobException("I can show you one task or more, but not " + count + "."
-                    + "\nFor example: " + NEXT_EXAMPLE);
+            throw BobException.withExample("I can show you one task or more, but not " + count + ".",
+                    NEXT_EXAMPLE);
         }
         return count;
     }

@@ -34,4 +34,23 @@ public class BobException extends Exception {
     public BobException(String message) {
         super(message);
     }
+
+    /**
+     * Returns an error saying what went wrong, followed on a line of its own by
+     * an example of what the user could type instead.
+     *
+     * <p>Many of the chatbot's complaints end with an example introduced the same
+     * way. Building the message here means that wording is written once, so no
+     * complaint can introduce its example differently from the rest.
+     *
+     * <p>A named method rather than a second constructor, because
+     * {@code new BobException(problem, example)} would give a reader no hint which
+     * of the two strings is which.
+     *
+     * @param problem what went wrong, which may itself run to several lines.
+     * @param example a well-formed input the user could type instead.
+     */
+    public static BobException withExample(String problem, String example) {
+        return new BobException(problem + "\nFor example: " + example);
+    }
 }
