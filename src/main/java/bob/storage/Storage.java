@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 import bob.BobException;
 import bob.task.Deadline;
@@ -227,11 +227,9 @@ public class Storage {
 
     /** Returns one task written as a line of the save file. */
     private static String toSaveLine(Task task) {
-        StringJoiner line = new StringJoiner(FIELD_SEPARATOR);
-        for (String field : task.toSaveFields()) {
-            line.add(escape(field));
-        }
-        return line.toString();
+        return task.toSaveFields().stream()
+                .map(Storage::escape)
+                .collect(Collectors.joining(FIELD_SEPARATOR));
     }
 
     /**
