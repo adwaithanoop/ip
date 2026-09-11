@@ -120,6 +120,16 @@ public class TaskListTest {
     }
 
     @Test
+    public void findIndexes_anyList_returnsAnUnchangeableList() {
+        TaskList tasks = listOf(new Todo("read book"));
+
+        List<Integer> found = tasks.findIndexes(task -> true);
+
+        // Callers only read these positions, so none can quietly add one.
+        assertThrows(UnsupportedOperationException.class, () -> found.add(0));
+    }
+
+    @Test
     public void allIndexes_severalTasks_everyPositionInOrder() {
         TaskList tasks = listOf(new Todo("first"), new Todo("second"), new Todo("third"));
 
@@ -190,6 +200,15 @@ public class TaskListTest {
         // own numbering from being renumbered as a side effect.
         assertEquals("[D][ ] later (by: Dec 05 2026)", tasks.get(0).toString());
         assertEquals("[D][ ] sooner (by: Dec 01 2026)", tasks.get(1).toString());
+    }
+
+    @Test
+    public void findIndexesSoonestFirst_anyList_returnsAnUnchangeableList() throws BobException {
+        TaskList tasks = listOf(deadlineOn("return book", "2026-12-02"));
+
+        List<Integer> found = tasks.findIndexesSoonestFirst();
+
+        assertThrows(UnsupportedOperationException.class, () -> found.add(0));
     }
 
     @Test
