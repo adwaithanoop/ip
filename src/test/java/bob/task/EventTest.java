@@ -2,6 +2,7 @@ package bob.task;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
@@ -140,8 +141,87 @@ public class EventTest {
         assertEquals(Task.DONE_FLAG, event.toSaveFields().get(1));
     }
 
+    @Test
+    public void withEdit_endOnly_startKept() throws BobException {
+        Task edited = eventFrom("2026-12-01", "2026-12-05").withEdit(endsEdit(null, "2026-12-07"));
+
+        assertEquals("[E][ ] orientation (from: Dec 01 2026 to: Dec 07 2026)", edited.toString());
+    }
+
+    @Test
+    public void withEdit_bothEnds_bothChanged() throws BobException {
+        Event event = eventFrom("2026-12-01", "2026-12-05");
+
+        Task edited = event.withEdit(endsEdit("2026-12-10", "2026-12-12"));
+
+        assertEquals("[E][ ] orientation (from: Dec 10 2026 to: Dec 12 2026)", edited.toString());
+    }
+
+    @Test
+    public void withEdit_endMovedBeforeStart_exceptionThrown() throws BobException {
+        Event event = eventFrom("2026-12-02 1800", "2026-12-02 2000");
+
+        BobException exception = assertThrows(BobException.class, () ->
+                event.withEdit(endsEdit(null, "2026-12-02 1700")));
+
+        // The start is shown too, though it was not typed, since it is what the new end clashes with.
+        assertEquals("An event can't end before it starts."
+                + "\nThat change would have it run from Dec 02 2026 18:00 to Dec 02 2026 17:00.",
+                exception.getMessage());
+    }
+
+    @Test
+    public void withEdit_startMovedPastEnd_exceptionThrown() throws BobException {
+        Event event = eventFrom("2026-12-01", "2026-12-05");
+
+        assertThrows(BobException.class, () -> event.withEdit(endsEdit("2026-12-06", null)));
+    }
+
+    @Test
+    public void withEdit_startMovedOntoEnd_accepted() throws BobException {
+        Event event = eventFrom("2026-12-02 1800", "2026-12-02 2000");
+
+        Task edited = event.withEdit(endsEdit("2026-12-02 2000", null));
+
+        // A moment in time is allowed here, as it is when an event is added.
+        assertEquals("[E][ ] orientation (from: Dec 02 2026 20:00 to: Dec 02 2026 20:00)",
+                edited.toString());
+    }
+
+    @Test
+    public void withEdit_descriptionOnlyOnEventWithEndsReversed_accepted() throws BobException {
+        // Only a hand-edited save file can hold such an event. Rewording it is not
+        // what put its ends the wrong way round, so the rewording is not refused.
+        Event event = eventFrom("2026-12-05", "2026-12-01");
+
+        Task edited = event.withEdit(new TaskEdit("orientation week", null, null, null));
+
+        assertEquals("[E][ ] orientation week (from: Dec 05 2026 to: Dec 01 2026)", edited.toString());
+    }
+
+    @Test
+    public void withEdit_dueDate_exceptionThrown() throws BobException {
+        Event event = eventFrom("2026-12-01", "2026-12-05");
+        TaskDateTime date = TaskDateTime.parse("2026-12-02");
+
+        BobException exception = assertThrows(BobException.class, () ->
+                event.withEdit(new TaskEdit(null, date, null, null)));
+
+        assertEquals("An event has a start and an end, not a due date.", exception.getMessage());
+    }
+
     /** Returns an event called {@code orientation} running between two dates. */
     private static Event eventFrom(String from, String to) throws BobException {
         return new Event("orientation", TaskDateTime.parse(from), TaskDateTime.parse(to));
+    }
+
+    /**
+     * Returns an edit that moves the start to {@code from} and the end to {@code to},
+     * either of which may be {@code null} to leave that end where it is.
+     */
+    private static TaskEdit endsEdit(String from, String to) throws BobException {
+        TaskDateTime newFrom = (from == null) ? null : TaskDateTime.parse(from);
+        TaskDateTime newTo = (to == null) ? null : TaskDateTime.parse(to);
+        return new TaskEdit(null, null, newFrom, newTo);
     }
 }

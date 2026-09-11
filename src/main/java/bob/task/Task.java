@@ -4,7 +4,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
+
+import bob.BobException;
 
 /**
  * A single task the chatbot remembers: what the user wants to do,
@@ -23,7 +26,7 @@ import java.util.Optional;
  * only through the methods below, which is all they need: {@link Deadline} and
  * {@link Event} add dates of their own, and no kind of task sets the description
  * or the done status itself. Keeping the fields private is what lets this class
- * promise that a task's description is the one it was added with, and that its
+ * promise that a task's description is the one it was made with, and that its
  * status only ever changes through {@link #markAsDone()} and
  * {@link #markAsNotDone()}.
  */
@@ -36,12 +39,12 @@ public abstract class Task {
     public static final String NOT_DONE_FLAG = "0";
 
     /**
-     * What the user typed when adding the task.
+     * What the user typed when adding the task, or when they last changed its description.
      *
-     * <p>{@code final}, because a task cannot be reworded once it has been added:
-     * the chatbot offers no command for it. Saying so here means the compiler
-     * refuses the assignment rather than a reader having to check every method for
-     * one.
+     * <p>{@code final}, because a task is never reworded in place: an edit builds a
+     * new task holding the new description, through {@link #withEdit}. Saying so here
+     * means the compiler refuses the assignment rather than a reader having to check
+     * every method for one.
      */
     private final String description;
 
@@ -165,6 +168,47 @@ public abstract class Task {
     public void markAsNotDone() {
         this.isDone = false;
     }
+
+    /**
+     * Returns a copy of this task with the changes in {@code edit} made to it,
+     * leaving this task as it is.
+     *
+     * <p>A new task is built rather than this one being changed, so that the fields
+     * of every kind of task can stay {@code final}. That matters most for an
+     * {@link Event}, whose start and end are only meaningful as a pair: a pair that
+     * is replaced whole can be checked whole.
+     *
+     * <p>What every kind of task shares is dealt with here, once: the copy has the
+     * new description if the edit gives one and the old one if not, and it is done
+     * if this task was done. What differs between the kinds — which dates they have,
+     * and which changes make no sense for them — is left to {@link #buildEdited}.
+     *
+     * @param edit the changes to make.
+     * @return the edited copy, of the same kind as this task and with the same done status.
+     * @throws BobException if the edit changes a date this kind of task does not
+     *                      have, or would leave an event ending before it starts.
+     */
+    public final Task withEdit(TaskEdit edit) throws BobException {
+        Task edited = buildEdited(Objects.requireNonNullElse(edit.description(), description), edit);
+        if (isDone) {
+            edited.markAsDone();
+        }
+        return edited;
+    }
+
+    /**
+     * Returns a new task of this kind holding {@code description}, with the dates
+     * {@code edit} changes and this task's own dates for the rest.
+     *
+     * <p>The copy is returned not done; {@link #withEdit} carries the done status over.
+     *
+     * @param description the description the copy is to have, already settled.
+     * @param edit        the changes asked for, whose description has already been dealt with.
+     * @return the copy.
+     * @throws BobException if {@code edit} changes a date this kind of task does not
+     *                      have, or leaves the copy's dates impossible.
+     */
+    protected abstract Task buildEdited(String description, TaskEdit edit) throws BobException;
 
     /**
      * Returns the task as the list of fields that {@link bob.storage.Storage Storage} writes to the

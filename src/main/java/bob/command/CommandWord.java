@@ -67,6 +67,13 @@ public enum CommandWord {
     /** Removes a task from the list; used as {@code delete <task number>}. */
     DELETE("delete", true),
 
+    /**
+     * Changes some details of a task, keeping its number and done status; used as
+     * {@code edit <task number>} followed by any of {@code /desc <description>},
+     * {@code /by <when>}, {@code /from <when>} and {@code /to <when>}.
+     */
+    EDIT("edit", true),
+
     /** Ends the conversation; used on its own. */
     BYE("bye", false);
 
@@ -77,7 +84,7 @@ public enum CommandWord {
      * Whether anything may follow the keyword on the same line.
      *
      * <p>This is what tells {@code list} and {@code bye}, which stand alone,
-     * apart from the six that are followed by a description or a task number.
+     * apart from the others, which are followed by what they act on.
      * The rule was previously implicit — some commands were compared with
      * {@code equals} and the rest with a separate helper — which made it
      * something a reader had to notice rather than something the code states.

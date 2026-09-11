@@ -2,12 +2,15 @@ package bob.task;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+
+import bob.BobException;
 
 /**
  * Tests {@link Todo}: the letter it answers with, and the behavior it takes
@@ -167,5 +170,51 @@ public class TodoTest {
         // a description like any other task, so find must not leave it out too.
         assertFalse(todo.occursOn(SOME_DAY));
         assertTrue(todo.matchesKeyword("read"));
+    }
+
+    @Test
+    public void withEdit_newDescription_descriptionChanged() throws BobException {
+        Task edited = new Todo("read book").withEdit(descriptionEdit("read library book"));
+
+        assertEquals("[T][ ] read library book", edited.toString());
+    }
+
+    @Test
+    public void withEdit_doneTodo_staysDone() throws BobException {
+        Todo todo = new Todo("read book");
+        todo.markAsDone();
+
+        Task edited = todo.withEdit(descriptionEdit("read library book"));
+
+        // Rewording a task is not the same as undoing it.
+        assertEquals("[T][X] read library book", edited.toString());
+    }
+
+    @Test
+    public void withEdit_anyEdit_originalUnchanged() throws BobException {
+        Todo todo = new Todo("read book");
+
+        todo.withEdit(descriptionEdit("read library book"));
+
+        // A copy is built, so the task itself is left exactly as it was.
+        assertEquals("[T][ ] read book", todo.toString());
+    }
+
+    @Test
+    public void withEdit_anyDate_exceptionThrown() throws BobException {
+        Todo todo = new Todo("read book");
+        TaskDateTime date = TaskDateTime.parse("2026-12-02");
+
+        BobException exception = assertThrows(BobException.class, () ->
+                todo.withEdit(new TaskEdit(null, date, null, null)));
+
+        assertEquals("A todo has no dates to change, only its description.", exception.getMessage());
+        assertThrows(BobException.class, () -> todo.withEdit(new TaskEdit(null, null, date, null)));
+        assertThrows(BobException.class, () -> todo.withEdit(new TaskEdit("read", null, null, date)));
+    }
+
+    /** Returns an edit that changes nothing but the description, to {@code description}. */
+    private static TaskEdit descriptionEdit(String description) {
+        return new TaskEdit(description, null, null, null);
     }
 }

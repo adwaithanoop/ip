@@ -17,6 +17,7 @@ import bob.command.AfterCommand;
 import bob.command.BeforeCommand;
 import bob.command.Command;
 import bob.command.DeleteCommand;
+import bob.command.EditCommand;
 import bob.command.ExitCommand;
 import bob.command.FindCommand;
 import bob.command.ListCommand;
@@ -102,6 +103,7 @@ public class ParserTest {
         assertInstanceOf(MarkCommand.class, Parser.parse("mark 2"));
         assertInstanceOf(MarkCommand.class, Parser.parse("unmark 2"));
         assertInstanceOf(DeleteCommand.class, Parser.parse("delete 2"));
+        assertInstanceOf(EditCommand.class, Parser.parse("edit 2 /desc read book"));
     }
 
     @Test
@@ -244,6 +246,94 @@ public class ParserTest {
     }
 
     @Test
+    public void parseEdit_noTaskNumber_exceptionThrown() {
+        BobException exception = assertThrows(BobException.class, () -> Parser.parse("edit"));
+
+        assertTrue(exception.getMessage().contains("Which task should I edit?"));
+    }
+
+    @Test
+    public void parseEdit_taskNumberNotANumber_exceptionThrown() {
+        BobException exception = assertThrows(BobException.class, () ->
+                Parser.parse("edit two /desc read book"));
+
+        // Only the word where the number should be is quoted back, not the changes after it.
+        assertTrue(exception.getMessage().startsWith("\"two\" isn't a task number."));
+    }
+
+    @Test
+    public void parseEdit_noChanges_exceptionThrown() {
+        BobException exception = assertThrows(BobException.class, () -> Parser.parse("edit 2"));
+
+        assertEquals("What should I change about task 2?\nUse /desc, /by, /from or /to."
+                + "\nFor example: edit 2 /desc read book", exception.getMessage());
+    }
+
+    @Test
+    public void parseEdit_textBeforeTheFirstMarker_exceptionThrown() {
+        // Refused rather than taken as a new description, which an edit is given
+        // only through /desc.
+        BobException exception = assertThrows(BobException.class, () ->
+                Parser.parse("edit 2 return book /by 2026-12-05"));
+
+        assertTrue(exception.getMessage().startsWith("What should I change about task 2?"));
+    }
+
+    @Test
+    public void parseEdit_markerWithNothingAfterIt_exceptionThrown() {
+        BobException exception = assertThrows(BobException.class, () -> Parser.parse("edit 2 /by"));
+
+        assertEquals("You wrote /by but nothing after it.", exception.getMessage());
+        // A marker followed straight away by another has nothing after it either.
+        assertThrows(BobException.class, () -> Parser.parse("edit 2 /from /to 2026-12-03"));
+        assertThrows(BobException.class, () -> Parser.parse("edit 2 /desc   "));
+    }
+
+    @Test
+    public void parseEdit_dateThatIsNotADate_exceptionThrown() {
+        assertThrows(BobException.class, () -> Parser.parse("edit 2 /by someday"));
+        assertThrows(BobException.class, () -> Parser.parse("edit 2 /to 2026-02-30"));
+    }
+
+    @Test
+    public void parseEdit_numberOutsideTheList_accepted() throws BobException {
+        // As with mark and delete, whether a task has that number is the list's question.
+        assertInstanceOf(EditCommand.class, Parser.parse("edit 0 /desc read book"));
+        assertInstanceOf(EditCommand.class, Parser.parse("edit 99 /by 2026-12-02"));
+    }
+
+    @Test
+    public void parseEdit_newDescription_onlyDescriptionChanged() throws BobException {
+        Task task = taskAfter("deadline return book /by 2026-12-02 1800",
+                "edit 1 /desc return library book");
+
+        assertEquals("[D][ ] return library book (by: Dec 02 2026 18:00)", task.toString());
+    }
+
+    @Test
+    public void parseEdit_newDueDate_onlyDueDateChanged() throws BobException {
+        Task task = taskAfter("deadline return book /by 2026-12-02 1800", "edit 1 /by 2026-12-05");
+
+        assertEquals("[D][ ] return book (by: Dec 05 2026)", task.toString());
+    }
+
+    @Test
+    public void parseEdit_oneEndOfAnEvent_otherEndKept() throws BobException {
+        Task task = taskAfter("event meeting /from 2026-12-02 1800 /to 2026-12-02 2000",
+                "edit 1 /to 2026-12-02 2100");
+
+        assertEquals("[E][ ] meeting (from: Dec 02 2026 18:00 to: Dec 02 2026 21:00)", task.toString());
+    }
+
+    @Test
+    public void parseEdit_markersInAnyOrder_eachValueEndsAtTheNextMarker() throws BobException {
+        Task task = taskAfter("event meeting /from 2026-12-02 1800 /to 2026-12-02 2000",
+                "edit 1 /to 2026-12-03 /desc trip /from 2026-12-01");
+
+        assertEquals("[E][ ] trip (from: Dec 01 2026 to: Dec 03 2026)", task.toString());
+    }
+
+    @Test
     public void parseDay_noDay_exceptionThrown() {
         assertThrows(BobException.class, () -> Parser.parse("on"));
         assertThrows(BobException.class, () -> Parser.parse("before"));
@@ -318,6 +408,21 @@ public class ParserTest {
         // The collecting Ui, so that running the command leaves the test session's
         // own output alone. What it says is not what is being tested here.
         command.execute(tasks, Ui.forGui(), new Storage(tempDirectory.resolve("duke.txt")));
+        return tasks.get(0);
+    }
+
+    /**
+     * Returns the first task in the list left by running each of {@code lines} in
+     * turn against one task list — used to see what an edit made of a task added
+     * just before it.
+     */
+    private Task taskAfter(String... lines) throws BobException {
+        TaskList tasks = new TaskList();
+        Storage storage = new Storage(tempDirectory.resolve("duke.txt"));
+        for (String line : lines) {
+            // The collecting Ui, for the same reason as in firstTaskFrom.
+            Parser.parse(line).execute(tasks, Ui.forGui(), storage);
+        }
         return tasks.get(0);
     }
 }
