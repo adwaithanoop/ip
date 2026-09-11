@@ -195,10 +195,10 @@ public class Storage {
         // does not bury the greeting under hundreds of lines.
         int quotedCount = Math.min(badLineCount, MAX_REPORTED_BAD_LINES);
         List<String> messages = new ArrayList<>(badLineReports.subList(0, quotedCount));
-        int uncountedLineCount = badLineCount - quotedCount;
-        if (uncountedLineCount > 0) {
-            messages.add("...and " + uncountedLineCount
-                    + (uncountedLineCount == 1 ? " more line" : " more lines")
+        int unquotedLineCount = badLineCount - quotedCount;
+        if (unquotedLineCount > 0) {
+            messages.add("...and " + unquotedLineCount
+                    + (unquotedLineCount == 1 ? " more line" : " more lines")
                     + " I couldn't read.");
         }
 
