@@ -1,36 +1,48 @@
-# Bob project template
+# Bob
 
-This is a project template for a greenfield Java project. Given below are instructions on how to use it.
+Bob is a chatbot that keeps track of your todos, deadlines and events. You chat with it in a window, typing
+commands such as `todo read book` or `deadline return book /by 2026-12-02`, and it saves your list so that the
+list is still there the next time you start it.
 
-## Setting up in Intellij
+See the [User Guide](docs/README.md) for the commands Bob understands.
 
-Prerequisites: JDK 25, update Intellij to the most recent version.
+## Running Bob
 
-1. Open Intellij (if you are not in the welcome screen, click `File` > `Close Project` to close the existing project first)
-1. Open the project into Intellij as follows:
+Prerequisites: JDK 25, on Windows or Linux with an Intel or AMD processor, or on an Apple silicon Mac. JavaFX does
+not need to be installed separately: Gradle downloads it, but only the builds for those machines, so the chat window
+does not start on others, such as an Intel Mac.
+
+* **The chat window:** run `./gradlew run` from the project folder (`gradlew.bat run` on Windows).
+* **The console version:** run the `main` method of `bob.Bob`, for example from IntelliJ as described below.
+* **A single JAR file:** run `./gradlew shadowJar` to build `build/libs/bob.jar`, then start it with
+  `java -jar build/libs/bob.jar`.
+
+Bob keeps your tasks in `data/duke.txt`, inside the folder it is started from.
+
+## Setting up in IntelliJ
+
+Prerequisites: JDK 25, update IntelliJ to the most recent version.
+
+1. Open IntelliJ (if you are not in the welcome screen, click `File` > `Close Project` to close the existing project first)
+1. Open the project into IntelliJ as follows:
    1. Click `Open`.
    1. Select the project directory, and click `OK`.
    1. If there are any further prompts, accept the defaults.
 1. Configure the project to use **JDK 25** (not other versions) as explained in [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk).<br>
    In the same dialog, set the **Project language level** field to the `SDK default` option.
-1. After that, locate the `src/main/java/bob/Bob.java` file, right-click it, and choose `Run Bob.main()` (if the code editor is showing compile errors, try restarting the IDE). If the setup is correct, you should see something like the below as the output:
-   ```
-       ____________________________________________________________
-          .        *         .        .        *        .
-              *         .         +        .       <]==-     .
-           .        +        ____        __      .        *
-         -==[>  *           / __ )____  / /_         +
-         +           .     / __  / __ \/ __ \  *              .
-                  *       / /_/ / /_/ / /_/ /   <]==-   .
-            .         +  /_____/\____/_.___/       .        *
-                +         .         *        .        +        .
-           .        -==[>      .         *                 .
-        Hello! I'm Bob.
-        What can I do for you?
-       ____________________________________________________________
-   ```
+1. After that, locate the `src/main/java/bob/Launcher.java` file, right-click it, and choose `Run Launcher.main()` (if the code editor is showing compile errors, try restarting the IDE). If the setup is correct, the chat window opens with Bob's greeting.
+   To use the console version instead, do the same with `src/main/java/bob/Bob.java`.
 
 **Warning:** Keep the `src\main\java` folder as the root folder for Java files (i.e., don't rename those folders or move Java files to another folder outside of this folder path), as this is the default location some tools (e.g., Gradle) expect to find Java files.
+
+## Testing
+
+* **JUnit tests:** run `./gradlew test`.
+* **Text UI tests:** run `python3 .claude/skills/test-ui/scripts/run-ui-tests.py`. It runs the console version against
+  every test case in [`test/ui-test-plan.md`](test/ui-test-plan.md) and compares what Bob prints with the expected
+  output.
+* **Continuous integration:** GitHub Actions runs `./gradlew check` on Windows, macOS and Linux for every push and
+  pull request, as set up in [`.github/workflows/gradle.yml`](.github/workflows/gradle.yml).
 
 ## Acknowledgements
 
