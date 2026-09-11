@@ -288,6 +288,9 @@ public class Storage {
      */
     private static Task parseTask(String line) throws BobException {
         List<String> fields = splitFields(line);
+        // splitFields adds a field after the last separator whether or not there is
+        // anything in it, so even a line with nothing on it comes back as one field.
+        assert !fields.isEmpty() : "A saved line always splits into at least one field";
         String typeIcon = fields.get(FIELD_INDEX_TYPE);
         return switch (typeIcon) {
             case Todo.TYPE_ICON -> parseTodo(fields);

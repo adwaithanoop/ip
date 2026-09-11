@@ -95,6 +95,8 @@ public class TaskList {
      * @return the task that was removed.
      */
     public Task delete(int index) {
+        assert index >= 0 && index < tasks.size()
+                : "No task at position " + index + " to delete from a list of " + tasks.size();
         return tasks.remove(index);
     }
 
@@ -104,6 +106,8 @@ public class TaskList {
      * @param index the task's position in this list, counting from 0.
      */
     public Task get(int index) {
+        assert index >= 0 && index < tasks.size()
+                : "No task at position " + index + " in a list of " + tasks.size();
         return tasks.get(index);
     }
 

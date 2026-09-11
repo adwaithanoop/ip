@@ -252,6 +252,9 @@ public class Bob {
         isLastResponseError = false;
         try {
             Command command = Parser.parse(fullCommand);
+            // Parser answers a line it cannot make sense of by throwing, so the
+            // only other way out of it is a command that is ready to be run.
+            assert command != null : "Parser returned no command for: " + fullCommand;
             command.execute(tasks, ui, storage);
             isExit = command.isExit();
         } catch (BobException e) {

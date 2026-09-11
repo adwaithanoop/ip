@@ -130,6 +130,9 @@ public enum CommandWord {
      * @param line a line that {@link #matches} has already accepted.
      */
     public String getArgumentsIn(String line) {
+        // The arithmetic below counts past the keyword, so it is only meaningful
+        // on a line that begins with it — which is what matches() has checked.
+        assert matches(line) : "Arguments read from a line that is not " + keyword + ": " + line;
         if (line.length() <= keyword.length()) {
             return "";
         }
