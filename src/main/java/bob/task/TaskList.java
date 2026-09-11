@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 /**
  * The tasks the user has told the chatbot about, in the order they were added,
@@ -140,17 +141,19 @@ public class TaskList {
      * command called, and a {@code switch} on it here — would put each command's
      * meaning somewhere other than in the command.
      *
+     * <p>The stream runs over the positions rather than over the tasks, because a
+     * stream of tasks would lose track of where each one sits, and the position
+     * is the answer wanted.
+     *
      * @param isWanted the test a task has to pass to be included.
-     * @return the positions of the matching tasks, counting from 0.
+     * @return the positions of the matching tasks, counting from 0, in a list that
+     *         cannot be changed.
      */
     public List<Integer> findIndexes(Predicate<Task> isWanted) {
-        List<Integer> matchingIndexes = new ArrayList<>();
-        for (int i = 0; i < tasks.size(); i++) {
-            if (isWanted.test(tasks.get(i))) {
-                matchingIndexes.add(i);
-            }
-        }
-        return matchingIndexes;
+        return IntStream.range(0, tasks.size())
+                .filter(i -> isWanted.test(tasks.get(i)))
+                .boxed()
+                .toList();
     }
 
     /**
@@ -177,13 +180,18 @@ public class TaskList {
      * answer the question just as well and quietly renumber the user's whole list
      * as a side effect.
      *
-     * @return the positions of the dated tasks, counting from 0, soonest first.
+     * <p>The positions are sorted into a new list rather than in place, because
+     * the list {@link #findIndexes} returns cannot be changed.
+     *
+     * @return the positions of the dated tasks, counting from 0, soonest first, in a
+     *         list that cannot be changed.
      */
     public List<Integer> findIndexesSoonestFirst() {
         List<Integer> datedIndexes = findIndexes(task -> task.getScheduledDate().isPresent());
         // orElseThrow cannot fire: only tasks that have a date are in this list.
-        datedIndexes.sort(Comparator.comparing(
-                index -> tasks.get(index).getScheduledDate().orElseThrow()));
-        return datedIndexes;
+        return datedIndexes.stream()
+                .sorted(Comparator.comparing(
+                        index -> tasks.get(index).getScheduledDate().orElseThrow()))
+                .toList();
     }
 }
