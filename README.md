@@ -34,6 +34,14 @@ Prerequisites: JDK 25, update Intellij to the most recent version.
 
 ## Acknowledgements
 
+### Credits
+
+* **Mouse wheel scrolling in the chat window:** the fix in `bob.ui.MainWindow`, which keeps the newest
+  message in view without binding the scroll position, so that the mouse wheel and trackpad can still
+  scroll the conversation, comes from the forum post
+  [Enabling mouse wheel & trackpad scrolling in JavaFX ScrollPane](https://github.com/NUS-CS2103-AY2627-S1/forum/issues/160)
+  by Kieran M ([@Kimame04](https://github.com/Kimame04)). Thanks Kieran!
+
 ### Use of AI
 
 Parts of this project were written with the help of an AI coding assistant, in line with the

@@ -78,10 +78,18 @@ public class MainWindow extends AnchorPane {
      * after the controller is made, so a constructor would run while every field
      * below was still {@code null}.
      *
-     * <p>Tying the scroll position to the height of the conversation is what keeps
-     * the newest bubble in view. The conversation only ever grows downwards, so
-     * every time it gets taller the view scrolls to the bottom, and the user is
-     * never left looking at an answer given several turns ago.
+     * <p>Scrolling to the bottom whenever the conversation gets taller is what keeps
+     * the newest bubble in view. The conversation only ever grows downwards, so the
+     * user is never left looking at an answer given several turns ago. The price is
+     * that a user who has scrolled up to reread something is brought back down when
+     * the next answer arrives or the window is resized.
+     *
+     * <p>The scroll position is set each time rather than bound to the height. A
+     * bound property cannot be set by anything else, and the scroll pane sets it
+     * itself whenever the mouse wheel turns, so a binding would leave the wheel
+     * doing nothing. The scroll is also put off with {@link Platform#runLater} until
+     * the conversation has been laid out at its new height, so that it lands at the
+     * bottom of the new content rather than of the old.
      */
     @FXML
     public void initialize() {
@@ -90,7 +98,13 @@ public class MainWindow extends AnchorPane {
         assert scrollPane != null && dialogContainer != null
                 && userInput != null && sendButton != null
                 : "MainWindow.fxml is missing an fx:id named here";
-        scrollPane.vvalueProperty().bind(dialogContainer.heightProperty());
+        //@@author adwaithanoop-reused
+        //Reused from https://github.com/NUS-CS2103-AY2627-S1/forum/issues/160
+        // with minor modifications
+        // A vvalue of 1.0 is the bottom of the scroll range, however tall the content is.
+        dialogContainer.heightProperty().addListener((observable, oldHeight, newHeight) ->
+                Platform.runLater(() -> scrollPane.setVvalue(1.0)));
+        //@@author
     }
 
     /**
