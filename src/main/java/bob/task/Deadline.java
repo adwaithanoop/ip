@@ -19,8 +19,15 @@ public class Deadline extends Task {
     /** The letter that stands for a deadline, as {@link Todo#TYPE_ICON} does for a todo. */
     public static final String TYPE_ICON = "D";
 
-    /** When the task is due. */
-    protected TaskDateTime by;
+    /**
+     * When the task is due.
+     *
+     * <p>Private and {@code final}, as {@link Task}'s own fields are. Nothing in
+     * the chatbot moves a deadline once it has been set, and a {@link TaskDateTime}
+     * cannot be altered from within, so a deadline built from a date the user typed
+     * carries that date for as long as it exists.
+     */
+    private final TaskDateTime by;
 
     /**
      * Creates a deadline that is not done yet.

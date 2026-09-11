@@ -251,8 +251,8 @@ public class Ui {
         }
         openBlock();
         if (taskCount > 0) {
-            showLine("Welcome back! I've picked up " + taskCount
-                    + (taskCount == 1 ? " task" : " tasks") + " you saved earlier.");
+            showLine("Welcome back! I've picked up " + describeTaskCount(taskCount)
+                    + " you saved earlier.");
         }
         for (String message : messages) {
             showLine(message);
@@ -270,7 +270,7 @@ public class Ui {
     public void showAddedTask(Task task, int taskCount) {
         showLine("Got it. I've added this task:");
         showLine("  " + task);
-        showLine("Now you have " + taskCount + " tasks in the list.");
+        showLine("Now you have " + describeTaskCount(taskCount) + " in the list.");
     }
 
     /**
@@ -283,7 +283,20 @@ public class Ui {
     public void showRemovedTask(Task task, int taskCount) {
         showLine("Noted. I've removed this task:");
         showLine("  " + task);
-        showLine("Now you have " + taskCount + " tasks in the list.");
+        showLine("Now you have " + describeTaskCount(taskCount) + " in the list.");
+    }
+
+    /**
+     * Returns how many tasks there are, worded to agree with the number, for
+     * example {@code 1 task} or {@code 3 tasks}.
+     *
+     * <p>Every message in this class that states a number of tasks is worded
+     * through here, so the singular is handled once rather than in each message.
+     *
+     * @param taskCount how many tasks to describe.
+     */
+    private static String describeTaskCount(int taskCount) {
+        return taskCount + (taskCount == 1 ? " task" : " tasks");
     }
 
     /**

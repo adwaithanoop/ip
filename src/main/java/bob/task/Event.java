@@ -13,22 +13,30 @@ import java.util.Optional;
  * has understood.
  *
  * <p>Nothing here checks that the end comes after the start. That check lives in
- * the command that builds the event, in {@link bob.Bob Bob}, because that is where there
- * is still a user to tell about it: a class that could only throw would leave the
- * caller to turn the failure into something worth reading. The consequence is that
- * an event whose end comes first can still be built — by a hand-edited save file,
- * which is the one route into this class that does not pass through the command.
+ * {@link bob.parser.Parser Parser}, which reads the line the event was typed on, because that is
+ * where there is still a user to tell about it: a class that could only throw
+ * would leave the caller to turn the failure into something worth reading. The
+ * consequence is that an event whose end comes first can still be built — by a
+ * hand-edited save file, which is the one route into this class that does not
+ * pass through the parser.
  */
 public class Event extends Task {
 
     /** The letter that stands for an event, as {@link Todo#TYPE_ICON} does for a todo. */
     public static final String TYPE_ICON = "E";
 
-    /** When the event starts. */
-    protected TaskDateTime from;
+    /**
+     * When the event starts.
+     *
+     * <p>Private and {@code final}, as {@link Deadline}'s due date is. It matters
+     * a little more here, because the two dates are only meaningful as a pair — an
+     * event that ended before it started would be nonsense — and a pair that cannot
+     * be half-changed cannot fall into that state after being checked.
+     */
+    private final TaskDateTime from;
 
     /** When the event ends. */
-    protected TaskDateTime to;
+    private final TaskDateTime to;
 
     /**
      * Creates an event that is not done yet.

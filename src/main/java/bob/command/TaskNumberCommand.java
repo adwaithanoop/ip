@@ -62,6 +62,11 @@ public abstract class TaskNumberCommand extends Command {
                     + " to see it.");
         }
         // The user counts from 1, the list counts from 0.
-        return taskNumber - 1;
+        int index = taskNumber - 1;
+        // The whole point of this method is to hand back a position the list holds,
+        // so the two checks above have to have left one.
+        assert index >= 0 && index < tasks.size()
+                : "Position " + index + " is outside a list of " + tasks.size() + " tasks";
+        return index;
     }
 }

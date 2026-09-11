@@ -85,6 +85,11 @@ public class MainWindow extends AnchorPane {
      */
     @FXML
     public void initialize() {
+        // Each control is filled in by FXMLLoader from the fx:id that matches its
+        // name, so one left empty means the FXML and this class have drifted apart.
+        assert scrollPane != null && dialogContainer != null
+                && userInput != null && sendButton != null
+                : "MainWindow.fxml is missing an fx:id named here";
         scrollPane.vvalueProperty().bind(dialogContainer.heightProperty());
     }
 
@@ -137,6 +142,9 @@ public class MainWindow extends AnchorPane {
      */
     @FXML
     private void handleUserInput() {
+        // Main hands the chatbot over before the window is shown, and nothing can be
+        // typed into a window that is not on screen yet.
+        assert bob != null : "The window was given input before it was given a chatbot";
         String input = userInput.getText().trim();
         userInput.clear();
         if (input.isEmpty()) {

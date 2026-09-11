@@ -14,8 +14,8 @@ import java.util.stream.IntStream;
  * directly by every command. Every one of them therefore had to know that the
  * tasks were kept in a list, that the list counts from 0 while the user counts
  * from 1, and how to walk it. Wrapping the list in a class of its own gives that
- * knowledge one home: {@code Bob} now asks this class for what it wants and no
- * longer touches the list itself.
+ * knowledge one home: a {@link bob.command.Command Command} now asks this class for what it wants,
+ * and nothing outside it touches the list itself.
  *
  * <p>Positions matter here in a way they do not in an ordinary collection. The
  * user names a task by the number it has in
@@ -27,9 +27,10 @@ import java.util.stream.IntStream;
  * part the user needs, and the task can be fetched with {@link #get}.
  *
  * <p>Nothing here validates what the user typed and nothing here prints. A task
- * number that names no task is refused by {@link bob.Bob Bob}, which is where there is
- * still a user to explain it to; this class assumes it is given a position that
- * exists, exactly as a plain list would.
+ * number that names no task is refused by
+ * {@link bob.command.TaskNumberCommand TaskNumberCommand}, which is the one that knows both the
+ * number the user typed and how long this list is; this class assumes it is given
+ * a position that exists, exactly as a plain list would.
  */
 public class TaskList {
 
@@ -95,6 +96,8 @@ public class TaskList {
      * @return the task that was removed.
      */
     public Task delete(int index) {
+        assert index >= 0 && index < tasks.size()
+                : "No task at position " + index + " to delete from a list of " + tasks.size();
         return tasks.remove(index);
     }
 
@@ -104,6 +107,8 @@ public class TaskList {
      * @param index the task's position in this list, counting from 0.
      */
     public Task get(int index) {
+        assert index >= 0 && index < tasks.size()
+                : "No task at position " + index + " in a list of " + tasks.size();
         return tasks.get(index);
     }
 

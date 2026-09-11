@@ -92,9 +92,11 @@ public class Main extends Application {
      * again through {@link ImageIO} rather than reusing {@link Images#BOB}, which is
      * a JavaFX image and not a kind AWT understands.
      *
-     * <p>Nothing here is worth failing over. A desktop that does not offer this —
-     * and every check below is a desktop that might not — simply keeps the icon it
-     * would have had, which costs the user nothing.
+     * <p>A desktop that does not offer this is not worth failing over: it simply
+     * keeps the icon it would have had, which costs the user nothing. Only the two
+     * ways that can happen are caught — the platform declining, and the picture not
+     * reading — so a mistake in this code still shows up instead of being taken for
+     * an unusual desktop.
      */
     private static void showBobInTheDock() {
         try {
@@ -106,8 +108,10 @@ public class Main extends Application {
                 return;
             }
             taskbar.setIconImage(ImageIO.read(Main.class.getResource(Images.BOB_PATH)));
-        } catch (IOException | RuntimeException e) {
-            // An unusual desktop, or none at all. The default icon will do.
+        } catch (IOException | UnsupportedOperationException e) {
+            // A desktop with no dock icon to set (a headless one included, since
+            // HeadlessException is an UnsupportedOperationException), or a picture
+            // that could not be read. The default icon will do.
         }
     }
 }

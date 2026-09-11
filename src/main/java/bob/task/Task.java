@@ -18,6 +18,14 @@ import java.util.Optional;
  * <p>It is {@code abstract} because "a task" on its own is not something the user
  * can add: every task the chatbot stores is one of the three kinds. Declaring it
  * abstract has the compiler enforce that, rather than leaving it to be remembered.
+ *
+ * <p>What a task is made of is private to this class, and the subclasses reach it
+ * only through the methods below, which is all they need: {@link Deadline} and
+ * {@link Event} add dates of their own, and no kind of task sets the description
+ * or the done status itself. Keeping the fields private is what lets this class
+ * promise that a task's description is the one it was added with, and that its
+ * status only ever changes through {@link #markAsDone()} and
+ * {@link #markAsNotDone()}.
  */
 public abstract class Task {
 
@@ -27,11 +35,18 @@ public abstract class Task {
     /** Status field written to the save file for a task that has not been done yet. */
     public static final String NOT_DONE_FLAG = "0";
 
-    /** What the user typed when adding the task. */
-    protected String description;
+    /**
+     * What the user typed when adding the task.
+     *
+     * <p>{@code final}, because a task cannot be reworded once it has been added:
+     * the chatbot offers no command for it. Saying so here means the compiler
+     * refuses the assignment rather than a reader having to check every method for
+     * one.
+     */
+    private final String description;
 
     /** Whether the task has been marked as done. */
-    protected boolean isDone;
+    private boolean isDone;
 
     /**
      * Creates a task that is not done yet, since a task the user has just
@@ -138,7 +153,7 @@ public abstract class Task {
      * {@code X} for a task that is done, a space for one that is not.
      */
     public String getStatusIcon() {
-        return (isDone ? "X" : " "); // mark done task with X
+        return (isDone ? "X" : " ");
     }
 
     /** Records that the task has been done. */
