@@ -200,14 +200,16 @@ public class Storage {
      * but the file always says exactly what the list says, which is not true of
      * schemes that patch a file in place and can leave it half updated.
      *
+     * <p>The lines are built with a stream because each task turns into exactly
+     * one line, independently of the others, which is what {@code map} describes.
+     *
      * @param tasks the task list as it now stands.
      * @throws BobException if the file or the folder holding it cannot be written.
      */
     public void save(List<Task> tasks) throws BobException {
-        List<String> lines = new ArrayList<>();
-        for (Task task : tasks) {
-            lines.add(toSaveLine(task));
-        }
+        List<String> lines = tasks.stream()
+                .map(Storage::toSaveLine)
+                .toList();
         try {
             Path parentDirectory = filePath.getParent();
             if (parentDirectory != null) {
