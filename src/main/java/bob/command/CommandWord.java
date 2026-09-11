@@ -2,7 +2,7 @@ package bob.command;
 
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 /**
  * The words the chatbot understands at the start of a line, and the rules for
@@ -167,12 +167,14 @@ public enum CommandWord {
      *
      * <p>Built from {@link #values()} rather than written out by hand, so adding
      * a command to this enum is all it takes for the chatbot to start offering it.
+     *
+     * <p>Written as a stream because turning each command into its keyword and
+     * joining the results is exactly what {@code map} and
+     * {@code Collectors.joining} do, with no joiner to set up and read back.
      */
     public static String getAllKeywords() {
-        StringJoiner keywords = new StringJoiner(", ");
-        for (CommandWord command : values()) {
-            keywords.add(command.keyword);
-        }
-        return keywords.toString();
+        return Arrays.stream(values())
+                .map(CommandWord::getKeyword)
+                .collect(Collectors.joining(", "));
     }
 }
