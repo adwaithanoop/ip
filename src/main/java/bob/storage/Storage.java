@@ -74,6 +74,30 @@ public class Storage {
     /** How many unreadable lines are reported one by one before the rest are just counted. */
     private static final int MAX_REPORTED_BAD_LINES = 5;
 
+    /** Position of the field saying which kind of task a saved line holds. */
+    private static final int FIELD_INDEX_TYPE = 0;
+
+    /** Position of the field saying whether a saved task has been done. */
+    private static final int FIELD_INDEX_DONE = 1;
+
+    /** Position of the field holding what a saved task is. */
+    private static final int FIELD_INDEX_DESCRIPTION = 2;
+
+    /** Position of a saved {@link Deadline}'s due date. */
+    private static final int FIELD_INDEX_BY = 3;
+
+    /**
+     * Position of a saved {@link Event}'s start.
+     *
+     * <p>The same position as {@link #FIELD_INDEX_BY}, since both are the first field
+     * after the three every task has. It is named separately so that each reading
+     * says which date it expects to find there.
+     */
+    private static final int FIELD_INDEX_FROM = 3;
+
+    /** Position of a saved {@link Event}'s end. */
+    private static final int FIELD_INDEX_TO = 4;
+
     /** Number of fields a saved {@link Todo} has: kind, status, description. */
     private static final int FIELD_COUNT_TODO = 3;
 
@@ -264,7 +288,7 @@ public class Storage {
      */
     private static Task parseTask(String line) throws BobException {
         List<String> fields = splitFields(line);
-        String typeIcon = fields.get(0);
+        String typeIcon = fields.get(FIELD_INDEX_TYPE);
         return switch (typeIcon) {
             case Todo.TYPE_ICON -> parseTodo(fields);
             case Deadline.TYPE_ICON -> parseDeadline(fields);
@@ -278,8 +302,8 @@ public class Storage {
     /** Returns the {@link Todo} written as {@code T | <done> | <description>}. */
     private static Todo parseTodo(List<String> fields) throws BobException {
         requireFieldCount(fields, FIELD_COUNT_TODO, "todo");
-        Todo todo = new Todo(requireNonEmpty(fields.get(2), "description"));
-        setDone(todo, fields.get(1));
+        Todo todo = new Todo(requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description"));
+        setDone(todo, fields.get(FIELD_INDEX_DONE));
         return todo;
     }
 
@@ -287,9 +311,9 @@ public class Storage {
     private static Deadline parseDeadline(List<String> fields) throws BobException {
         requireFieldCount(fields, FIELD_COUNT_DEADLINE, "deadline");
         Deadline deadline = new Deadline(
-                requireNonEmpty(fields.get(2), "description"),
-                requireDate(fields.get(3), "due date"));
-        setDone(deadline, fields.get(1));
+                requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description"),
+                requireDate(fields.get(FIELD_INDEX_BY), "due date"));
+        setDone(deadline, fields.get(FIELD_INDEX_DONE));
         return deadline;
     }
 
@@ -297,10 +321,10 @@ public class Storage {
     private static Event parseEvent(List<String> fields) throws BobException {
         requireFieldCount(fields, FIELD_COUNT_EVENT, "event");
         Event event = new Event(
-                requireNonEmpty(fields.get(2), "description"),
-                requireDate(fields.get(3), "start time"),
-                requireDate(fields.get(4), "end time"));
-        setDone(event, fields.get(1));
+                requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description"),
+                requireDate(fields.get(FIELD_INDEX_FROM), "start time"),
+                requireDate(fields.get(FIELD_INDEX_TO), "end time"));
+        setDone(event, fields.get(FIELD_INDEX_DONE));
         return event;
     }
 
