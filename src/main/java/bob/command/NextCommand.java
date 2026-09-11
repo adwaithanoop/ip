@@ -26,6 +26,9 @@ public class NextCommand extends Command {
      * @param wantedCount how many to show at most.
      */
     public NextCommand(int wantedCount) {
+        // Parser refuses zero and negative counts, with a message of its own, so a
+        // count that reaches this far has already been found to be worth showing.
+        assert wantedCount >= 1 : "Asked for " + wantedCount + " tasks, which is not a number to show";
         this.wantedCount = wantedCount;
     }
 
