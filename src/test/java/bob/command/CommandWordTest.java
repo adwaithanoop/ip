@@ -33,6 +33,7 @@ public class CommandWordTest {
         assertEquals(Optional.of(CommandWord.TODO), CommandWord.parse("todo read book"));
         assertEquals(Optional.of(CommandWord.DELETE), CommandWord.parse("delete 2"));
         assertEquals(Optional.of(CommandWord.ON), CommandWord.parse("on 2026-12-02"));
+        assertEquals(Optional.of(CommandWord.EDIT), CommandWord.parse("edit 2 /by 2026-12-02"));
     }
 
     @Test
@@ -111,7 +112,7 @@ public class CommandWordTest {
         String keywords = CommandWord.getAllKeywords();
 
         assertEquals("todo, deadline, event, list, on, before, after, next, find, mark,"
-                + " unmark, delete, bye", keywords);
+                + " unmark, delete, edit, bye", keywords);
     }
 
     @Test

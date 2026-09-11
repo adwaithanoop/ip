@@ -6,14 +6,14 @@ import bob.task.TaskList;
 /**
  * A command that acts on the one task the user named by its number.
  *
- * <p>{@link MarkCommand} and {@link DeleteCommand} both take a number, and both
- * have to answer the same question before they can do anything: is there a task
- * with that number? {@link bob.parser.Parser Parser} cannot answer it, because it reads text and
- * has no list to count; so the check belongs to the commands, and being the same
- * check in both it belongs to a parent they share.
+ * <p>{@link MarkCommand}, {@link DeleteCommand} and {@link EditCommand} all take a
+ * number, and all have to answer the same question before they can do anything: is
+ * there a task with that number? {@link bob.parser.Parser Parser} cannot answer it, because it
+ * reads text and has no list to count; so the check belongs to the commands, and
+ * being the same check in each it belongs to a parent they share.
  *
  * <p>Only the checking is shared. What to do with the task once it has been
- * found is what tells the two commands apart, and that stays in each of them.
+ * found is what tells the commands apart, and that stays in each of them.
  */
 public abstract class TaskNumberCommand extends Command {
 

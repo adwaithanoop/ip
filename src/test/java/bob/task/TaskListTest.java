@@ -73,6 +73,19 @@ public class TaskListTest {
     }
 
     @Test
+    public void set_middleTask_replacedInPlaceOthersUnmoved() {
+        TaskList tasks = listOf(new Todo("first"), new Todo("second"), new Todo("third"));
+
+        tasks.set(1, new Todo("new second"));
+
+        // The replacement takes over the number, so no other task is renumbered.
+        assertEquals(3, tasks.size());
+        assertEquals("[T][ ] first", tasks.get(0).toString());
+        assertEquals("[T][ ] new second", tasks.get(1).toString());
+        assertEquals("[T][ ] third", tasks.get(2).toString());
+    }
+
+    @Test
     public void asList_taskList_returnsAnUnchangeableCopy() {
         TaskList tasks = listOf(new Todo("read book"));
 

@@ -1,9 +1,12 @@
 package bob.task;
 
+import bob.BobException;
+
 /**
  * A task with no date or time attached to it, for example
  * {@code borrow book}. It adds nothing to {@link Task} beyond its
- * type icon, since there is nothing more to remember about it.
+ * type icon and its refusal of a date when it is edited, since there is
+ * nothing more to remember about it.
  */
 public class Todo extends Task {
 
@@ -30,5 +33,19 @@ public class Todo extends Task {
     @Override
     public String getTypeIcon() {
         return TYPE_ICON;
+    }
+
+    /**
+     * Returns a todo with the new description.
+     *
+     * <p>A todo has no dates, so an edit giving one is refused rather than quietly
+     * ignored: a user who typed a date expected something to change.
+     */
+    @Override
+    protected Task buildEdited(String description, TaskEdit edit) throws BobException {
+        if (edit.hasDueDate() || edit.hasStartOrEnd()) {
+            throw new BobException("A todo has no dates to change, only its description.");
+        }
+        return new Todo(description);
     }
 }

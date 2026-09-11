@@ -1,7 +1,10 @@
 package bob.task;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+
+import bob.BobException;
 
 /**
  * A task that has to be done before a given point in time, for example
@@ -22,10 +25,10 @@ public class Deadline extends Task {
     /**
      * When the task is due.
      *
-     * <p>Private and {@code final}, as {@link Task}'s own fields are. Nothing in
-     * the chatbot moves a deadline once it has been set, and a {@link TaskDateTime}
-     * cannot be altered from within, so a deadline built from a date the user typed
-     * carries that date for as long as it exists.
+     * <p>Private and {@code final}, as {@link Task}'s own fields are. Moving a
+     * deadline builds a new one, through {@link #withEdit}, rather than changing this
+     * field, and a {@link TaskDateTime} cannot be altered from within, so a deadline
+     * carries the date it was built with for as long as it exists.
      */
     private final TaskDateTime by;
 
@@ -54,6 +57,21 @@ public class Deadline extends Task {
     @Override
     public Optional<TaskDateTime> getScheduledDate() {
         return Optional.of(by);
+    }
+
+    /**
+     * Returns a deadline with the new description, and the new due date if the edit
+     * gives one.
+     *
+     * <p>The due date is replaced whole, time of day included, so a new date given
+     * without a time leaves the deadline without one.
+     */
+    @Override
+    protected Task buildEdited(String description, TaskEdit edit) throws BobException {
+        if (edit.hasStartOrEnd()) {
+            throw new BobException("A deadline has a due date, not a start or an end.");
+        }
+        return new Deadline(description, Objects.requireNonNullElse(edit.by(), by));
     }
 
     /** Returns for example {@code [D][ ] return book (by: Dec 02 2026)}. */

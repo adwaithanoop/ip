@@ -57,7 +57,7 @@ what is on the disk on either side of the run:
 A test case with neither block starts with no save file — the ordinary first
 run — and nothing is checked about what it saves. That is the case for TC1 to
 TC16 below, all of which were written before the chatbot saved anything, and
-for TC23 onward apart from TC27.
+for TC23 to TC31 apart from TC27.
 
 ## How to run the tests
 
@@ -351,7 +351,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "borrow book" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -583,7 +583,7 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "todolist" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1178,17 +1178,17 @@ bye
 
     ____________________________________________________________
      Sorry, I don't know what "bye now" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
     ____________________________________________________________
 
     ____________________________________________________________
      Sorry, I don't know what "list foo" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
     ____________________________________________________________
 
     ____________________________________________________________
      Sorry, I don't know what "BYE" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, bye
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1426,14 +1426,16 @@ bye
 
 **Aim:** Check that starting the chatbot and quitting without adding anything
 does not create a save file. A first run should leave the disk as it found it,
-and a `list` that finds nothing is not a change to be written. This is also what
-lets every test case above it start from a genuinely empty state.
+and neither a `list` that finds nothing nor a `mark` or an `edit` refused for want
+of a task is a change to be written. This is also what lets every test case above
+it start from a genuinely empty state.
 
 **Input**
 
 ```text
 list
 mark 1
+edit 1 /desc read book
 bye
 ```
 
@@ -1460,6 +1462,10 @@ bye
 
     ____________________________________________________________
      There is nothing to mark yet — your list is empty.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     There is nothing to edit yet — your list is empty.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -2452,4 +2458,264 @@ bye
     ____________________________________________________________
      Bye. Hope to see you again soon!
     ____________________________________________________________
+```
+
+### TC32 - Editing each kind of task in place
+
+**Aim:** Check that `edit` changes only the details typed and leaves everything
+else about a task alone. Each kind of task is edited through the markers it has:
+a todo's description, a deadline's due date, and an event's end on its own and
+then both of its ends at once. A deadline given a new day without a time loses the
+time it had, because a new date replaces the old one whole. The markers may come
+in any order, so the second event edit types `/to` before `/from`, and the last
+edit changes a description and a date together. Each confirmation shows the task
+before and after, the first task's done box stays ticked, and the `list` at the
+end shows every task still under the number it started with. The save file after
+the run shows each edit written in the usual format, on the line of the task it
+changed.
+
+**Data file before**
+
+```text
+T | 1 | read book
+D | 0 | return book | 2026-12-02 1800
+E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1600
+```
+
+**Input**
+
+```text
+edit 1 /desc read library book
+edit 2 /by 2026-12-05
+edit 3 /to 2026-08-06 1800
+edit 3 /to 2026-08-07 1200 /from 2026-08-07 1000
+edit 2 /desc return library book /by 2026-12-06 0900
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Welcome back! I've picked up 3 tasks you saved earlier.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've changed this task from:
+       [T][X] read book
+     to:
+       [T][X] read library book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've changed this task from:
+       [D][ ] return book (by: Dec 02 2026 18:00)
+     to:
+       [D][ ] return book (by: Dec 05 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've changed this task from:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+     to:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 18:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've changed this task from:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 18:00)
+     to:
+       [E][ ] project meeting (from: Aug 07 2026 10:00 to: Aug 07 2026 12:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've changed this task from:
+       [D][ ] return book (by: Dec 05 2026)
+     to:
+       [D][ ] return library book (by: Dec 06 2026 09:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][X] read library book
+     2.[D][ ] return library book (by: Dec 06 2026 09:00)
+     3.[E][ ] project meeting (from: Aug 07 2026 10:00 to: Aug 07 2026 12:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 1 | read library book
+D | 0 | return library book | 2026-12-06 0900
+E | 0 | project meeting | 2026-08-07 1000 | 2026-08-07 1200
+```
+
+### TC33 - Edits that cannot be carried out leave every task as it was
+
+**Aim:** Check that each way an `edit` can go wrong is answered with the
+explanation that fits it, and that none of them changes a task. A missing task
+number, one that is not a number, and one that names no task are refused as they
+are for `mark` and `delete`. An `edit` with no marker after the number is refused
+with an example, and so is one that starts with plain text, as a description would
+be typed after `todo`. A marker with nothing after it and a new date that is not a
+date are refused before any task is looked at. A date the task does not have is
+refused by the kind of task: a todo has no dates, a deadline has no start or end,
+and an event has no due date. Last, a new start that would put an event's start
+after its end is refused, and the message shows the dates the change would have
+left, including the end that was not typed. The `list` and the save file at the
+end show the three tasks exactly as they were added.
+
+**Input**
+
+```text
+todo read book
+deadline return book /by 2026-12-02
+event project meeting /from 2026-08-06 1400 /to 2026-08-06 1600
+edit
+edit two /desc read book
+edit 5 /desc read book
+edit 2
+edit 2 return book /by 2026-12-05
+edit 1 /desc
+edit 2 /by
+edit 2 /by someday
+edit 1 /by 2026-12-02
+edit 2 /from 2026-12-02 1800
+edit 3 /by 2026-12-02
+edit 3 /from 2026-08-06 1700
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+       .        *         .        .        *        .
+           *         .         +        .       <]==-     .
+        .        +        ____        __      .        *
+      -==[>  *           / __ )____  / /_         +
+      +           .     / __  / __ \/ __ \  *              .
+               *       / /_/ / /_/ / /_/ /   <]==-   .
+         .         +  /_____/\____/_.___/       .        *
+             +         .         *        .        +        .
+        .        -==[>      .         *                 .
+     Hello! I'm Bob.
+     What can I do for you?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [T][ ] read book
+     Now you have 1 task in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [D][ ] return book (by: Dec 02 2026)
+     Now you have 2 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Got it. I've added this task:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+     Now you have 3 tasks in the list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Which task should I edit?
+     Give me its number from list, for example: edit 2
+    ____________________________________________________________
+
+    ____________________________________________________________
+     "two" isn't a task number.
+     I need the number shown next to the task in list, for example: edit 2
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't have a task numbered 5.
+     Your list runs from 1 to 3; type list to see it.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     What should I change about task 2?
+     Use /desc, /by, /from or /to.
+     For example: edit 2 /desc read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     What should I change about task 2?
+     Use /desc, /by, /from or /to.
+     For example: edit 2 /desc read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You wrote /desc but nothing after it.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     You wrote /by but nothing after it.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     I don't understand "someday" as a date.
+     Write the day as yyyy-mm-dd, and add a 24-hour time if the hour matters.
+     For example: 2026-12-02 or 2026-12-02 1800
+    ____________________________________________________________
+
+    ____________________________________________________________
+     A todo has no dates to change, only its description.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     A deadline has a due date, not a start or an end.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     An event has a start and an end, not a due date.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     An event can't end before it starts.
+     That change would have it run from Aug 06 2026 17:00 to Aug 06 2026 16:00.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Here are the tasks in your list:
+     1.[T][ ] read book
+     2.[D][ ] return book (by: Dec 02 2026)
+     3.[E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bye. Hope to see you again soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | read book
+D | 0 | return book | 2026-12-02
+E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1600
 ```

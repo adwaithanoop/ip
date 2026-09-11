@@ -2,7 +2,10 @@ package bob.task;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+
+import bob.BobException;
 
 /**
  * A task that runs from one point in time to another, for example
@@ -12,13 +15,14 @@ import java.util.Optional;
  * values rather than as the text the user typed, so both are dates the chatbot
  * has understood.
  *
- * <p>Nothing here checks that the end comes after the start. That check lives in
- * {@link bob.parser.Parser Parser}, which reads the line the event was typed on, because that is
- * where there is still a user to tell about it: a class that could only throw
- * would leave the caller to turn the failure into something worth reading. The
+ * <p>The constructor does not check that the end comes after the start. When an
+ * event is added, that check is made by {@link bob.parser.Parser Parser}, which reads
+ * the line the event was typed on and can show the user which date it read as which.
+ * When an event is edited, {@link #buildEdited} makes it, because only the event
+ * knows the end that an edit moving just the start has to be compared with. The
  * consequence is that an event whose end comes first can still be built — by a
- * hand-edited save file, which is the one route into this class that does not
- * pass through the parser.
+ * hand-edited save file, which is the one route into this class that passes
+ * through neither check.
  */
 public class Event extends Task {
 
@@ -80,6 +84,29 @@ public class Event extends Task {
     @Override
     public boolean occursOn(LocalDate day) {
         return !from.isAfter(day) && !to.isBefore(day);
+    }
+
+    /**
+     * Returns an event with the new description, and the new start and end where the
+     * edit gives them.
+     *
+     * <p>The two ends are checked as a pair once the edit has been applied, because
+     * moving one end alone can put it on the wrong side of the other. The check is
+     * made only when an end is moved: an event saved with its ends the wrong way round
+     * can still be reworded, since rewording it is not what put them there.
+     */
+    @Override
+    protected Task buildEdited(String description, TaskEdit edit) throws BobException {
+        if (edit.hasDueDate()) {
+            throw new BobException("An event has a start and an end, not a due date.");
+        }
+        TaskDateTime newFrom = Objects.requireNonNullElse(edit.from(), from);
+        TaskDateTime newTo = Objects.requireNonNullElse(edit.to(), to);
+        if (edit.hasStartOrEnd() && newTo.compareTo(newFrom) < 0) {
+            throw new BobException("An event can't end before it starts."
+                    + "\nThat change would have it run from " + newFrom + " to " + newTo + ".");
+        }
+        return new Event(description, newFrom, newTo);
     }
 
     /**

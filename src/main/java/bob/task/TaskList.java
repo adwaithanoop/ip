@@ -102,6 +102,22 @@ public class TaskList {
     }
 
     /**
+     * Puts a task in place of the one at a position, so that it takes over that
+     * task's number rather than going to the end of the list.
+     *
+     * <p>This is how an edited task is stored: nothing else in the list moves, so
+     * every number the user has already been shown still names the same task.
+     *
+     * @param index the position to replace, counting from 0.
+     * @param task  the task to put there.
+     */
+    public void set(int index, Task task) {
+        assert index >= 0 && index < tasks.size()
+                : "No task at position " + index + " to replace in a list of " + tasks.size();
+        tasks.set(index, task);
+    }
+
+    /**
      * Returns the task at one position.
      *
      * @param index the task's position in this list, counting from 0.

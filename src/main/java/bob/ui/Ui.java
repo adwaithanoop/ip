@@ -313,6 +313,22 @@ public class Ui {
     }
 
     /**
+     * Confirms a task just edited, showing it as it was and as it now is.
+     *
+     * <p>Both are shown because an edit changes only the details the user typed, and
+     * seeing the two one above the other is what makes plain which details those were.
+     *
+     * @param before the task as it was before the edit.
+     * @param after  the task as it is now.
+     */
+    public void showEditedTask(Task before, Task after) {
+        showLine("Got it. I've changed this task from:");
+        showLine("  " + before);
+        showLine("to:");
+        showLine("  " + after);
+    }
+
+    /**
      * Prints a numbered listing of some of the tasks, or says there are none.
      *
      * <p>Which tasks to show arrives as their positions rather than as the tasks

@@ -2,6 +2,7 @@ package bob.task;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
@@ -103,8 +104,50 @@ public class DeadlineTest {
                 deadline.toSaveFields());
     }
 
+    @Test
+    public void withEdit_newDueDate_dueDateChanged() throws BobException {
+        Task edited = deadlineOn("2026-12-02").withEdit(dueDateEdit("2026-12-05"));
+
+        assertEquals("[D][ ] return book (by: Dec 05 2026)", edited.toString());
+    }
+
+    @Test
+    public void withEdit_dayWithoutATime_timeRemoved() throws BobException {
+        Task edited = deadlineOn("2026-12-02 1800").withEdit(dueDateEdit("2026-12-05"));
+
+        // The due date is replaced whole, so leaving the time off does not keep the old one.
+        assertEquals("[D][ ] return book (by: Dec 05 2026)", edited.toString());
+    }
+
+    @Test
+    public void withEdit_descriptionOnly_dueDateKept() throws BobException {
+        TaskEdit edit = new TaskEdit("return library book", null, null, null);
+
+        Task edited = deadlineOn("2026-12-02 1800").withEdit(edit);
+
+        assertEquals("[D][ ] return library book (by: Dec 02 2026 18:00)", edited.toString());
+    }
+
+    @Test
+    public void withEdit_startOrEnd_exceptionThrown() throws BobException {
+        Deadline deadline = deadlineOn("2026-12-02");
+        TaskDateTime date = TaskDateTime.parse("2026-12-05");
+
+        BobException exception = assertThrows(BobException.class, () ->
+                deadline.withEdit(new TaskEdit(null, null, date, null)));
+
+        assertEquals("A deadline has a due date, not a start or an end.", exception.getMessage());
+        // Refused as a whole, even alongside a due date the deadline could have taken.
+        assertThrows(BobException.class, () -> deadline.withEdit(new TaskEdit(null, date, null, date)));
+    }
+
     /** Returns a deadline called {@code return book} due at {@code date}. */
     private static Deadline deadlineOn(String date) throws BobException {
         return new Deadline("return book", TaskDateTime.parse(date));
+    }
+
+    /** Returns an edit that changes nothing but the due date, to {@code date}. */
+    private static TaskEdit dueDateEdit(String date) throws BobException {
+        return new TaskEdit(null, TaskDateTime.parse(date), null, null);
     }
 }
