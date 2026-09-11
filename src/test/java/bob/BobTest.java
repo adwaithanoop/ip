@@ -63,7 +63,7 @@ public class BobTest {
         String listed = bob.getResponse("list");
 
         assertEquals("Got it. I've added this task:\n  [T][ ] read book\n"
-                + "Now you have 1 tasks in the list.", added);
+                + "Now you have 1 task in the list.", added);
         assertEquals("Here are the tasks in your list:\n1.[T][ ] read book", listed);
     }
 

@@ -160,9 +160,8 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
         try {
             return LocalDate.parse(text.trim());
         } catch (DateTimeParseException e) {
-            throw new BobException("I don't understand \"" + text + "\" as a day."
-                    + "\nWrite the day as yyyy-mm-dd, with no time after it."
-                    + "\nFor example: " + EXAMPLE_DATE);
+            throw BobException.withExample("I don't understand \"" + text + "\" as a day."
+                    + "\nWrite the day as yyyy-mm-dd, with no time after it.", EXAMPLE_DATE);
         }
     }
 
@@ -187,9 +186,9 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
      * which of several dates on the line was not understood.
      */
     private static BobException createUnreadableDateError(String text) {
-        return new BobException("I don't understand \"" + text + "\" as a date."
-                + "\nWrite the day as yyyy-mm-dd, and add a 24-hour time if the hour matters."
-                + "\nFor example: " + EXAMPLE_DATE + " or " + EXAMPLE_DATE_TIME);
+        return BobException.withExample("I don't understand \"" + text + "\" as a date."
+                + "\nWrite the day as yyyy-mm-dd, and add a 24-hour time if the hour matters.",
+                EXAMPLE_DATE + " or " + EXAMPLE_DATE_TIME);
     }
 
     /**

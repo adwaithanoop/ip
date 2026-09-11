@@ -48,7 +48,7 @@ import bob.task.Todo;
  *
  * <p>Nothing in this class prints anything. Whatever the user needs to be told
  * is either returned in a {@link LoadResult} or thrown as a {@link BobException},
- * leaving {@link bob.Bob Bob} as the only class that writes to the console.
+ * leaving {@link bob.ui.Ui Ui} as the only class that writes to the console.
  */
 public class Storage {
 
@@ -73,6 +73,30 @@ public class Storage {
 
     /** How many unreadable lines are reported one by one before the rest are just counted. */
     private static final int MAX_REPORTED_BAD_LINES = 5;
+
+    /** Position of the field saying which kind of task a saved line holds. */
+    private static final int FIELD_INDEX_TYPE = 0;
+
+    /** Position of the field saying whether a saved task has been done. */
+    private static final int FIELD_INDEX_DONE = 1;
+
+    /** Position of the field holding what a saved task is. */
+    private static final int FIELD_INDEX_DESCRIPTION = 2;
+
+    /** Position of a saved {@link Deadline}'s due date. */
+    private static final int FIELD_INDEX_BY = 3;
+
+    /**
+     * Position of a saved {@link Event}'s start.
+     *
+     * <p>The same position as {@link #FIELD_INDEX_BY}, since both are the first field
+     * after the three every task has. It is named separately so that each reading
+     * says which date it expects to find there.
+     */
+    private static final int FIELD_INDEX_FROM = 3;
+
+    /** Position of a saved {@link Event}'s end. */
+    private static final int FIELD_INDEX_TO = 4;
 
     /** Number of fields a saved {@link Todo} has: kind, status, description. */
     private static final int FIELD_COUNT_TODO = 3;
@@ -154,8 +178,7 @@ public class Storage {
      */
     private LoadResult readTasks(List<String> lines) {
         List<Task> loadedTasks = new ArrayList<>();
-        List<String> messages = new ArrayList<>();
-        int badLineCount = 0;
+        List<String> badLineReports = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             if (line.isEmpty()) {
@@ -164,32 +187,53 @@ public class Storage {
             try {
                 loadedTasks.add(parseTask(line));
             } catch (BobException e) {
-                badLineCount++;
-                // Only the first few are quoted, so a thoroughly damaged file
-                // does not bury the greeting under hundreds of lines.
-                if (badLineCount <= MAX_REPORTED_BAD_LINES) {
-                    // The user counts lines from 1, the list counts from 0.
-                    messages.add("Line " + (i + 1) + " of " + filePath
-                            + " isn't a task I can read: " + e.getMessage() + ".");
-                }
+                // The user counts lines from 1, the list counts from 0.
+                badLineReports.add("Line " + (i + 1) + " of " + filePath
+                        + " isn't a task I can read: " + e.getMessage() + ".");
             }
         }
-        if (badLineCount > MAX_REPORTED_BAD_LINES) {
-            messages.add("...and " + (badLineCount - MAX_REPORTED_BAD_LINES)
-                    + " more lines I couldn't read.");
+        return new LoadResult(loadedTasks, summarizeBadLines(badLineReports));
+    }
+
+    /**
+     * Returns what the user should be told about the lines of the save file that
+     * could not be read, given a report on each of them.
+     *
+     * <p>Kept apart from {@link #readTasks}, which walks the file, because this is
+     * different work: deciding how many of the reports to quote, and how to word
+     * what is said about the rest.
+     *
+     * @param badLineReports one report per unreadable line, in the order the lines
+     *                       appear in the file.
+     * @return the messages to show, which are none at all when every line was read.
+     */
+    private static List<String> summarizeBadLines(List<String> badLineReports) {
+        int badLineCount = badLineReports.size();
+        if (badLineCount == 0) {
+            return List.of();
         }
-        if (badLineCount > 0) {
-            boolean isSingleBadLine = badLineCount == 1;
-            messages.add(isSingleBadLine
-                    ? "I've left that line out of your list."
-                    : "I've left those " + badLineCount + " lines out of your list.");
-            // Said plainly, because the next command that changes the list rewrites
-            // the whole file, and these lines are not in it to be rewritten.
-            messages.add(isSingleBadLine
-                    ? "It will be lost the next time the list changes — fix the file to keep it."
-                    : "They will be lost the next time the list changes — fix the file to keep them.");
+
+        // Only the first few are quoted, so a thoroughly damaged file
+        // does not bury the greeting under hundreds of lines.
+        int quotedCount = Math.min(badLineCount, MAX_REPORTED_BAD_LINES);
+        List<String> messages = new ArrayList<>(badLineReports.subList(0, quotedCount));
+        int unquotedLineCount = badLineCount - quotedCount;
+        if (unquotedLineCount > 0) {
+            messages.add("...and " + unquotedLineCount
+                    + (unquotedLineCount == 1 ? " more line" : " more lines")
+                    + " I couldn't read.");
         }
-        return new LoadResult(loadedTasks, messages);
+
+        boolean isSingleBadLine = badLineCount == 1;
+        messages.add(isSingleBadLine
+                ? "I've left that line out of your list."
+                : "I've left those " + badLineCount + " lines out of your list.");
+        // Said plainly, because the next command that changes the list rewrites
+        // the whole file, and these lines are not in it to be rewritten.
+        messages.add(isSingleBadLine
+                ? "It will be lost the next time the list changes — fix the file to keep it."
+                : "They will be lost the next time the list changes — fix the file to keep them.");
+        return messages;
     }
 
     /**
@@ -247,7 +291,7 @@ public class Storage {
         // splitFields adds a field after the last separator whether or not there is
         // anything in it, so even a line with nothing on it comes back as one field.
         assert !fields.isEmpty() : "A saved line always splits into at least one field";
-        String typeIcon = fields.get(0);
+        String typeIcon = fields.get(FIELD_INDEX_TYPE);
         return switch (typeIcon) {
             case Todo.TYPE_ICON -> parseTodo(fields);
             case Deadline.TYPE_ICON -> parseDeadline(fields);
@@ -261,8 +305,8 @@ public class Storage {
     /** Returns the {@link Todo} written as {@code T | <done> | <description>}. */
     private static Todo parseTodo(List<String> fields) throws BobException {
         requireFieldCount(fields, FIELD_COUNT_TODO, "todo");
-        Todo todo = new Todo(requireNonEmpty(fields.get(2), "description"));
-        setDone(todo, fields.get(1));
+        Todo todo = new Todo(requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description"));
+        setDone(todo, fields.get(FIELD_INDEX_DONE));
         return todo;
     }
 
@@ -270,9 +314,9 @@ public class Storage {
     private static Deadline parseDeadline(List<String> fields) throws BobException {
         requireFieldCount(fields, FIELD_COUNT_DEADLINE, "deadline");
         Deadline deadline = new Deadline(
-                requireNonEmpty(fields.get(2), "description"),
-                requireDate(fields.get(3), "due date"));
-        setDone(deadline, fields.get(1));
+                requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description"),
+                requireDate(fields.get(FIELD_INDEX_BY), "due date"));
+        setDone(deadline, fields.get(FIELD_INDEX_DONE));
         return deadline;
     }
 
@@ -280,10 +324,10 @@ public class Storage {
     private static Event parseEvent(List<String> fields) throws BobException {
         requireFieldCount(fields, FIELD_COUNT_EVENT, "event");
         Event event = new Event(
-                requireNonEmpty(fields.get(2), "description"),
-                requireDate(fields.get(3), "start time"),
-                requireDate(fields.get(4), "end time"));
-        setDone(event, fields.get(1));
+                requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description"),
+                requireDate(fields.get(FIELD_INDEX_FROM), "start time"),
+                requireDate(fields.get(FIELD_INDEX_TO), "end time"));
+        setDone(event, fields.get(FIELD_INDEX_DONE));
         return event;
     }
 
@@ -372,14 +416,19 @@ public class Storage {
     /** Returns the text with each escape sequence replaced by the character it stands for. */
     private static String unescape(String field) {
         StringBuilder text = new StringBuilder();
-        for (int i = 0; i < field.length(); i++) {
-            char character = field.charAt(i);
+        boolean isEscaped = false;
+        for (char character : field.toCharArray()) {
             // A backslash is punctuation, so what is kept is the character after it.
-            if (character == ESCAPE_CHARACTER && i + 1 < field.length()) {
-                i++;
-                character = field.charAt(i);
+            if (character == ESCAPE_CHARACTER && !isEscaped) {
+                isEscaped = true;
+            } else {
+                text.append(character);
+                isEscaped = false;
             }
-            text.append(character);
+        }
+        if (isEscaped) {
+            // A backslash at the very end escapes nothing, so it is kept as written.
+            text.append(ESCAPE_CHARACTER);
         }
         return text.toString();
     }
@@ -399,18 +448,24 @@ public class Storage {
     private static List<String> splitFields(String line) {
         List<String> fields = new ArrayList<>();
         StringBuilder field = new StringBuilder();
-        for (int i = 0; i < line.length(); i++) {
-            char character = line.charAt(i);
-            if (character == ESCAPE_CHARACTER && i + 1 < line.length()) {
+        boolean isEscaped = false;
+        for (char character : line.toCharArray()) {
+            if (isEscaped) {
                 // Kept escaped for now; unescaping the whole field comes after the split.
-                field.append(character).append(line.charAt(i + 1));
-                i++;
+                field.append(ESCAPE_CHARACTER).append(character);
+                isEscaped = false;
+            } else if (character == ESCAPE_CHARACTER) {
+                isEscaped = true;
             } else if (character == FIELD_SEPARATOR_CHARACTER) {
                 fields.add(unescape(field.toString().trim()));
                 field.setLength(0);
             } else {
                 field.append(character);
             }
+        }
+        if (isEscaped) {
+            // A backslash at the very end escapes nothing, so it is kept as written.
+            field.append(ESCAPE_CHARACTER);
         }
         fields.add(unescape(field.toString().trim()));
         return fields;

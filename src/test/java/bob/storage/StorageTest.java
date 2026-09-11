@@ -183,6 +183,17 @@ public class StorageTest {
     }
 
     @Test
+    public void load_exactlyOneMoreBadLineThanIsReported_countWordedInTheSingular() throws IOException {
+        // Six damaged lines: five are quoted, and the one left over is the
+        // boundary where "more lines" must read "more line" instead.
+        Storage storage = storageWithLines("a", "b", "c", "d", "e", "f");
+
+        List<String> messages = storage.load().messages();
+
+        assertTrue(messages.contains("...and 1 more line I couldn't read."));
+    }
+
+    @Test
     public void load_fileThatCannotBeRead_emptyListAndAWarning() throws IOException {
         // A folder where the save file should be: it exists, and reading it fails.
         Files.createDirectory(tempDirectory.resolve("duke.txt"));

@@ -6,10 +6,12 @@ package bob;
  *
  * <p>Using an exception lets the code that works out what a command means stop
  * as soon as something is wrong, without also having to know how the chatbot
- * prints things. Every such error travels up to one place — the command loop in
- * {@link Bob} — which catches it and prints the message inside the usual block
- * of output. So the rule "an unusable command is reported, not obeyed" is
- * enforced in a single place instead of in every command.
+ * shows things. Every such error travels up to one place — the
+ * {@code handleCommand} method of {@link Bob} — which catches it and hands the
+ * message to {@link bob.ui.Ui Ui} as the answer. So the rule "an unusable
+ * command is reported, not obeyed" is enforced in a single place instead of in
+ * every command, and it is enforced there for both front ends at once: a window
+ * runs its commands through the same method the console loop does.
  *
  * <p>It extends {@code Exception} rather than {@code RuntimeException} so the
  * compiler insists that it is either handled or declared. A mistyped command is
@@ -31,5 +33,24 @@ public class BobException extends Exception {
      */
     public BobException(String message) {
         super(message);
+    }
+
+    /**
+     * Returns an error saying what went wrong, followed on a line of its own by
+     * an example of what the user could type instead.
+     *
+     * <p>Many of the chatbot's complaints end with an example introduced the same
+     * way. Building the message here means that wording is written once, so no
+     * complaint can introduce its example differently from the rest.
+     *
+     * <p>A named method rather than a second constructor, because
+     * {@code new BobException(problem, example)} would give a reader no hint which
+     * of the two strings is which.
+     *
+     * @param problem what went wrong, which may itself run to several lines.
+     * @param example a well-formed input the user could type instead.
+     */
+    public static BobException withExample(String problem, String example) {
+        return new BobException(problem + "\nFor example: " + example);
     }
 }
