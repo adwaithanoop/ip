@@ -413,14 +413,19 @@ public class Storage {
     /** Returns the text with each escape sequence replaced by the character it stands for. */
     private static String unescape(String field) {
         StringBuilder text = new StringBuilder();
-        for (int i = 0; i < field.length(); i++) {
-            char character = field.charAt(i);
+        boolean isEscaped = false;
+        for (char character : field.toCharArray()) {
             // A backslash is punctuation, so what is kept is the character after it.
-            if (character == ESCAPE_CHARACTER && i + 1 < field.length()) {
-                i++;
-                character = field.charAt(i);
+            if (character == ESCAPE_CHARACTER && !isEscaped) {
+                isEscaped = true;
+            } else {
+                text.append(character);
+                isEscaped = false;
             }
-            text.append(character);
+        }
+        if (isEscaped) {
+            // A backslash at the very end escapes nothing, so it is kept as written.
+            text.append(ESCAPE_CHARACTER);
         }
         return text.toString();
     }
@@ -440,18 +445,24 @@ public class Storage {
     private static List<String> splitFields(String line) {
         List<String> fields = new ArrayList<>();
         StringBuilder field = new StringBuilder();
-        for (int i = 0; i < line.length(); i++) {
-            char character = line.charAt(i);
-            if (character == ESCAPE_CHARACTER && i + 1 < line.length()) {
+        boolean isEscaped = false;
+        for (char character : line.toCharArray()) {
+            if (isEscaped) {
                 // Kept escaped for now; unescaping the whole field comes after the split.
-                field.append(character).append(line.charAt(i + 1));
-                i++;
+                field.append(ESCAPE_CHARACTER).append(character);
+                isEscaped = false;
+            } else if (character == ESCAPE_CHARACTER) {
+                isEscaped = true;
             } else if (character == FIELD_SEPARATOR_CHARACTER) {
                 fields.add(unescape(field.toString().trim()));
                 field.setLength(0);
             } else {
                 field.append(character);
             }
+        }
+        if (isEscaped) {
+            // A backslash at the very end escapes nothing, so it is kept as written.
+            field.append(ESCAPE_CHARACTER);
         }
         fields.add(unescape(field.toString().trim()));
         return fields;
