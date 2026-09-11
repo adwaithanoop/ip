@@ -1,5 +1,6 @@
 package bob.command;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.StringJoiner;
 
@@ -146,16 +147,18 @@ public enum CommandWord {
      * unnoticed and fail later as a {@code NullPointerException}, well away from
      * the line that caused it.
      *
+     * <p>Written as a stream because the question is exactly "the first command
+     * that matches, if any", and {@code findFirst} answers it with that
+     * {@code Optional} already built. Like the loop it replaces, the stream stops
+     * at the first match rather than testing every command.
+     *
      * @param line one whole line as the user typed it, with surrounding spaces removed.
      * @return the matching command, or an empty {@code Optional} if there is none.
      */
     public static Optional<CommandWord> parse(String line) {
-        for (CommandWord command : values()) {
-            if (command.matches(line)) {
-                return Optional.of(command);
-            }
-        }
-        return Optional.empty();
+        return Arrays.stream(values())
+                .filter(command -> command.matches(line))
+                .findFirst();
     }
 
     /**
