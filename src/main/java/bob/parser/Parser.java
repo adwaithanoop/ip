@@ -33,9 +33,9 @@ import bob.task.Todo;
  * <p>Separating them puts every rule about how a command is <em>written</em> in
  * one file. The markers, the examples quoted back when a command is malformed,
  * and the wording of every "that isn't a date" complaint now live together, so
- * changing what the chatbot accepts is a change here and nowhere else. What those
- * methods became is the {@link bob.command.Command Command} classes, each handed a finished
- * {@link bob.task.Task Task}, or a number, or a day, and getting on with using it.
+ * changing what the chatbot accepts is a change here and nowhere else. The other
+ * job, carrying the command out, belongs to the {@link bob.command.Command Command} classes, each
+ * handed what it needs, such as a finished {@link bob.task.Task Task}, a number or a day.
  *
  * <p>This class makes sense of <em>text</em>, and of nothing else. Whether the
  * number 7 names a task that exists is a fact about the task list rather than

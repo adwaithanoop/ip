@@ -20,13 +20,11 @@ import java.util.Optional;
  * abstract has the compiler enforce that, rather than leaving it to be remembered.
  *
  * <p>What a task is made of is private to this class, and the subclasses reach it
- * only through the methods below — which is what they already did. A field is
- * shared with a subclass by being {@code protected}, and sharing one is a promise
- * that every subclass, present and future, may set it to anything at any time. The
- * promise was never wanted here: the three kinds of task add a date apiece and
- * change nothing they inherit, so making it was giving away the one guarantee this
- * class can offer — that a task's description is the description it was added
- * with, and that its status only ever changes through {@link #markAsDone()} and
+ * only through the methods below, which is all they need: {@link Deadline} and
+ * {@link Event} add dates of their own, and no kind of task sets the description
+ * or the done status itself. Keeping the fields private is what lets this class
+ * promise that a task's description is the one it was added with, and that its
+ * status only ever changes through {@link #markAsDone()} and
  * {@link #markAsNotDone()}.
  */
 public abstract class Task {
@@ -155,7 +153,7 @@ public abstract class Task {
      * {@code X} for a task that is done, a space for one that is not.
      */
     public String getStatusIcon() {
-        return (isDone ? "X" : " "); // mark done task with X
+        return (isDone ? "X" : " ");
     }
 
     /** Records that the task has been done. */

@@ -290,9 +290,8 @@ public class Ui {
      * Returns how many tasks there are, worded to agree with the number, for
      * example {@code 1 task} or {@code 3 tasks}.
      *
-     * <p>Written once here rather than inline at each of the three call sites
-     * above, all of which say how many tasks there are and none of which is the
-     * place to get the one-task case wrong by copying the other two.
+     * <p>Every message in this class that states a number of tasks is worded
+     * through here, so the singular is handled once rather than in each message.
      *
      * @param taskCount how many tasks to describe.
      */

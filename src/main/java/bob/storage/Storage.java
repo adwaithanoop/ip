@@ -177,9 +177,7 @@ public class Storage {
      *
      * <p>Kept apart from {@link #readTasks}, which walks the file, because this is
      * different work: deciding how many of the reports to quote, and how to word
-     * what is said about the rest. With both in one method, the cap on quoting sat
-     * three blocks deep inside the loop, and a reader following how the file is
-     * walked had the wording of the summary to read past.
+     * what is said about the rest.
      *
      * @param badLineReports one report per unreadable line, in the order the lines
      *                       appear in the file.
