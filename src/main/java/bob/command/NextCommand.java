@@ -44,8 +44,8 @@ public class NextCommand extends Command {
         // printed: an empty selection is shown as the message below it instead.
         ui.showTasks(tasks, datedTaskIndexes.subList(0, shownCount),
                 shownCount == 1
-                        ? "Here is your most urgent task:"
-                        : "Here are your " + shownCount + " most urgent tasks, soonest first:",
-                "None of your tasks have a date on them yet.");
+                        ? "Bee-do bee-do! Most urgent:"
+                        : "Bee-do bee-do! " + shownCount + " most urgent, soonest first:",
+                "No dates on tasks. No bee-do!");
     }
 }

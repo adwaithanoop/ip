@@ -36,7 +36,7 @@ public class FindCommand extends Command {
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) {
         ui.showTasks(tasks, tasks.findIndexes(task -> task.matchesKeyword(keyword)),
-                "Here are the matching tasks in your list:",
-                "No task of yours mentions \"" + keyword + "\".");
+                "Bob found dem:",
+                "Bob no find \"" + keyword + "\". Bi-do!");
     }
 }

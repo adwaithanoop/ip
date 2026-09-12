@@ -51,6 +51,6 @@ public class BobException extends Exception {
      * @param example a well-formed input the user could type instead.
      */
     public static BobException withExample(String problem, String example) {
-        return new BobException(problem + "\nFor example: " + example);
+        return new BobException(problem + "\nLike dis: " + example);
     }
 }
