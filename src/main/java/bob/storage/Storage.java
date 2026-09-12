@@ -79,6 +79,12 @@ public class Storage {
      */
     private static final String TEMP_FILE_SUFFIX = ".tmp";
 
+    /**
+     * Added to the save file's name to name the copy kept of a damaged save file, so
+     * that {@code data/duke.txt} is backed up as {@code data/duke.txt.bak}.
+     */
+    private static final String BACKUP_FILE_SUFFIX = ".bak";
+
     /** How many unreadable lines are reported one by one before the rest are just counted. */
     private static final int MAX_REPORTED_BAD_LINES = 5;
 
@@ -155,13 +161,17 @@ public class Storage {
      *   <li>no file yet — the ordinary first run — is not a problem at all, and is
      *       reported as an empty list with nothing to say;</li>
      *   <li>a file that cannot be read at all gives an empty list and a warning
-     *       that it will be overwritten, so the user can quit and rescue it
-     *       before typing anything that changes the list;</li>
+     *       that it will be overwritten;</li>
      *   <li>a line that cannot be understood is skipped and reported, so one
      *       damaged line does not cost the user the tasks on all the others;</li>
      *   <li>lines holding the same task are all loaded, and reported together, so
      *       the user can decide which of them to delete.</li>
      * </ul>
+     *
+     * <p>In the two cases where something in the file is left out of the list, the
+     * file is also copied to a backup beside it, such as {@code data/duke.txt.bak},
+     * and the user is told where. The next change to the list overwrites the file, so
+     * without the copy it would be the end of whatever was left out.
      */
     public LoadResult load() {
         if (!Files.exists(filePath)) {
@@ -171,10 +181,14 @@ public class Storage {
         try {
             lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            return new LoadResult(List.of(), List.of(
-                    "I couldn't read " + filePath + " (" + describe(e) + ").",
+            List<String> messages = new ArrayList<>();
+            messages.add("I couldn't read " + filePath + " (" + describe(e) + ").");
+            messages.addAll(backUpDamagedFile(
+                    "I'm starting with an empty list. That file will be overwritten the next time the list"
+                            + " changes, but the copy stays as it is.",
                     "I'm starting with an empty list, and that file will be overwritten"
                             + " the next time the list changes."));
+            return new LoadResult(List.of(), messages);
         }
         return readTasks(lines);
     }
@@ -182,7 +196,7 @@ public class Storage {
     /**
      * Turns the lines of the save file into tasks, collecting a message about
      * every line that could not be turned into one, and about lines that hold the
-     * same task.
+     * same task. If any line could not be read, the file is backed up as well.
      *
      * <p>Blank lines are passed over without comment: they are not damage, and a
      * file that a user has opened in an editor can easily end up with one.
@@ -209,8 +223,84 @@ public class Storage {
             }
         }
         List<String> messages = new ArrayList<>(summarizeBadLines(badLineReports));
+        if (!badLineReports.isEmpty()) {
+            messages.addAll(warnOfLeftOutLines(badLineReports.size()));
+        }
         messages.addAll(reportSameTaskLines(loadedTasks, loadedLineNumbers));
         return new LoadResult(loadedTasks, messages);
+    }
+
+    /**
+     * Returns the warning that the lines left out of the list will not survive the
+     * next save, followed by what was done to keep them.
+     *
+     * <p>Said plainly, because the next command that changes the list rewrites the
+     * whole file, and these lines are not in it to be rewritten. The file is copied
+     * first, so the warning can usually point to a copy that still has them.
+     *
+     * @param badLineCount how many lines were left out, at least one.
+     */
+    private List<String> warnOfLeftOutLines(int badLineCount) {
+        assert badLineCount >= 1 : "Only lines left out of the list need a warning, not " + badLineCount;
+        boolean isSingleBadLine = badLineCount == 1;
+        String warningIfCopied = isSingleBadLine
+                ? "It'll be dropped from " + filePath + " the next time the list changes,"
+                        + " but the copy still has it."
+                : "They'll be dropped from " + filePath + " the next time the list changes,"
+                        + " but the copy still has them.";
+        String warningIfNotCopied = isSingleBadLine
+                ? "It will be lost the next time the list changes — fix the file to keep it."
+                : "They will be lost the next time the list changes — fix the file to keep them.";
+        return backUpDamagedFile(warningIfCopied, warningIfNotCopied);
+    }
+
+    /**
+     * Copies the save file to a backup beside it, such as {@code data/duke.txt.bak},
+     * and returns what the user should be told: the warning that fits whether the copy
+     * was made, followed by where the copy is or why there is none.
+     *
+     * <p>Only called when loading has left something out of the list. The next change
+     * to the list rewrites the save file from the tasks that were loaded, so without a
+     * copy whatever was left out would be gone for good. The copy is made here, at
+     * load, rather than just before that first save, so that the user is told where it
+     * is at the same moment as they are told what was left out.
+     *
+     * <p>Only one copy is kept, under a fixed name, and a copy left by an earlier start
+     * is replaced. Otherwise a file found damaged on every start would fill its folder
+     * with copies; the price is that a copy from an earlier start, of a file that has
+     * changed since, is lost.
+     *
+     * <p>A folder where the save file should be is not copied. It holds no tasks, and
+     * copying it would only make an empty folder, so there is no copy to report either.
+     *
+     * @param warningIfCopied    the warning to give when the copy is made.
+     * @param warningIfNotCopied the warning to give when it is not, which has to be
+     *                           starker, since then nothing else keeps the file.
+     * @return the warning, then either where the copy is, or two lines saying it could
+     *         not be made and what the user should do instead.
+     */
+    private List<String> backUpDamagedFile(String warningIfCopied, String warningIfNotCopied) {
+        if (!Files.isRegularFile(filePath)) {
+            return List.of(warningIfNotCopied);
+        }
+        Path backupFilePath = siblingPath(BACKUP_FILE_SUFFIX);
+        try {
+            Files.copy(filePath, backupFilePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            return List.of(warningIfNotCopied,
+                    "I couldn't make a backup at " + backupFilePath + " (" + describe(e) + ").",
+                    "Copy " + filePath + " somewhere safe yourself before changing the list.");
+        }
+        return List.of(warningIfCopied,
+                "The file as it was is kept in " + backupFilePath + ", so nothing in it is lost.");
+    }
+
+    /**
+     * Returns the path of a file in the save file's folder, named after the save file
+     * with {@code suffix} added, such as {@code data/duke.txt.bak}.
+     */
+    private Path siblingPath(String suffix) {
+        return filePath.resolveSibling(filePath.getFileName() + suffix);
     }
 
     /**
@@ -303,15 +393,9 @@ public class Storage {
                     + " I couldn't read.");
         }
 
-        boolean isSingleBadLine = badLineCount == 1;
-        messages.add(isSingleBadLine
+        messages.add(badLineCount == 1
                 ? "I've left that line out of your list."
                 : "I've left those " + badLineCount + " lines out of your list.");
-        // Said plainly, because the next command that changes the list rewrites
-        // the whole file, and these lines are not in it to be rewritten.
-        messages.add(isSingleBadLine
-                ? "It will be lost the next time the list changes — fix the file to keep it."
-                : "They will be lost the next time the list changes — fix the file to keep them.");
         return messages;
     }
 
@@ -345,7 +429,7 @@ public class Storage {
         List<String> lines = tasks.stream()
                 .map(Storage::toSaveLine)
                 .toList();
-        Path tempFilePath = filePath.resolveSibling(filePath.getFileName() + TEMP_FILE_SUFFIX);
+        Path tempFilePath = siblingPath(TEMP_FILE_SUFFIX);
         try {
             Path parentDirectory = filePath.getParent();
             if (parentDirectory != null) {

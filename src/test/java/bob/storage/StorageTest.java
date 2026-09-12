@@ -1,5 +1,6 @@
 package bob.storage;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -249,6 +250,8 @@ public class StorageTest {
         List<String> messages = storage.load().messages();
 
         assertTrue(messages.contains("I've left those 2 lines out of your list."));
+        assertTrue(messages.contains("They'll be dropped from " + tempDirectory.resolve("duke.txt")
+                + " the next time the list changes, but the copy still has them."));
     }
 
     @Test
@@ -275,7 +278,7 @@ public class StorageTest {
     }
 
     @Test
-    public void load_fileThatCannotBeRead_emptyListAndAWarning() throws IOException {
+    public void load_folderWhereFileShouldBe_emptyListAndAWarningButNoBackup() throws IOException {
         // A folder where the save file should be: it exists, and reading it fails.
         Files.createDirectory(tempDirectory.resolve("duke.txt"));
 
@@ -285,6 +288,86 @@ public class StorageTest {
         assertTrue(result.messages().get(0).contains("couldn't read"));
         // The user is warned before typing anything that would overwrite it.
         assertTrue(result.messages().get(1).contains("overwritten"));
+        // A folder holds no tasks to keep, and copying one would only make an empty folder.
+        assertFalse(Files.exists(tempDirectory.resolve("duke.txt.bak")));
+    }
+
+    @Test
+    public void load_fileThatIsNotUtf8_fileCopiedAsItWasAndCopyReported() throws IOException {
+        // The byte 0xFF never appears in UTF-8, so the file cannot be read as text at all.
+        byte[] contents = {'T', ' ', '|', ' ', '0', ' ', '|', ' ', (byte) 0xFF};
+        Path path = tempDirectory.resolve("duke.txt");
+        Files.write(path, contents);
+
+        Storage.LoadResult result = new Storage(path).load();
+
+        assertEquals(List.of(), result.tasks());
+        assertArrayEquals(contents, Files.readAllBytes(tempDirectory.resolve("duke.txt.bak")));
+        // The first message quotes the error, whose wording is Java's rather than this project's.
+        List<String> expectedWarningAndNote = List.of(
+                "I'm starting with an empty list. That file will be overwritten the next time the list"
+                        + " changes, but the copy stays as it is.",
+                "The file as it was is kept in " + path + ".bak, so nothing in it is lost.");
+        assertEquals(3, result.messages().size());
+        assertEquals(expectedWarningAndNote, result.messages().subList(1, 3));
+    }
+
+    @Test
+    public void load_badLine_fileCopiedAsItWasAndCopyReported() throws IOException {
+        Storage storage = storageWithLines("T | 0 | read book", "nonsense", "", "T | 1 | return book");
+        Path path = tempDirectory.resolve("duke.txt");
+        byte[] contentsBeforeLoad = Files.readAllBytes(path);
+
+        List<String> messages = storage.load().messages();
+
+        // The copy is the file byte for byte, the blank and the damaged line included.
+        assertArrayEquals(contentsBeforeLoad, Files.readAllBytes(tempDirectory.resolve("duke.txt.bak")));
+        List<String> expectedSummary = List.of(
+                "I've left that line out of your list.",
+                "It'll be dropped from " + path + " the next time the list changes,"
+                        + " but the copy still has it.",
+                "The file as it was is kept in " + path + ".bak, so nothing in it is lost.");
+        assertEquals(expectedSummary, messages.subList(1, messages.size()));
+    }
+
+    @Test
+    public void load_everyLineLoaded_noBackupMade() throws IOException {
+        // Lines holding the same task are all loaded, so they leave nothing out for a copy to keep.
+        Storage storage = storageWithLines("T | 0 | read book", "T | 0 | read book");
+
+        storage.load();
+
+        assertFalse(Files.exists(tempDirectory.resolve("duke.txt.bak")));
+    }
+
+    @Test
+    public void load_backupLeftByAnEarlierStart_replaced() throws IOException {
+        Path backupPath = tempDirectory.resolve("duke.txt.bak");
+        Files.writeString(backupPath, "a copy made on an earlier start");
+        Storage storage = storageWithLines("nonsense");
+
+        storage.load();
+
+        assertEquals(List.of("nonsense"), Files.readAllLines(backupPath, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void load_backupCannotBeMade_warnedToCopyTheFileByHand() throws IOException {
+        Storage storage = storageWithLines("nonsense");
+        // A folder with something in it, where the copy would go, cannot be replaced by the copy.
+        Path blockedPath = tempDirectory.resolve("duke.txt.bak");
+        Files.createDirectory(blockedPath);
+        Files.writeString(blockedPath.resolve("inside.txt"), "keeps the folder from being replaced");
+
+        List<String> messages = storage.load().messages();
+
+        // With no copy the line really will be lost, so the warning says so as it always did.
+        assertEquals(5, messages.size());
+        assertEquals("It will be lost the next time the list changes — fix the file to keep it.",
+                messages.get(2));
+        assertTrue(messages.get(3).startsWith("I couldn't make a backup at " + blockedPath + " ("));
+        assertEquals("Copy " + tempDirectory.resolve("duke.txt")
+                + " somewhere safe yourself before changing the list.", messages.get(4));
     }
 
     @Test

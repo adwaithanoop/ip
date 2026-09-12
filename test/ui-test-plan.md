@@ -54,6 +54,10 @@ what is on the disk on either side of the run:
   the single line `(no file)`, which says the program should have left no save
   file at all.
 
+A program that finds a damaged save file also copies it to `data/duke.txt.bak`.
+The runner does not compare that copy, so what it holds is checked by the JUnit
+tests in `StorageTest` instead.
+
 A test case with neither block starts with no save file — the ordinary first
 run — and nothing is checked about what it saves. That is the case for TC1 to
 TC16 below, all of which were written before the chatbot saved anything, and
@@ -2058,9 +2062,10 @@ loaded. The last of those is new: a deadline due `someday` was a readable line
 before this increment, and is not one now that dates are understood. Its message
 is the short one written for someone repairing the file, not the three lines of
 advice the chatbot gives someone typing a command. A blank line is not damage and
-is passed over in silence. The warning that the skipped lines will be lost is the
+is passed over in silence. The warning that the skipped lines will be dropped is the
 point of reporting them at all: the next command that changes the list rewrites
-the whole file without them.
+the whole file without them. So the file is first copied, as it was, to
+`data/duke.txt.bak`, and the report ends by saying where the copy is.
 
 **Data file before**
 
@@ -2129,7 +2134,8 @@ bye
      Line 5 of data/duke.txt isn't a task I can read: the description is empty.
      Line 6 of data/duke.txt isn't a task I can read: the due date "someday" isn't a date (dates are saved as 2026-12-02, or 2026-12-02 1800 with a time).
      I've left those 5 lines out of your list.
-     They will be lost the next time the list changes — fix the file to keep them.
+     They'll be dropped from data/duke.txt the next time the list changes, but the copy still has them.
+     The file as it was is kept in data/duke.txt.bak, so nothing in it is lost.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -4284,4 +4290,105 @@ bye
 ```text
 T|1|read book
 D|0|return book|2026-12-02
+```
+
+### TC40 - A damaged save file is copied before it can be overwritten
+
+**Aim:** Check that a save file with lines the chatbot cannot read is copied, as it
+was, to `data/duke.txt.bak` when the chatbot starts, and that the load report says
+where the copy is rather than warning that the skipped lines will be lost. The
+damaged lines are the two events that break the rule an event typed at the chatbot
+meets — one ending before it starts, and one starting and ending at the same
+moment — so this also checks that a hand-edited file cannot load either of them.
+The `todo` afterwards changes the list, and the Data file after shows that
+`data/duke.txt` was then rewritten without the skipped lines, leaving the copy as
+the only place they survive. What the copy holds is checked in `StorageTest`,
+since the runner compares only `data/duke.txt`.
+
+**Data file before**
+
+```text
+T | 0 | read book
+E | 0 | conference | 2026-12-05 | 2026-12-02
+E | 0 | standup | 2026-12-05 0900 | 2026-12-05 0900
+```
+
+**Input**
+
+```text
+todo pay bills
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bob found 1 task from before.
+     Line 2 of data/duke.txt isn't a task I can read: the event ends before it starts.
+     Line 3 of data/duke.txt isn't a task I can read: the event starts and ends at the same moment.
+     I've left those 2 lines out of your list.
+     They'll be dropped from data/duke.txt the next time the list changes, but the copy still has them.
+     The file as it was is kept in data/duke.txt.bak, so nothing in it is lost.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [T][ ] pay bills
+     Now yu have 2 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][ ] read book
+     2.[T][ ] pay bills
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | read book
+T | 0 | pay bills
 ```
