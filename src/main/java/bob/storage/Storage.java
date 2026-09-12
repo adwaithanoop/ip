@@ -2,8 +2,10 @@ package bob.storage;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -70,6 +72,12 @@ public class Storage {
 
     /** The character marking the one after it as part of a field rather than as punctuation. */
     private static final char ESCAPE_CHARACTER = '\\';
+
+    /**
+     * Added to the save file's name to name the temporary file a save writes first, so
+     * that {@code data/duke.txt} is saved by way of {@code data/duke.txt.tmp}.
+     */
+    private static final String TEMP_FILE_SUFFIX = ".tmp";
 
     /** How many unreadable lines are reported one by one before the rest are just counted. */
     private static final int MAX_REPORTED_BAD_LINES = 5;
@@ -312,8 +320,20 @@ public class Storage {
      *
      * <p>The whole list is rewritten on every change rather than the one changed
      * task being edited in place. That is more writing than is strictly needed,
-     * but the file always says exactly what the list says, which is not true of
-     * schemes that patch a file in place and can leave it half updated.
+     * but it keeps the file saying exactly what the list says.
+     *
+     * <p>The lines are not written into the save file itself. They go to a temporary
+     * file beside it, which is then moved over it. Writing straight into the save file
+     * empties it first, so a disk filling up, or the chatbot being stopped, partway
+     * through would leave it half written and every task after that point gone. Moved
+     * into place, the file holds the old list or the new one, never part of each. A
+     * temporary file left by a save that failed is removed, and one left by a chatbot
+     * that was stopped is simply overwritten by the next save.
+     *
+     * <p>What this does not guard against is a power cut just after a save, before the
+     * operating system has put the new contents on the disk. Forcing them there before
+     * the move, through a {@link java.nio.channels.FileChannel}, would close that gap at
+     * the price of slower saves, which a task list kept by hand does not need.
      *
      * <p>The lines are built with a stream because each task turns into exactly
      * one line, independently of the others, which is what {@code map} describes.
@@ -325,6 +345,7 @@ public class Storage {
         List<String> lines = tasks.stream()
                 .map(Storage::toSaveLine)
                 .toList();
+        Path tempFilePath = filePath.resolveSibling(filePath.getFileName() + TEMP_FILE_SUFFIX);
         try {
             Path parentDirectory = filePath.getParent();
             if (parentDirectory != null) {
@@ -332,11 +353,47 @@ public class Storage {
                 // to call on every save rather than only on the first one.
                 Files.createDirectories(parentDirectory);
             }
-            Files.write(filePath, lines, StandardCharsets.UTF_8);
+            Files.write(tempFilePath, lines, StandardCharsets.UTF_8);
+            moveIntoPlace(tempFilePath);
         } catch (IOException e) {
+            deleteLeftover(tempFilePath);
             throw new BobException("I couldn't save your tasks to " + filePath
                     + " (" + describe(e) + ")."
                     + "\nThe change is in this session's list, but it won't survive quitting.");
+        }
+    }
+
+    /**
+     * Moves a fully written temporary file over the save file.
+     *
+     * <p>An atomic move is asked for first, which swaps the file in one step, so there
+     * is no moment at which the save file is missing or partly replaced. A file system
+     * that cannot move a file that way is given an ordinary replacing move instead,
+     * which is the best it offers.
+     *
+     * @param tempFilePath the temporary file holding the whole new list.
+     * @throws IOException if the file cannot be moved into place.
+     */
+    private void moveIntoPlace(Path tempFilePath) throws IOException {
+        try {
+            Files.move(tempFilePath, filePath, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(tempFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    /**
+     * Removes the temporary file a failed save may have left beside the save file.
+     *
+     * <p>A failure to remove it is ignored. The save has already failed, which is what
+     * the user is told, and a temporary file that could not be removed is overwritten
+     * by the next save that works.
+     */
+    private static void deleteLeftover(Path tempFilePath) {
+        try {
+            Files.deleteIfExists(tempFilePath);
+        } catch (IOException e) {
+            // Deliberately ignored, for the reason given above.
         }
     }
 

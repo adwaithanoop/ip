@@ -1,6 +1,8 @@
 package bob.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -327,6 +329,61 @@ public class StorageTest {
 
         assertEquals(List.of(),
                 Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void save_overAnExistingFile_replacedWithNoTemporaryFileLeft() throws BobException, IOException {
+        Storage storage = storageAt("duke.txt");
+        storage.save(List.of(new Todo("read book")));
+
+        storage.save(List.of(new Todo("return book")));
+
+        assertEquals(List.of("T | 0 | return book"),
+                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+        // The list is written beside the save file and moved over it, leaving nothing behind.
+        assertFalse(Files.exists(tempDirectory.resolve("duke.txt.tmp")));
+    }
+
+    @Test
+    public void save_temporaryFileLeftByAStoppedSave_overwritten() throws BobException, IOException {
+        Path leftover = tempDirectory.resolve("duke.txt.tmp");
+        Files.writeString(leftover, "half a line from a save that was cut off");
+
+        storageAt("duke.txt").save(List.of(new Todo("read book")));
+
+        assertEquals(List.of("T | 0 | read book"),
+                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+        assertFalse(Files.exists(leftover));
+    }
+
+    @Test
+    public void save_newListCannotBeWritten_oldFileKeptWhole() throws BobException, IOException {
+        Storage storage = storageAt("duke.txt");
+        storage.save(List.of(new Todo("read book"), new Todo("return book")));
+        // A folder with something in it, where the temporary file would go, makes writing
+        // the new list fail once the old file is already there, as a full disk would.
+        Path blockedPath = tempDirectory.resolve("duke.txt.tmp");
+        Files.createDirectory(blockedPath);
+        Files.writeString(blockedPath.resolve("inside.txt"), "keeps the folder from being removed");
+
+        assertThrows(BobException.class, () -> storage.save(List.of(new Todo("pay bills"))));
+
+        // Writing straight into the save file would have emptied it before failing.
+        assertEquals(List.of("T | 0 | read book", "T | 0 | return book"),
+                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void save_newListCannotBeMovedIntoPlace_noTemporaryFileLeft() throws IOException {
+        // A folder with something in it, where the save file should be: the new list is
+        // written, but cannot be moved over the folder.
+        Path folder = tempDirectory.resolve("duke.txt");
+        Files.createDirectory(folder);
+        Files.writeString(folder.resolve("inside.txt"), "keeps the folder from being replaced");
+
+        assertThrows(BobException.class, () -> storageAt("duke.txt").save(List.of(new Todo("read book"))));
+
+        assertFalse(Files.exists(tempDirectory.resolve("duke.txt.tmp")));
     }
 
     @Test
