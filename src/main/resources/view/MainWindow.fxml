@@ -42,7 +42,7 @@
         <TextField fx:id="userInput"
                    onAction="#handleUserInput"
                    prefHeight="40.0"
-                   promptText="Type a command, for example: list"
+                   promptText="Tell Bob what to do, like: list"
                    AnchorPane.bottomAnchor="6.0"
                    AnchorPane.leftAnchor="6.0"
                    AnchorPane.rightAnchor="86.0" />
@@ -52,7 +52,7 @@
                 onAction="#handleUserInput"
                 prefHeight="40.0"
                 prefWidth="74.0"
-                text="Send"
+                text="Baboi!"
                 AnchorPane.bottomAnchor="6.0"
                 AnchorPane.rightAnchor="6.0" />
     </children>
