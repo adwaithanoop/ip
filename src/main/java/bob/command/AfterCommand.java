@@ -41,7 +41,7 @@ public class AfterCommand extends Command {
     public void execute(TaskList tasks, Ui ui, Storage storage) {
         String dayShown = TaskDateTime.formatDay(day);
         ui.showTasks(tasks, tasks.findIndexes(task -> task.isAfter(day)),
-                "Here is what you have after " + dayShown + ":",
-                "You have nothing after " + dayShown + ".");
+                "Bob look after " + dayShown + ". Yu have:",
+                "Nothing after " + dayShown + ". Yay!");
     }
 }

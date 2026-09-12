@@ -53,9 +53,9 @@ If task 2 is a deadline to return a book by 6pm on 2 December 2026,
 the change:
 
 ```
-Got it. I've changed this task from:
+Tadaa! Dis was:
   [D][ ] return book (by: Dec 02 2026 18:00)
-to:
+Now is:
   [D][ ] return book (by: Dec 05 2026)
 ```
 

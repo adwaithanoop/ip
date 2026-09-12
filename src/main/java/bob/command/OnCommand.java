@@ -43,7 +43,7 @@ public class OnCommand extends Command {
     public void execute(TaskList tasks, Ui ui, Storage storage) {
         String dayShown = TaskDateTime.formatDay(day);
         ui.showTasks(tasks, tasks.findIndexes(task -> task.occursOn(day)),
-                "Here is what you have on " + dayShown + ":",
-                "You have nothing on " + dayShown + ".");
+                "Luk! On " + dayShown + " yu have:",
+                "Nothing on " + dayShown + ". Bob go play!");
     }
 }

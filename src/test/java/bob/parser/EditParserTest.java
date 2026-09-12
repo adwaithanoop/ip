@@ -53,7 +53,7 @@ public class EditParserTest {
         BobException exception = assertThrows(BobException.class, () -> EditParser.parseEdit("2"));
 
         assertEquals("What should I change about task 2?\nUse /desc, /by, /from or /to."
-                + "\nFor example: edit 2 /desc read book", exception.getMessage());
+                + "\nLike dis: edit 2 /desc read book", exception.getMessage());
     }
 
     @Test

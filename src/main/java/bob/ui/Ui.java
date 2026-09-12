@@ -69,10 +69,30 @@ public class Ui {
     private static final String DIVIDER = "_".repeat(60);
 
     /**
-     * ASCII-art banner shown when the chatbot starts: its name in the figlet
-     * "slant" font, drifting through a field of stars with a few small
-     * spaceships. Stored as one line per element so each line can be indented
-     * the same way as every other line the chatbot prints.
+     * Line shown above every complaint, in the chatbot's Minion voice.
+     *
+     * <p>Added once, here where every error is shown, rather than written into each
+     * message. The explanations underneath stay in plain English, so they still say
+     * clearly how to put the mistake right, and the opener of all of them is
+     * changed by changing this one line.
+     */
+    private static final String ERROR_OPENER = "MINION EMERGENCY!";
+
+    /**
+     * Banner shown when the chatbot starts: the name King Bob, in ASCII lettering
+     * drawn after the figlet "slant" font, above a picture of a Minion. Stored as
+     * one line per element so each line can be indented the same way as every
+     * other line the chatbot prints.
+     *
+     * <p>The banner says King Bob while {@link #NAME} is plain Bob. King is the
+     * title the character is shown off with; in conversation he calls himself by
+     * his name alone.
+     *
+     * <p>The picture is drawn in braille characters rather than ASCII. Each braille
+     * character is a small grid of dots, so it shows far finer detail than a slash
+     * or an underscore can, which is what lets the picture look like a Minion at
+     * this size. The price is that a console unable to show Unicode, such as an
+     * older Windows one, prints a question mark in place of each character.
      *
      * <p>No line is wider than the {@link #DIVIDER} that frames each block of
      * output, so the art never spills past the right-hand end of the rule.
@@ -88,15 +108,37 @@ public class Ui {
      * changed at all, so the name is honest about what it holds.
      */
     private static final List<String> BANNER_LINES = List.of(
-            "  .        *         .        .        *        .",
-            "      *         .         +        .       <]==-     .",
-            "   .        +        ____        __      .        *",
-            " -==[>  *           / __ )____  / /_         +",
-            " +           .     / __  / __ \\/ __ \\  *              .",
-            "          *       / /_/ / /_/ / /_/ /   <]==-   .",
-            "    .         +  /_____/\\____/_.___/       .        *",
-            "        +         .         *        .        +        .",
-            "   .        -==[>      .         *                 .");
+            "        __ __  _                     ____        __",
+            "       / //_/ (_) ____   ____       / __ )____  / /_",
+            "      / ,<   / / / __ \\ / __ \\     / __  / __ \\/ __ \\",
+            "     / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /",
+            "    /_/ |_|/_/ /_/ /_/ \\__, /    /_____/\\____/_.___/",
+            "                      /____/",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀",
+            "    ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀",
+            "    ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀",
+            "    ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀",
+            "    ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀",
+            "    ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇",
+            "    ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀",
+            "    ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
+            "    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀");
 
     /**
      * Where the user's typing is read from.
@@ -178,8 +220,8 @@ public class Ui {
                 showLine(bannerLine);
             }
         }
-        showLine("Hello! I'm " + NAME + ".");
-        showLine("What can I do for you?");
+        showLine("Bello! Me " + NAME + "!");
+        showLine("Wat yu want " + NAME + " do? Banana?");
         closeBlock();
     }
 
@@ -192,7 +234,7 @@ public class Ui {
      * block opens one around it.
      */
     public void showFarewell() {
-        showLine("Bye. Hope to see you again soon!");
+        showLine("Poopaye! " + NAME + " go find banana, see yu soon!");
     }
 
     /**
@@ -218,9 +260,9 @@ public class Ui {
     }
 
     /**
-     * Prints an explanation of something that went wrong, one line per line of
-     * the message, so that a message written as several lines is indented like
-     * any other output.
+     * Prints an explanation of something that went wrong, under the
+     * {@link #ERROR_OPENER} line, one line per line of the message, so that a
+     * message written as several lines is indented like any other output.
      *
      * <p>Printed inside whatever block is already open, so an error reads as the
      * answer to the command that caused it rather than as an interruption.
@@ -228,6 +270,7 @@ public class Ui {
      * @param message the explanation to show, which may span several lines.
      */
     public void showError(String message) {
+        showLine(ERROR_OPENER);
         for (String line : message.split("\n")) {
             showLine(line);
         }
@@ -251,8 +294,8 @@ public class Ui {
         }
         openBlock();
         if (taskCount > 0) {
-            showLine("Welcome back! I've picked up " + describeTaskCount(taskCount)
-                    + " you saved earlier.");
+            showLine(NAME + " found " + describeTaskCount(taskCount)
+                    + " from before.");
         }
         for (String message : messages) {
             showLine(message);
@@ -268,9 +311,9 @@ public class Ui {
      * @param taskCount how many tasks there are now.
      */
     public void showAddedTask(Task task, int taskCount) {
-        showLine("Got it. I've added this task:");
+        showLine("Okay! " + NAME + " add dis:");
         showLine("  " + task);
-        showLine("Now you have " + describeTaskCount(taskCount) + " in the list.");
+        showLine("Now yu have " + describeTaskCount(taskCount) + " in da list.");
     }
 
     /**
@@ -281,9 +324,9 @@ public class Ui {
      * @param taskCount how many tasks are left.
      */
     public void showRemovedTask(Task task, int taskCount) {
-        showLine("Noted. I've removed this task:");
+        showLine("Bee-do! " + NAME + " throw away dis:");
         showLine("  " + task);
-        showLine("Now you have " + describeTaskCount(taskCount) + " in the list.");
+        showLine("Now yu have " + describeTaskCount(taskCount) + " in da list.");
     }
 
     /**
@@ -307,8 +350,8 @@ public class Ui {
      */
     public void showMarkedTask(Task task, boolean isDone) {
         showLine(isDone
-                ? "Nice! I've marked this task as done:"
-                : "OK, I've marked this task as not done yet:");
+                ? "Kanpai! Dis one finish:"
+                : "Bi-do! Dis one not finish yet:");
         showLine("  " + task);
     }
 
@@ -322,9 +365,9 @@ public class Ui {
      * @param after  the task as it is now.
      */
     public void showEditedTask(Task before, Task after) {
-        showLine("Got it. I've changed this task from:");
+        showLine("Tadaa! Dis was:");
         showLine("  " + before);
-        showLine("to:");
+        showLine("Now is:");
         showLine("  " + after);
     }
 

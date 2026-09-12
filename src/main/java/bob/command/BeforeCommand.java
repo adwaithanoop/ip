@@ -36,7 +36,7 @@ public class BeforeCommand extends Command {
     public void execute(TaskList tasks, Ui ui, Storage storage) {
         String dayShown = TaskDateTime.formatDay(day);
         ui.showTasks(tasks, tasks.findIndexes(task -> task.isBefore(day)),
-                "Here is what you have before " + dayShown + ":",
-                "You have nothing before " + dayShown + ".");
+                "Bob look before " + dayShown + ". Yu have:",
+                "Nothing before " + dayShown + ". Yay!");
     }
 }

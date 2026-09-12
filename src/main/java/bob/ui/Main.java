@@ -63,7 +63,7 @@ public class Main extends Application {
             fxmlLoader.<MainWindow>getController().setBob(bob);
 
             stage.setScene(new Scene(root));
-            stage.setTitle("Bob");
+            stage.setTitle("King Bob");
             stage.setMinWidth(MIN_WIDTH);
             stage.setMinHeight(MIN_HEIGHT);
             stage.getIcons().add(Images.BOB);

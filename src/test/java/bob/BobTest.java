@@ -44,15 +44,15 @@ public class BobTest {
         String greeting = bobWithSavedLines().getGreeting();
 
         // No banner: it is drawn in columns, which a window's font would not keep.
-        assertEquals("Hello! I'm Bob.\nWhat can I do for you?", greeting);
+        assertEquals("Bello! Me Bob!\nWat yu want Bob do? Banana?", greeting);
     }
 
     @Test
     public void getGreeting_savedTasks_reportsWhatWasPickedUp() {
         String greeting = bobWithSavedLines("T | 0 | read book", "T | 1 | return book").getGreeting();
 
-        assertTrue(greeting.startsWith("Hello! I'm Bob."));
-        assertTrue(greeting.contains("I've picked up 2 tasks you saved earlier."));
+        assertTrue(greeting.startsWith("Bello! Me Bob!"));
+        assertTrue(greeting.contains("Bob found 2 tasks from before."));
     }
 
     @Test
@@ -62,9 +62,9 @@ public class BobTest {
         String added = bob.getResponse("todo read book");
         String listed = bob.getResponse("list");
 
-        assertEquals("Got it. I've added this task:\n  [T][ ] read book\n"
-                + "Now you have 1 task in the list.", added);
-        assertEquals("Here are the tasks in your list:\n1.[T][ ] read book", listed);
+        assertEquals("Okay! Bob add dis:\n  [T][ ] read book\n"
+                + "Now yu have 1 task in da list.", added);
+        assertEquals("Luk at tu! Here da tasks:\n1.[T][ ] read book", listed);
     }
 
     @Test
@@ -77,8 +77,8 @@ public class BobTest {
 
         // Nothing said earlier — not the greeting, not the first confirmation —
         // may still be hanging around in front of this answer.
-        assertTrue(second.startsWith("Got it."));
-        assertFalse(second.contains("Hello!"));
+        assertTrue(second.startsWith("Okay!"));
+        assertFalse(second.contains("Bello!"));
         assertFalse(second.contains("read book"));
     }
 
@@ -157,7 +157,8 @@ public class BobTest {
         // reaches here as an empty one, and is answered like any other bad input.
         String response = bobWithSavedLines().getResponse("");
 
-        assertTrue(response.startsWith("You didn't type anything."));
+        // Every complaint opens with the same line, so the explanation comes second.
+        assertTrue(response.startsWith("MINION EMERGENCY!\nYou didn't type anything."));
     }
 
     @Test
@@ -181,7 +182,7 @@ public class BobTest {
 
         String farewell = bob.getResponse("bye");
 
-        assertEquals("Bye. Hope to see you again soon!", farewell);
+        assertEquals("Poopaye! Bob go find banana, see yu soon!", farewell);
         assertTrue(bob.isExit());
     }
 
