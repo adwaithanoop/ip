@@ -150,7 +150,9 @@ public class Storage {
      *       that it will be overwritten, so the user can quit and rescue it
      *       before typing anything that changes the list;</li>
      *   <li>a line that cannot be understood is skipped and reported, so one
-     *       damaged line does not cost the user the tasks on all the others.</li>
+     *       damaged line does not cost the user the tasks on all the others;</li>
+     *   <li>lines holding the same task are all loaded, and reported together, so
+     *       the user can decide which of them to delete.</li>
      * </ul>
      */
     public LoadResult load() {
@@ -171,28 +173,97 @@ public class Storage {
 
     /**
      * Turns the lines of the save file into tasks, collecting a message about
-     * every line that could not be turned into one.
+     * every line that could not be turned into one, and about lines that hold the
+     * same task.
      *
      * <p>Blank lines are passed over without comment: they are not damage, and a
      * file that a user has opened in an editor can easily end up with one.
      */
     private LoadResult readTasks(List<String> lines) {
         List<Task> loadedTasks = new ArrayList<>();
+        // The line each loaded task came from, kept so that a report names the file's
+        // own line even when blank or damaged lines have been passed over.
+        List<Integer> loadedLineNumbers = new ArrayList<>();
         List<String> badLineReports = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             if (line.isEmpty()) {
                 continue;
             }
+            // The user counts lines from 1, the list counts from 0.
+            int lineNumber = i + 1;
             try {
                 loadedTasks.add(parseTask(line));
+                loadedLineNumbers.add(lineNumber);
             } catch (BobException e) {
-                // The user counts lines from 1, the list counts from 0.
-                badLineReports.add("Line " + (i + 1) + " of " + filePath
+                badLineReports.add("Line " + lineNumber + " of " + filePath
                         + " isn't a task I can read: " + e.getMessage() + ".");
             }
         }
-        return new LoadResult(loadedTasks, summarizeBadLines(badLineReports));
+        List<String> messages = new ArrayList<>(summarizeBadLines(badLineReports));
+        messages.addAll(reportSameTaskLines(loadedTasks, loadedLineNumbers));
+        return new LoadResult(loadedTasks, messages);
+    }
+
+    /**
+     * Returns a message for each group of lines in the save file that hold the same
+     * task, in the sense of {@link Task#isSameTaskAs}.
+     *
+     * <p>Every line of a group is loaded, rather than all but the first being left out.
+     * The lines may differ in ways the user cares about — one marked done and the other
+     * not, or the description written in different capitals — so which to keep is
+     * theirs to decide. Adding such a task at the chatbot is refused, so only a file
+     * edited by hand can hold two.
+     *
+     * <p>Each task is compared with every task after it, which is plenty fast for a
+     * list a person keeps by hand.
+     *
+     * @param tasks       the tasks read from the file, in the order they were saved.
+     * @param lineNumbers the line each of those tasks was read from, counting from 1.
+     * @return the messages to show, which are none at all when no two lines hold the same task.
+     */
+    private List<String> reportSameTaskLines(List<Task> tasks, List<Integer> lineNumbers) {
+        List<String> messages = new ArrayList<>();
+        // A task already named in a group must not start a second group of its own.
+        boolean[] isAlreadyReported = new boolean[tasks.size()];
+        for (int i = 0; i < tasks.size(); i++) {
+            if (isAlreadyReported[i]) {
+                continue;
+            }
+            List<Integer> sameTaskLineNumbers = new ArrayList<>(List.of(lineNumbers.get(i)));
+            for (int j = i + 1; j < tasks.size(); j++) {
+                if (tasks.get(i).isSameTaskAs(tasks.get(j))) {
+                    sameTaskLineNumbers.add(lineNumbers.get(j));
+                    isAlreadyReported[j] = true;
+                }
+            }
+            if (sameTaskLineNumbers.size() > 1) {
+                messages.add(describeSameTaskLines(sameTaskLineNumbers));
+            }
+        }
+        return messages;
+    }
+
+    /**
+     * Returns the message about one group of lines holding the same task, for example
+     * {@code Lines 2 and 5 of data/duke.txt are the same task.}, followed by a note
+     * that all of them were kept.
+     *
+     * @param lineNumbers the lines holding that task, at least two, in the order they
+     *                    appear in the file.
+     */
+    private String describeSameTaskLines(List<Integer> lineNumbers) {
+        int lineCount = lineNumbers.size();
+        assert lineCount >= 2 : "A group of the same task has at least two lines, not " + lineCount;
+        List<String> numberTexts = lineNumbers.stream()
+                .map(String::valueOf)
+                .toList();
+        String namedLines = String.join(", ", numberTexts.subList(0, lineCount - 1))
+                + " and " + numberTexts.get(lineCount - 1);
+        String keptNote = (lineCount == 2)
+                ? "I've kept both — delete the one you don't need."
+                : "I've kept all " + lineCount + " — delete the ones you don't need.";
+        return "Lines " + namedLines + " of " + filePath + " are the same task. " + keptNote;
     }
 
     /**

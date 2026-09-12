@@ -21,9 +21,12 @@ import bob.BobException;
  * day, sorting, saving — assumes a {@code TaskDateTime} only exists for text that
  * was understood, and this is the method that has to make that true.
  *
- * <p>{@code TaskDateTime} has no {@code equals}, so a parsed date is checked through
- * what it produces: {@link TaskDateTime#toSaveField()} for the form written to the
- * save file, and {@link TaskDateTime#toString()} for the form shown to the user.
+ * <p>A parsed date is checked through what it produces:
+ * {@link TaskDateTime#toSaveField()} for the form written to the save file, and
+ * {@link TaskDateTime#toString()} for the form shown to the user. Those are what the
+ * rest of the chatbot relies on, so they are checked rather than {@code equals}.
+ * {@code equals} is tested on its own, above all for the one pair of dates it tells
+ * apart that {@link TaskDateTime#compareTo} puts level.
  */
 public class TaskDateTimeTest {
 
@@ -67,6 +70,36 @@ public class TaskDateTimeTest {
         assertTrue(TaskDateTime.parse("2026-12-02 1800").hasTime());
         // Midnight is a time the user gave, although it sorts with a day given none.
         assertTrue(TaskDateTime.parse("2026-12-02 0000").hasTime());
+    }
+
+    @Test
+    public void equals_sameDayAndTimeTypedDifferently_equalWithEqualHashCodes() throws BobException {
+        TaskDateTime date = TaskDateTime.parse("2026-12-02 1800");
+        TaskDateTime sameDate = TaskDateTime.parse("  2026-12-02   1800 ");
+
+        assertEquals(date, sameDate);
+        assertEquals(date.hashCode(), sameDate.hashCode());
+    }
+
+    @Test
+    public void equals_dayWithoutTimeAndSameDayAtMidnight_notEqualThoughLevelInOrder() throws BobException {
+        TaskDateTime withoutTime = TaskDateTime.parse("2026-12-02");
+        TaskDateTime atMidnight = TaskDateTime.parse("2026-12-02 0000");
+
+        // Ordering puts the two level, but they were written, and are shown, differently.
+        assertEquals(0, withoutTime.compareTo(atMidnight));
+        assertNotEquals(withoutTime, atMidnight);
+    }
+
+    @Test
+    public void equals_differentDayTimeOrType_notEqual() throws BobException {
+        TaskDateTime date = TaskDateTime.parse("2026-12-02 1800");
+
+        assertNotEquals(date, TaskDateTime.parse("2026-12-03 1800"));
+        assertNotEquals(date, TaskDateTime.parse("2026-12-02 1801"));
+        assertNotEquals(date, TaskDateTime.parse("2026-12-02"));
+        // The text it was read from is not the date itself.
+        assertNotEquals(date, "2026-12-02 1800");
     }
 
     @Test

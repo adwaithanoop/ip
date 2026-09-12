@@ -35,12 +35,12 @@ started in, so a directory per test case is what stops one test case from
 loading the tasks another one saved — and it keeps a test run from writing
 anything into the repository.
 
-The one test case that has the program print the path of the data file (TC22)
-expects it written with `/` between the folder and the file name. That is how
-the path prints on macOS and Linux; on Windows the same path prints as
+The two test cases that have the program print the path of the data file (TC22
+and TC38) expect it written with `/` between the folder and the file name. That
+is how the path prints on macOS and Linux; on Windows the same path prints as
 `data\duke.txt`, because the program builds it from its parts and lets the
-operating system supply the separator. On Windows, expect that test case to
-report a difference in those four lines only.
+operating system supply the separator. On Windows, expect those test cases to
+report a difference in the lines naming the file only.
 
 ## The save file
 
@@ -4026,4 +4026,163 @@ bye
 
 ```text
 D | 0 | pay fees | 2028-02-29 2359
+```
+
+### TC38 - Duplicate tasks
+
+**Aim:** Check that a task the list already holds is refused rather than added a
+second time, and that an edit which would make one task the same as another is
+refused too. Tasks are matched loosely: capitals and the spaces between words are
+ignored, and so is whether a task is done, so `todo READ   book` matches the saved
+`read book`, and a new deadline matches one already marked done. The task already
+there is named by its number and shown as it is. The same words with a different
+date, or on a different kind of task, make a different task and are added: a
+deadline due at `0000` is not one due on the day with no time, and an event ending
+an hour later is not the same event. An edit is not compared with the task it
+changes, so recapitalizing task 4 is carried out. The save file starts with the
+same todo on lines 1 and 3, which only a hand-edited file can hold: both are loaded,
+and the load report names the two lines. The `list` and the save file at the end
+show that nothing refused was added or saved.
+
+**Data file before**
+
+```text
+T | 0 | read book
+D | 1 | return book | 2026-12-02
+T | 1 | Read  Book
+E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1600
+```
+
+**Input**
+
+```text
+todo READ   book
+deadline Return Book /by 2026-12-02
+deadline return book /by 2026-12-02 0000
+event project meeting /from 2026-08-06 1400 /to 2026-08-06 1700
+todo return book
+edit 6 /to 2026-08-06 1600
+edit 7 /desc READ BOOK
+edit 4 /desc Project Meeting
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bob found 4 tasks from before.
+     Lines 1 and 3 of data/duke.txt are the same task. I've kept both — delete the one you don't need.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Yu already have dis as task 1: [T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Yu already have dis as task 2: [D][X] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] return book (by: Dec 02 2026 00:00)
+     Now yu have 5 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 17:00)
+     Now yu have 6 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [T][ ] return book
+     Now yu have 7 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Dat change would make it da same as task 4:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Dat change would make it da same as task 1:
+       [T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Tadaa! Dis was:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+     Now is:
+       [E][ ] Project Meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][ ] read book
+     2.[D][X] return book (by: Dec 02 2026)
+     3.[T][X] Read  Book
+     4.[E][ ] Project Meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+     5.[D][ ] return book (by: Dec 02 2026 00:00)
+     6.[E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 17:00)
+     7.[T][ ] return book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | read book
+D | 1 | return book | 2026-12-02
+T | 1 | Read  Book
+E | 0 | Project Meeting | 2026-08-06 1400 | 2026-08-06 1600
+D | 0 | return book | 2026-12-02 0000
+E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1700
+T | 0 | return book
 ```

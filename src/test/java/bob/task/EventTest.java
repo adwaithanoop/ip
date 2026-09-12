@@ -259,6 +259,24 @@ public class EventTest {
         assertEquals("An event has a start and an end, not a due date.", exception.getMessage());
     }
 
+    @Test
+    public void isSameTaskAs_sameStartAndEnd_true() throws BobException {
+        Event retyped = new Event("ORIENTATION",
+                TaskDateTime.parse("2026-12-01"), TaskDateTime.parse("2026-12-05"));
+
+        assertTrue(eventFrom("2026-12-01", "2026-12-05").isSameTaskAs(retyped));
+    }
+
+    @Test
+    public void isSameTaskAs_differentStartOrEnd_false() throws BobException {
+        Event event = eventFrom("2026-12-01", "2026-12-05");
+
+        assertFalse(event.isSameTaskAs(eventFrom("2026-12-02", "2026-12-05")));
+        // Starting together is not enough: both ends are compared.
+        assertFalse(event.isSameTaskAs(eventFrom("2026-12-01", "2026-12-06")));
+        assertFalse(event.isSameTaskAs(new Deadline("orientation", TaskDateTime.parse("2026-12-01"))));
+    }
+
     /** Returns an event called {@code orientation} running between two dates. */
     private static Event eventFrom(String from, String to) throws BobException {
         return new Event("orientation", TaskDateTime.parse(from), TaskDateTime.parse(to));

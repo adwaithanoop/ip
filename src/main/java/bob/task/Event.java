@@ -116,6 +116,16 @@ public class Event extends Task {
     }
 
     /**
+     * Returns whether {@code other} is an event with the same start and the same end.
+     * Both are compared, since two events starting together but ending apart are two
+     * different stretches of time.
+     */
+    @Override
+    protected boolean hasSameDatesAs(Task other) {
+        return other instanceof Event otherEvent && from.equals(otherEvent.from) && to.equals(otherEvent.to);
+    }
+
+    /**
      * Returns an event with the new description, and the new start and end where the
      * edit gives them.
      *

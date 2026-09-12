@@ -185,6 +185,18 @@ public class BobTest {
     }
 
     @Test
+    public void getResponse_taskAlreadyInTheList_refusedAsAnErrorAndNotSaved() throws IOException {
+        Bob bob = bobWithSavedLines("T | 0 | read book");
+
+        String response = bob.getResponse("todo Read  Book");
+
+        // The task already there is shown as it is, not as the new line was typed.
+        assertEquals("MINION EMERGENCY!\nYu already have dis as task 1: [T][ ] read book", response);
+        assertTrue(bob.isLastResponseError());
+        assertEquals("T | 0 | read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
+    @Test
     public void isExit_onlyAfterGoodbye() {
         Bob bob = bobWithSavedLines();
 

@@ -60,6 +60,16 @@ public class Deadline extends Task {
     }
 
     /**
+     * Returns whether {@code other} is a deadline due at the same date, compared with
+     * {@link TaskDateTime#equals}, so a deadline due on a day is not the same as one
+     * due at midnight on it.
+     */
+    @Override
+    protected boolean hasSameDatesAs(Task other) {
+        return other instanceof Deadline otherDeadline && by.equals(otherDeadline.by);
+    }
+
+    /**
      * Returns a deadline with the new description, and the new due date if the edit
      * gives one.
      *

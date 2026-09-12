@@ -180,6 +180,58 @@ public class StorageTest {
     }
 
     @Test
+    public void load_sameTaskOnTwoLines_bothLoadedAndReported() throws IOException {
+        // The blank line makes the file's line numbers differ from the list's.
+        Storage storage = storageWithLines(
+                "T | 0 | read book",
+                "",
+                "D | 0 | return book | 2026-12-02",
+                "T | 1 | Read  Book");
+
+        Storage.LoadResult result = storage.load();
+
+        // Both are kept: they differ in ways the user may care about, here the done status.
+        assertEquals(3, result.tasks().size());
+        assertEquals(List.of("Lines 1 and 4 of " + tempDirectory.resolve("duke.txt")
+                + " are the same task. I've kept both — delete the one you don't need."), result.messages());
+    }
+
+    @Test
+    public void load_sameTaskOnThreeLines_oneMessageNamingAllThree() throws IOException {
+        Storage storage = storageWithLines(
+                "T | 0 | read book",
+                "T | 0 | read book",
+                "T | 0 | return book",
+                "T | 0 | read book");
+
+        List<String> messages = storage.load().messages();
+
+        assertEquals(List.of("Lines 1, 2 and 4 of " + tempDirectory.resolve("duke.txt")
+                + " are the same task. I've kept all 3 — delete the ones you don't need."), messages);
+    }
+
+    @Test
+    public void load_sameDescriptionWithDifferentDatesOrKinds_notReported() throws IOException {
+        Storage storage = storageWithLines(
+                "D | 0 | return book | 2026-12-02",
+                "D | 0 | return book | 2026-12-02 0000",
+                "E | 0 | return book | 2026-12-02 | 2026-12-03",
+                "T | 0 | return book");
+
+        assertEquals(List.of(), storage.load().messages());
+    }
+
+    @Test
+    public void load_badLineBetweenSameTasks_reportedFirstAndLineNumbersKept() throws IOException {
+        Storage storage = storageWithLines("T | 0 | read book", "nonsense", "T | 0 | read book");
+
+        List<String> messages = storage.load().messages();
+
+        assertTrue(messages.get(0).startsWith("Line 2 "));
+        assertTrue(messages.get(messages.size() - 1).startsWith("Lines 1 and 3 "));
+    }
+
+    @Test
     public void load_oneBadLine_messagesWordedInTheSingular() throws IOException {
         Storage storage = storageWithLines("nonsense");
 

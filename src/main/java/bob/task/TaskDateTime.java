@@ -8,6 +8,7 @@ import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.time.format.TextStyle;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -353,6 +354,38 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
     /** Returns the time of day, or the start of the day when the user gave no time. */
     private LocalTime getTimeOrStartOfDay() {
         return (time == null) ? LocalTime.MIN : time;
+    }
+
+    /**
+     * Returns whether {@code other} is a date on the same day, with the same time of
+     * day or with no time just as this one has none.
+     *
+     * <p>A day given without a time is not equal to the same day at {@code 0000},
+     * although {@link #compareTo} puts the two level. Ordering has to place a missing
+     * time somewhere, but a task due "on the 2nd" and one due "at midnight on the 2nd"
+     * were written differently and are shown differently, so they are not the same
+     * date. The price is that the ordering is not consistent with {@code equals}: a
+     * sorted set of dates would keep only one of the two.
+     *
+     * @param other the object to compare this date with.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        return other instanceof TaskDateTime otherDate
+                && date.equals(otherDate.date)
+                && Objects.equals(time, otherDate.time);
+    }
+
+    /**
+     * Returns a hash code built from the day and the time of day, the two things
+     * {@link #equals} compares, so that equal dates always share a hash code.
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hash(date, time);
     }
 
     /** Returns for example {@code Dec 02 2026}, or {@code Dec 02 2026 18:00} with a time. */

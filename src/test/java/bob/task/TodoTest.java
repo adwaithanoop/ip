@@ -213,6 +213,39 @@ public class TodoTest {
         assertThrows(BobException.class, () -> todo.withEdit(new TaskEdit("read", null, null, date)));
     }
 
+    @Test
+    public void isSameTaskAs_descriptionDifferingInCapitalsAndSpaces_true() {
+        Todo todo = new Todo("read book");
+        Todo retyped = new Todo("Read   BOOK");
+
+        assertTrue(todo.isSameTaskAs(retyped));
+        assertTrue(retyped.isSameTaskAs(todo));
+        // Only the comparison is loose: each keeps its description as typed.
+        assertEquals("[T][ ] Read   BOOK", retyped.toString());
+    }
+
+    @Test
+    public void isSameTaskAs_oneOfTheTwoDone_stillTrue() {
+        Todo done = new Todo("read book");
+        done.markAsDone();
+
+        // Marking a task done does not make it a different task.
+        assertTrue(done.isSameTaskAs(new Todo("read book")));
+    }
+
+    @Test
+    public void isSameTaskAs_differentWordsOrKind_false() throws BobException {
+        Todo todo = new Todo("read book");
+        Deadline deadline = new Deadline("read book", TaskDateTime.parse("2026-12-02"));
+
+        assertFalse(todo.isSameTaskAs(new Todo("read books")));
+        // Spaces between words are only ignored when there is at least one.
+        assertFalse(todo.isSameTaskAs(new Todo("readbook")));
+        // However alike the words, a deadline is a different task from a todo.
+        assertFalse(todo.isSameTaskAs(deadline));
+        assertFalse(deadline.isSameTaskAs(todo));
+    }
+
     /** Returns an edit that changes nothing but the description, to {@code description}. */
     private static TaskEdit descriptionEdit(String description) {
         return new TaskEdit(description, null, null, null);
