@@ -2,6 +2,7 @@ package bob.storage;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -85,6 +86,16 @@ public class Storage {
      */
     private static final String BACKUP_FILE_SUFFIX = ".bak";
 
+    /**
+     * The invisible character some editors, Notepad among them, put at the very start of a
+     * file they save as UTF-8, to mark it as UTF-8.
+     */
+    private static final String BYTE_ORDER_MARK = "\uFEFF";
+
+    /** Said after every failure to save, so the user knows what the failure has cost. */
+    private static final String UNSAVED_CHANGE_NOTE =
+            "\nThe change is in this session's list, but it won't survive quitting.";
+
     /** How many unreadable lines are reported one by one before the rest are just counted. */
     private static final int MAX_REPORTED_BAD_LINES = 5;
 
@@ -160,6 +171,8 @@ public class Storage {
      * <ul>
      *   <li>no file yet — the ordinary first run — is not a problem at all, and is
      *       reported as an empty list with nothing to say;</li>
+     *   <li>a folder where the file should be gives an empty list, and says so along
+     *       with what to do about it, since no save can replace a folder;</li>
      *   <li>a file that cannot be read at all gives an empty list and a warning
      *       that it will be overwritten;</li>
      *   <li>a line that cannot be understood is skipped and reported, so one
@@ -177,9 +190,16 @@ public class Storage {
         if (!Files.exists(filePath)) {
             return new LoadResult(List.of(), List.of());
         }
+        if (Files.isDirectory(filePath)) {
+            // Checked before reading, which would fail as well, but with an error that
+            // makes the folder sound like a damaged file.
+            return new LoadResult(List.of(), List.of(
+                    filePath + " is a folder, not a file, so your tasks can't be saved.",
+                    "Move or rename that folder, then start Bob again."));
+        }
         List<String> lines;
         try {
-            lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
+            lines = removeByteOrderMark(Files.readAllLines(filePath, StandardCharsets.UTF_8));
         } catch (IOException e) {
             List<String> messages = new ArrayList<>();
             messages.add("I couldn't read " + filePath + " (" + describe(e) + ").");
@@ -191,6 +211,24 @@ public class Storage {
             return new LoadResult(List.of(), messages);
         }
         return readTasks(lines);
+    }
+
+    /**
+     * Returns the lines of the save file with the byte order mark taken off the start of
+     * the first line, if the file begins with one.
+     *
+     * <p>Some editors, Notepad among them, put this invisible character at the start of a
+     * file they save as UTF-8. Java reads it as part of the first line, and {@code trim}
+     * does not remove it, so a file the user had only opened and saved again would have
+     * its first line reported as unreadable and left out. A save does not write it back.
+     */
+    private static List<String> removeByteOrderMark(List<String> lines) {
+        if (lines.isEmpty() || !lines.get(0).startsWith(BYTE_ORDER_MARK)) {
+            return lines;
+        }
+        List<String> cleanedLines = new ArrayList<>(lines);
+        cleanedLines.set(0, lines.get(0).substring(BYTE_ORDER_MARK.length()));
+        return cleanedLines;
     }
 
     /**
@@ -270,8 +308,9 @@ public class Storage {
      * with copies; the price is that a copy from an earlier start, of a file that has
      * changed since, is lost.
      *
-     * <p>A folder where the save file should be is not copied. It holds no tasks, and
-     * copying it would only make an empty folder, so there is no copy to report either.
+     * <p>Anything but an ordinary file is not copied. A folder where the save file should
+     * be never gets this far, since {@link #load} reports it first, and copying one would
+     * only make an empty folder.
      *
      * @param warningIfCopied    the warning to give when the copy is made.
      * @param warningIfNotCopied the warning to give when it is not, which has to be
@@ -426,6 +465,7 @@ public class Storage {
      * @throws BobException if the file or the folder holding it cannot be written.
      */
     public void save(List<Task> tasks) throws BobException {
+        requireRoomToSave();
         List<String> lines = tasks.stream()
                 .map(Storage::toSaveLine)
                 .toList();
@@ -442,8 +482,36 @@ public class Storage {
         } catch (IOException e) {
             deleteLeftover(tempFilePath);
             throw new BobException("I couldn't save your tasks to " + filePath
-                    + " (" + describe(e) + ")."
-                    + "\nThe change is in this session's list, but it won't survive quitting.");
+                    + " (" + describe(e) + ")." + UNSAVED_CHANGE_NOTE);
+        }
+    }
+
+    /**
+     * Checks that nothing already on the disk stands where the save file, or a folder
+     * above it, has to go.
+     *
+     * <p>Saving would fail either way, but with an error that names a path and leaves the
+     * user to work out what is wrong with it. Looked for beforehand, the problem can be
+     * named, along with what to do about it. Whatever is in the way is left alone, since it
+     * may be something the user needs.
+     *
+     * @throws BobException if the save file's place is taken by a folder, or the place of a
+     *                      folder above it by a file.
+     */
+    private void requireRoomToSave() throws BobException {
+        if (Files.isDirectory(filePath)) {
+            throw new BobException("I couldn't save your tasks to " + filePath
+                    + " because it is a folder, not a file." + UNSAVED_CHANGE_NOTE);
+        }
+        // Only walked up as far as the first folder that exists, since everything above
+        // a folder is a folder too.
+        for (Path folder = filePath.getParent(); folder != null && !Files.isDirectory(folder);
+                folder = folder.getParent()) {
+            if (Files.exists(folder)) {
+                throw new BobException("I couldn't save your tasks to " + filePath
+                        + " because \"" + folder + "\" is a file, not a folder."
+                        + "\nMove or rename that file so I can make the folder." + UNSAVED_CHANGE_NOTE);
+            }
         }
     }
 
@@ -704,8 +772,15 @@ public class Storage {
      *
      * <p>Some file errors carry no message of their own, so the name of the error
      * is shown instead of an empty pair of brackets.
+     *
+     * <p>The operating system refusing access is put in words. That error's own message
+     * is only the path it refused, which says nothing about why, and which the message
+     * this explanation goes into names already.
      */
     private static String describe(IOException error) {
+        if (error instanceof AccessDeniedException) {
+            return "permission denied";
+        }
         String reason = error.getMessage();
         if (reason == null || reason.isBlank()) {
             return error.getClass().getSimpleName();

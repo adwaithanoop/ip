@@ -278,18 +278,34 @@ public class StorageTest {
     }
 
     @Test
-    public void load_folderWhereFileShouldBe_emptyListAndAWarningButNoBackup() throws IOException {
-        // A folder where the save file should be: it exists, and reading it fails.
+    public void load_folderWhereFileShouldBe_emptyListAndSaidPlainly() throws IOException {
         Files.createDirectory(tempDirectory.resolve("duke.txt"));
 
         Storage.LoadResult result = storageAt("duke.txt").load();
 
         assertEquals(List.of(), result.tasks());
-        assertTrue(result.messages().get(0).contains("couldn't read"));
-        // The user is warned before typing anything that would overwrite it.
-        assertTrue(result.messages().get(1).contains("overwritten"));
+        // Not a warning that the file will be overwritten, which no save could do to a folder.
+        List<String> expectedMessages = List.of(
+                tempDirectory.resolve("duke.txt")
+                        + " is a folder, not a file, so your tasks can't be saved.",
+                "Move or rename that folder, then start Bob again.");
+        assertEquals(expectedMessages, result.messages());
         // A folder holds no tasks to keep, and copying one would only make an empty folder.
         assertFalse(Files.exists(tempDirectory.resolve("duke.txt.bak")));
+    }
+
+    @Test
+    public void load_fileStartingWithByteOrderMark_firstLineReadAsUsual() throws IOException {
+        // Written in UTF-8, the character U+FEFF is the three bytes Notepad puts at the
+        // start of a file it saves.
+        Path path = tempDirectory.resolve("duke.txt");
+        Files.writeString(path, "\uFEFFT | 0 | read book\nT | 1 | return book\n", StandardCharsets.UTF_8);
+
+        Storage.LoadResult result = new Storage(path).load();
+
+        assertEquals(List.of(), result.messages());
+        assertEquals(2, result.tasks().size());
+        assertEquals("[T][ ] read book", result.tasks().get(0).toString());
     }
 
     @Test
@@ -457,16 +473,35 @@ public class StorageTest {
     }
 
     @Test
-    public void save_newListCannotBeMovedIntoPlace_noTemporaryFileLeft() throws IOException {
-        // A folder with something in it, where the save file should be: the new list is
-        // written, but cannot be moved over the folder.
+    public void save_folderWhereFileShouldBe_refusedPlainlyWithNoTemporaryFileLeft() throws IOException {
         Path folder = tempDirectory.resolve("duke.txt");
         Files.createDirectory(folder);
-        Files.writeString(folder.resolve("inside.txt"), "keeps the folder from being replaced");
 
-        assertThrows(BobException.class, () -> storageAt("duke.txt").save(List.of(new Todo("read book"))));
+        BobException error = assertThrows(BobException.class, () ->
+                storageAt("duke.txt").save(List.of(new Todo("read book"))));
 
+        String expectedMessage = "I couldn't save your tasks to " + folder
+                + " because it is a folder, not a file."
+                + "\nThe change is in this session's list, but it won't survive quitting.";
+        assertEquals(expectedMessage, error.getMessage());
         assertFalse(Files.exists(tempDirectory.resolve("duke.txt.tmp")));
+    }
+
+    @Test
+    public void save_fileWhereFolderShouldBe_refusedPlainly() throws IOException {
+        Path file = tempDirectory.resolve("data");
+        Files.writeString(file, "not a folder");
+
+        BobException error = assertThrows(BobException.class, () ->
+                storageAt("data", "duke.txt").save(List.of(new Todo("read book"))));
+
+        String expectedMessage = "I couldn't save your tasks to " + file.resolve("duke.txt")
+                + " because \"" + file + "\" is a file, not a folder."
+                + "\nMove or rename that file so I can make the folder."
+                + "\nThe change is in this session's list, but it won't survive quitting.";
+        assertEquals(expectedMessage, error.getMessage());
+        // The file in the way is left as it was, since it may be something the user needs.
+        assertEquals("not a folder", Files.readString(file));
     }
 
     @Test
