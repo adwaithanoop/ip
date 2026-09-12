@@ -73,12 +73,31 @@ public class TaskDateTimeTest {
     }
 
     @Test
-    public void parse_dayThatDoesNotExist_exceptionThrown() {
+    public void parse_dayPastTheEndOfItsMonth_exceptionSaysHowLongTheMonthIs() {
         // The 30th of February never happens, and neither does the 29th in a
         // year that is not a leap year.
-        assertThrows(BobException.class, () -> TaskDateTime.parse("2026-02-30"));
-        assertThrows(BobException.class, () -> TaskDateTime.parse("2026-02-29"));
-        assertThrows(BobException.class, () -> TaskDateTime.parse("2026-13-01"));
+        assertEquals("2026-02-30 isn't a real day: February 2026 has 28 days.",
+                messageFromParsing("2026-02-30"));
+        assertEquals("2026-02-29 isn't a real day: February 2026 has 28 days.",
+                messageFromParsing("2026-02-29"));
+        assertEquals("2028-02-30 isn't a real day: February 2028 has 29 days.",
+                messageFromParsing("2028-02-30"));
+        assertEquals("2026-04-31 isn't a real day: April 2026 has 30 days.",
+                messageFromParsing("2026-04-31"));
+        assertEquals("2026-12-00 isn't a real day: December 2026 has 31 days.",
+                messageFromParsing("2026-12-00"));
+    }
+
+    @Test
+    public void parse_monthThatDoesNotExist_exceptionSaysThereIsNoSuchMonth() {
+        assertEquals("2026-13-01 isn't a real day: there is no month 13.", messageFromParsing("2026-13-01"));
+        assertEquals("2026-00-10 isn't a real day: there is no month 0.", messageFromParsing("2026-00-10"));
+    }
+
+    @Test
+    public void parse_impossibleDayWithATime_exceptionNamesTheDay() {
+        assertEquals("2026-02-30 isn't a real day: February 2026 has 28 days.",
+                messageFromParsing("2026-02-30 1800"));
     }
 
     @Test
@@ -88,6 +107,9 @@ public class TaskDateTimeTest {
         assertThrows(BobException.class, () -> TaskDateTime.parse("02/12/2026"));
         assertThrows(BobException.class, () -> TaskDateTime.parse("2026-2-2"));
         assertThrows(BobException.class, () -> TaskDateTime.parse("Dec 02 2026"));
+        // Out of the accepted form, a day is not looked into, so it is asked for
+        // again in that form rather than said not to exist.
+        assertTrue(messageFromParsing("2026-2-30").startsWith("I don't understand \"2026-2-30\" as a date."));
     }
 
     @Test
@@ -98,9 +120,20 @@ public class TaskDateTimeTest {
     }
 
     @Test
-    public void parse_timeThatDoesNotExist_exceptionThrown() {
-        assertThrows(BobException.class, () -> TaskDateTime.parse("2026-12-02 2500"));
-        assertThrows(BobException.class, () -> TaskDateTime.parse("2026-12-02 1860"));
+    public void parse_timeThatDoesNotExist_exceptionSaysHowHighHoursAndMinutesGo() {
+        assertEquals("2500 isn't a real time: hours go up to 23 and minutes up to 59.",
+                messageFromParsing("2026-12-02 2500"));
+        // Below 2359, but the minutes run past 59.
+        assertEquals("1260 isn't a real time: hours go up to 23 and minutes up to 59.",
+                messageFromParsing("2026-12-02 1260"));
+    }
+
+    @Test
+    public void parse_midnightWrittenAs2400_exceptionThrown() {
+        // Read leniently, 2400 would quietly become 0000 of the same day, a day
+        // earlier than the user meant.
+        assertEquals("2400 isn't a real time: hours go up to 23 and minutes up to 59.",
+                messageFromParsing("2026-12-02 2400"));
     }
 
     @Test
@@ -155,8 +188,18 @@ public class TaskDateTimeTest {
     public void parseDay_textThatIsNotADay_exceptionThrown() {
         assertThrows(BobException.class, () -> TaskDateTime.parseDay("Sunday"));
         assertThrows(BobException.class, () -> TaskDateTime.parseDay("02/12/2026"));
-        assertThrows(BobException.class, () -> TaskDateTime.parseDay("2026-02-30"));
         assertThrows(BobException.class, () -> TaskDateTime.parseDay(""));
+    }
+
+    @Test
+    public void parseDay_dayThatDoesNotExist_exceptionSaysWhy() {
+        BobException leapException = assertThrows(BobException.class, () ->
+                TaskDateTime.parseDay("2026-02-29"));
+        BobException monthException = assertThrows(BobException.class, () ->
+                TaskDateTime.parseDay("  2026-13-01  "));
+
+        assertEquals("2026-02-29 isn't a real day: February 2026 has 28 days.", leapException.getMessage());
+        assertEquals("2026-13-01 isn't a real day: there is no month 13.", monthException.getMessage());
     }
 
     @Test
@@ -213,5 +256,10 @@ public class TaskDateTimeTest {
         assertFalse(date.isAfter(LocalDate.of(2026, 12, 2)));
         assertTrue(date.isBefore(LocalDate.of(2026, 12, 3)));
         assertTrue(date.isAfter(LocalDate.of(2026, 12, 1)));
+    }
+
+    /** Returns the message of the error that parsing {@code text} throws. */
+    private static String messageFromParsing(String text) {
+        return assertThrows(BobException.class, () -> TaskDateTime.parse(text)).getMessage();
     }
 }
