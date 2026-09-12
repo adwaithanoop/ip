@@ -4,7 +4,7 @@ import bob.BobException;
 import bob.task.TaskList;
 
 /**
- * A command that acts on the one task the user named by its number.
+ * Represents a command that acts on the one task the user named by its number.
  *
  * <p>{@link MarkCommand}, {@link DeleteCommand} and {@link EditCommand} all take a
  * number, and all have to answer the same question before they can do anything: is

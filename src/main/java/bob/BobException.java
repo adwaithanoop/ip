@@ -1,8 +1,8 @@
 package bob;
 
 /**
- * An error in what the user asked the chatbot to do, described in words that
- * can be shown to the user as-is.
+ * Represents an error in what the user asked the chatbot to do, described in
+ * words that can be shown to the user as-is.
  *
  * <p>Using an exception lets the code that works out what a command means stop
  * as soon as something is wrong, without also having to know how the chatbot

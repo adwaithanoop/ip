@@ -10,7 +10,7 @@ import bob.task.TaskList;
 import bob.ui.Ui;
 
 /**
- * A chatbot that greets the user, remembers the tasks the user types,
+ * Represents a chatbot that greets the user, remembers the tasks the user types,
  * lists them back on request, marks them as done, removes the ones the user
  * no longer wants, and exits when the user types {@code bye}.
  *

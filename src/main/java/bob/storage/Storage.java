@@ -122,8 +122,8 @@ public class Storage {
     }
 
     /**
-     * What came of reading the save file: the tasks that could be read, and any
-     * messages for the user about parts of the file that could not be.
+     * Represents what came of reading the save file: the tasks that could be read,
+     * and any messages for the user about parts of the file that could not be.
      *
      * <p>Two things have to come back from a load, and a record is the shortest
      * honest way to return both. It is a plain data carrier, so the compiler

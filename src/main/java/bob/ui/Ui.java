@@ -7,7 +7,7 @@ import bob.task.Task;
 import bob.task.TaskList;
 
 /**
- * Everything the chatbot says to the user and everything it hears back.
+ * Handles everything the chatbot says to the user and everything it hears back.
  *
  * <p>This was part of {@link bob.Bob Bob}, mixed in with the code that decides what each
  * command does. Two quite different questions were being answered in the one

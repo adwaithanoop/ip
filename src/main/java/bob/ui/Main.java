@@ -14,7 +14,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 
 /**
- * The chatbot as a windowed program.
+ * Runs the chatbot as a windowed program.
  *
  * <p>This is the graphical counterpart of {@link Bob#main}: it makes a chatbot,
  * gives it something to talk through, and steps aside. The difference is that a

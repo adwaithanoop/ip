@@ -5,8 +5,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * The words the chatbot understands at the start of a line, and the rules for
- * recognizing each one.
+ * Represents the words the chatbot understands at the start of a line, and the
+ * rules for recognizing each one.
  *
  * <p>The name says <em>word</em> because a word is all this is. It holds the
  * chatbot's vocabulary and the rules for recognizing one of those words at the

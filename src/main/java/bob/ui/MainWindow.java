@@ -12,7 +12,8 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 /**
- * The chatbot's window: the conversation so far, and the box the user types into.
+ * Represents the chatbot's window: the conversation so far, and the box the user
+ * types into.
  *
  * <p>This class is to the window what {@link bob.Bob Bob}'s command loop is to the console. It
  * does the same three things — take a line from the user, have the chatbot answer

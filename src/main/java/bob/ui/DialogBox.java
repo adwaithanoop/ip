@@ -16,8 +16,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.shape.Circle;
 
 /**
- * One speech bubble in the conversation: a picture of whoever is speaking, and
- * what they said.
+ * Represents one speech bubble in the conversation: a picture of whoever is
+ * speaking, and what they said.
  *
  * <p>This is a control of the project's own, made by putting two of JavaFX's
  * together — an {@link ImageView} and a {@link Label} side by side in an
