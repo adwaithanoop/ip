@@ -197,6 +197,30 @@ public class BobTest {
     }
 
     @Test
+    public void getResponse_markTaskAlreadyDone_answeredNotAsAnErrorAndNothingSaved() throws IOException {
+        // Written without the spaces a save puts around each bar, so a file still
+        // written this way afterwards shows that nothing was saved.
+        Bob bob = bobWithSavedLines("T|1|read book");
+
+        String response = bob.getResponse("mark 1");
+
+        assertEquals("Dis one already finish! Nothing to change:\n  [T][X] read book", response);
+        assertFalse(bob.isLastResponseError());
+        assertEquals("T|1|read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
+    @Test
+    public void getResponse_unmarkTaskNotDone_answeredNotAsAnErrorAndNothingSaved() throws IOException {
+        Bob bob = bobWithSavedLines("T|0|read book");
+
+        String response = bob.getResponse("unmark 1");
+
+        assertEquals("Dis one not finish yet! Nothing to change:\n  [T][ ] read book", response);
+        assertFalse(bob.isLastResponseError());
+        assertEquals("T|0|read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
+    @Test
     public void isExit_onlyAfterGoodbye() {
         Bob bob = bobWithSavedLines();
 

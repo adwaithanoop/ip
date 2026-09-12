@@ -361,6 +361,23 @@ public class Ui {
     }
 
     /**
+     * Says that a task already had the status it was just asked for, showing it so
+     * the user can check it is the task they meant.
+     *
+     * <p>Worded as an ordinary answer rather than as a complaint, since the task ends
+     * up just as the user asked.
+     *
+     * @param task   the task, which has not changed.
+     * @param isDone the status it was asked for, and already has.
+     */
+    public void showAlreadyMarkedTask(Task task, boolean isDone) {
+        showLine(isDone
+                ? "Dis one already finish! Nothing to change:"
+                : "Dis one not finish yet! Nothing to change:");
+        showLine("  " + task);
+    }
+
+    /**
      * Confirms a task just edited, showing it as it was and as it now is.
      *
      * <p>Both are shown because an edit changes only the details the user typed, and
