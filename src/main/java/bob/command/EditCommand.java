@@ -1,5 +1,7 @@
 package bob.command;
 
+import java.util.Optional;
+
 import bob.BobException;
 import bob.storage.Storage;
 import bob.task.Task;
@@ -44,12 +46,24 @@ public class EditCommand extends TaskNumberCommand {
      *
      * <p>The copy is built before the list is touched, so an edit the task refuses
      * leaves both the list and the save file exactly as they were.
+     *
+     * <p>An edit that would make the task the same as another task in the list is
+     * refused as well, as adding that other task a second time would be. The copy is
+     * not compared with the task it was made from, so an edit that only changes the
+     * capitals of a description is carried out.
      */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) throws BobException {
         int index = requireTaskIndex(tasks);
         Task original = tasks.get(index);
         Task edited = original.withEdit(edit);
+        Optional<Integer> duplicateIndex = tasks.findDuplicate(edited, index);
+        if (duplicateIndex.isPresent()) {
+            int otherIndex = duplicateIndex.get();
+            // The user counts from 1, the list counts from 0.
+            throw new BobException("Dat change would make it da same as task " + (otherIndex + 1) + ":"
+                    + "\n  " + tasks.get(otherIndex));
+        }
         tasks.set(index, edited);
         ui.showEditedTask(original, edited);
         storage.save(tasks.asList());

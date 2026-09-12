@@ -15,14 +15,13 @@ import bob.BobException;
  * values rather than as the text the user typed, so both are dates the chatbot
  * has understood.
  *
- * <p>The constructor does not check that the end comes after the start. When an
- * event is added, that check is made by {@link bob.parser.Parser Parser}, which reads
- * the line the event was typed on and can show the user which date it read as which.
- * When an event is edited, {@link #buildEdited} makes it, because only the event
- * knows the end that an edit moving just the start has to be compared with. The
- * consequence is that an event whose end comes first can still be built — by a
- * hand-edited save file, which is the one route into this class that passes
- * through neither check.
+ * <p>An event may not end before it starts, nor start and end at the same moment.
+ * That rule is {@link #requireValidPeriod}, and it is checked on every route by which
+ * an event reaches the task list: when one is added, by {@link bob.parser.Parser Parser};
+ * when one is edited, by {@link #buildEdited}; and when one is read back from the save
+ * file, by {@link bob.storage.Storage Storage}. The constructor does not check it, so
+ * that {@code Storage} can report a broken rule in the short wording it uses for every
+ * other damaged line of the file.
  */
 public class Event extends Task {
 
@@ -53,6 +52,36 @@ public class Event extends Task {
         super(description);
         this.from = from;
         this.to = to;
+    }
+
+    /**
+     * Checks that {@code from} and {@code to} can be the start and the end of an event.
+     *
+     * <p>An end before the start is refused, and both dates are shown back in the
+     * friendly form, so a user who typed them the wrong way round can see which was
+     * read as which. An end at the same moment as the start is refused too, but only
+     * when both have a time: {@code 2026-12-05 0900} to {@code 2026-12-05 0900} lasts no
+     * time at all, which is what a deadline records, while {@code 2026-12-05} to
+     * {@code 2026-12-05} is a whole day.
+     *
+     * <p>Kept in this class rather than in the parser that reads a new event, so that
+     * adding, editing and loading an event share one rule and cannot drift apart.
+     *
+     * @param from when the event would start.
+     * @param to   when it would end.
+     * @throws BobException if the end comes before the start, or at the same moment
+     *                      when both have a time.
+     */
+    public static void requireValidPeriod(TaskDateTime from, TaskDateTime to) throws BobException {
+        int comparison = to.compareTo(from);
+        if (comparison < 0) {
+            throw new BobException("An event can't end before it starts."
+                    + "\nIt would run from " + from + " to " + to + ".");
+        }
+        if (comparison == 0 && from.hasTime() && to.hasTime()) {
+            throw new BobException("An event can't start and end at the same moment."
+                    + " For a single moment, use a deadline.");
+        }
     }
 
     /** Returns {@link #TYPE_ICON}, the {@code E} that marks an event. */
@@ -87,13 +116,24 @@ public class Event extends Task {
     }
 
     /**
+     * Returns whether {@code other} is an event with the same start and the same end.
+     * Both are compared, since two events starting together but ending apart are two
+     * different stretches of time.
+     */
+    @Override
+    protected boolean hasSameDatesAs(Task other) {
+        return other instanceof Event otherEvent && from.equals(otherEvent.from) && to.equals(otherEvent.to);
+    }
+
+    /**
      * Returns an event with the new description, and the new start and end where the
      * edit gives them.
      *
      * <p>The two ends are checked as a pair once the edit has been applied, because
-     * moving one end alone can put it on the wrong side of the other. The check is
-     * made only when an end is moved: an event saved with its ends the wrong way round
-     * can still be reworded, since rewording it is not what put them there.
+     * moving one end alone can put it on the wrong side of the other, or onto it. The
+     * check is made whatever the edit changes: adding and loading an event check the
+     * same rule, so an event already in the list always keeps it, and an edit that
+     * moves neither end passes.
      */
     @Override
     protected Task buildEdited(String description, TaskEdit edit) throws BobException {
@@ -102,10 +142,7 @@ public class Event extends Task {
         }
         TaskDateTime newFrom = Objects.requireNonNullElse(edit.from(), from);
         TaskDateTime newTo = Objects.requireNonNullElse(edit.to(), to);
-        if (edit.hasStartOrEnd() && newTo.compareTo(newFrom) < 0) {
-            throw new BobException("An event can't end before it starts."
-                    + "\nThat change would have it run from " + newFrom + " to " + newTo + ".");
-        }
+        requireValidPeriod(newFrom, newTo);
         return new Event(description, newFrom, newTo);
     }
 

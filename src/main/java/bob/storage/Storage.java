@@ -2,8 +2,11 @@ package bob.storage;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -70,6 +73,28 @@ public class Storage {
 
     /** The character marking the one after it as part of a field rather than as punctuation. */
     private static final char ESCAPE_CHARACTER = '\\';
+
+    /**
+     * Added to the save file's name to name the temporary file a save writes first, so
+     * that {@code data/duke.txt} is saved by way of {@code data/duke.txt.tmp}.
+     */
+    private static final String TEMP_FILE_SUFFIX = ".tmp";
+
+    /**
+     * Added to the save file's name to name the copy kept of a damaged save file, so
+     * that {@code data/duke.txt} is backed up as {@code data/duke.txt.bak}.
+     */
+    private static final String BACKUP_FILE_SUFFIX = ".bak";
+
+    /**
+     * The invisible character some editors, Notepad among them, put at the very start of a
+     * file they save as UTF-8, to mark it as UTF-8.
+     */
+    private static final String BYTE_ORDER_MARK = "\uFEFF";
+
+    /** Said after every failure to save, so the user knows what the failure has cost. */
+    private static final String UNSAVED_CHANGE_NOTE =
+            "\nThe change is in this session's list, but it won't survive quitting.";
 
     /** How many unreadable lines are reported one by one before the rest are just counted. */
     private static final int MAX_REPORTED_BAD_LINES = 5;
@@ -146,53 +171,236 @@ public class Storage {
      * <ul>
      *   <li>no file yet — the ordinary first run — is not a problem at all, and is
      *       reported as an empty list with nothing to say;</li>
+     *   <li>a folder where the file should be gives an empty list, and says so along
+     *       with what to do about it, since no save can replace a folder;</li>
      *   <li>a file that cannot be read at all gives an empty list and a warning
-     *       that it will be overwritten, so the user can quit and rescue it
-     *       before typing anything that changes the list;</li>
+     *       that it will be overwritten;</li>
      *   <li>a line that cannot be understood is skipped and reported, so one
-     *       damaged line does not cost the user the tasks on all the others.</li>
+     *       damaged line does not cost the user the tasks on all the others;</li>
+     *   <li>lines holding the same task are all loaded, and reported together, so
+     *       the user can decide which of them to delete.</li>
      * </ul>
+     *
+     * <p>In the two cases where something in the file is left out of the list, the
+     * file is also copied to a backup beside it, such as {@code data/duke.txt.bak},
+     * and the user is told where. The next change to the list overwrites the file, so
+     * without the copy it would be the end of whatever was left out.
      */
     public LoadResult load() {
         if (!Files.exists(filePath)) {
             return new LoadResult(List.of(), List.of());
         }
+        if (Files.isDirectory(filePath)) {
+            // Checked before reading, which would fail as well, but with an error that
+            // makes the folder sound like a damaged file.
+            return new LoadResult(List.of(), List.of(
+                    filePath + " is a folder, not a file, so your tasks can't be saved.",
+                    "Move or rename that folder, then start Bob again."));
+        }
         List<String> lines;
         try {
-            lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
+            lines = removeByteOrderMark(Files.readAllLines(filePath, StandardCharsets.UTF_8));
         } catch (IOException e) {
-            return new LoadResult(List.of(), List.of(
-                    "I couldn't read " + filePath + " (" + describe(e) + ").",
+            List<String> messages = new ArrayList<>();
+            messages.add("I couldn't read " + filePath + " (" + describe(e) + ").");
+            messages.addAll(backUpDamagedFile(
+                    "I'm starting with an empty list. That file will be overwritten the next time the list"
+                            + " changes, but the copy stays as it is.",
                     "I'm starting with an empty list, and that file will be overwritten"
                             + " the next time the list changes."));
+            return new LoadResult(List.of(), messages);
         }
         return readTasks(lines);
     }
 
     /**
+     * Returns the lines of the save file with the byte order mark taken off the start of
+     * the first line, if the file begins with one.
+     *
+     * <p>Some editors, Notepad among them, put this invisible character at the start of a
+     * file they save as UTF-8. Java reads it as part of the first line, and {@code trim}
+     * does not remove it, so a file the user had only opened and saved again would have
+     * its first line reported as unreadable and left out. A save does not write it back.
+     */
+    private static List<String> removeByteOrderMark(List<String> lines) {
+        if (lines.isEmpty() || !lines.get(0).startsWith(BYTE_ORDER_MARK)) {
+            return lines;
+        }
+        List<String> cleanedLines = new ArrayList<>(lines);
+        cleanedLines.set(0, lines.get(0).substring(BYTE_ORDER_MARK.length()));
+        return cleanedLines;
+    }
+
+    /**
      * Turns the lines of the save file into tasks, collecting a message about
-     * every line that could not be turned into one.
+     * every line that could not be turned into one, and about lines that hold the
+     * same task. If any line could not be read, the file is backed up as well.
      *
      * <p>Blank lines are passed over without comment: they are not damage, and a
      * file that a user has opened in an editor can easily end up with one.
      */
     private LoadResult readTasks(List<String> lines) {
         List<Task> loadedTasks = new ArrayList<>();
+        // The line each loaded task came from, kept so that a report names the file's
+        // own line even when blank or damaged lines have been passed over.
+        List<Integer> loadedLineNumbers = new ArrayList<>();
         List<String> badLineReports = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             if (line.isEmpty()) {
                 continue;
             }
+            // The user counts lines from 1, the list counts from 0.
+            int lineNumber = i + 1;
             try {
                 loadedTasks.add(parseTask(line));
+                loadedLineNumbers.add(lineNumber);
             } catch (BobException e) {
-                // The user counts lines from 1, the list counts from 0.
-                badLineReports.add("Line " + (i + 1) + " of " + filePath
+                badLineReports.add("Line " + lineNumber + " of " + filePath
                         + " isn't a task I can read: " + e.getMessage() + ".");
             }
         }
-        return new LoadResult(loadedTasks, summarizeBadLines(badLineReports));
+        List<String> messages = new ArrayList<>(summarizeBadLines(badLineReports));
+        if (!badLineReports.isEmpty()) {
+            messages.addAll(warnOfLeftOutLines(badLineReports.size()));
+        }
+        messages.addAll(reportSameTaskLines(loadedTasks, loadedLineNumbers));
+        return new LoadResult(loadedTasks, messages);
+    }
+
+    /**
+     * Returns the warning that the lines left out of the list will not survive the
+     * next save, followed by what was done to keep them.
+     *
+     * <p>Said plainly, because the next command that changes the list rewrites the
+     * whole file, and these lines are not in it to be rewritten. The file is copied
+     * first, so the warning can usually point to a copy that still has them.
+     *
+     * @param badLineCount how many lines were left out, at least one.
+     */
+    private List<String> warnOfLeftOutLines(int badLineCount) {
+        assert badLineCount >= 1 : "Only lines left out of the list need a warning, not " + badLineCount;
+        boolean isSingleBadLine = badLineCount == 1;
+        String warningIfCopied = isSingleBadLine
+                ? "It'll be dropped from " + filePath + " the next time the list changes,"
+                        + " but the copy still has it."
+                : "They'll be dropped from " + filePath + " the next time the list changes,"
+                        + " but the copy still has them.";
+        String warningIfNotCopied = isSingleBadLine
+                ? "It will be lost the next time the list changes — fix the file to keep it."
+                : "They will be lost the next time the list changes — fix the file to keep them.";
+        return backUpDamagedFile(warningIfCopied, warningIfNotCopied);
+    }
+
+    /**
+     * Copies the save file to a backup beside it, such as {@code data/duke.txt.bak},
+     * and returns what the user should be told: the warning that fits whether the copy
+     * was made, followed by where the copy is or why there is none.
+     *
+     * <p>Only called when loading has left something out of the list. The next change
+     * to the list rewrites the save file from the tasks that were loaded, so without a
+     * copy whatever was left out would be gone for good. The copy is made here, at
+     * load, rather than just before that first save, so that the user is told where it
+     * is at the same moment as they are told what was left out.
+     *
+     * <p>Only one copy is kept, under a fixed name, and a copy left by an earlier start
+     * is replaced. Otherwise a file found damaged on every start would fill its folder
+     * with copies; the price is that a copy from an earlier start, of a file that has
+     * changed since, is lost.
+     *
+     * <p>Anything but an ordinary file is not copied. A folder where the save file should
+     * be never gets this far, since {@link #load} reports it first, and copying one would
+     * only make an empty folder.
+     *
+     * @param warningIfCopied    the warning to give when the copy is made.
+     * @param warningIfNotCopied the warning to give when it is not, which has to be
+     *                           starker, since then nothing else keeps the file.
+     * @return the warning, then either where the copy is, or two lines saying it could
+     *         not be made and what the user should do instead.
+     */
+    private List<String> backUpDamagedFile(String warningIfCopied, String warningIfNotCopied) {
+        if (!Files.isRegularFile(filePath)) {
+            return List.of(warningIfNotCopied);
+        }
+        Path backupFilePath = siblingPath(BACKUP_FILE_SUFFIX);
+        try {
+            Files.copy(filePath, backupFilePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            return List.of(warningIfNotCopied,
+                    "I couldn't make a backup at " + backupFilePath + " (" + describe(e) + ").",
+                    "Copy " + filePath + " somewhere safe yourself before changing the list.");
+        }
+        return List.of(warningIfCopied,
+                "The file as it was is kept in " + backupFilePath + ", so nothing in it is lost.");
+    }
+
+    /**
+     * Returns the path of a file in the save file's folder, named after the save file
+     * with {@code suffix} added, such as {@code data/duke.txt.bak}.
+     */
+    private Path siblingPath(String suffix) {
+        return filePath.resolveSibling(filePath.getFileName() + suffix);
+    }
+
+    /**
+     * Returns a message for each group of lines in the save file that hold the same
+     * task, in the sense of {@link Task#isSameTaskAs}.
+     *
+     * <p>Every line of a group is loaded, rather than all but the first being left out.
+     * The lines may differ in ways the user cares about — one marked done and the other
+     * not, or the description written in different capitals — so which to keep is
+     * theirs to decide. Adding such a task at the chatbot is refused, so only a file
+     * edited by hand can hold two.
+     *
+     * <p>Each task is compared with every task after it, which is plenty fast for a
+     * list a person keeps by hand.
+     *
+     * @param tasks       the tasks read from the file, in the order they were saved.
+     * @param lineNumbers the line each of those tasks was read from, counting from 1.
+     * @return the messages to show, which are none at all when no two lines hold the same task.
+     */
+    private List<String> reportSameTaskLines(List<Task> tasks, List<Integer> lineNumbers) {
+        List<String> messages = new ArrayList<>();
+        // A task already named in a group must not start a second group of its own.
+        boolean[] isAlreadyReported = new boolean[tasks.size()];
+        for (int i = 0; i < tasks.size(); i++) {
+            if (isAlreadyReported[i]) {
+                continue;
+            }
+            List<Integer> sameTaskLineNumbers = new ArrayList<>(List.of(lineNumbers.get(i)));
+            for (int j = i + 1; j < tasks.size(); j++) {
+                if (tasks.get(i).isSameTaskAs(tasks.get(j))) {
+                    sameTaskLineNumbers.add(lineNumbers.get(j));
+                    isAlreadyReported[j] = true;
+                }
+            }
+            if (sameTaskLineNumbers.size() > 1) {
+                messages.add(describeSameTaskLines(sameTaskLineNumbers));
+            }
+        }
+        return messages;
+    }
+
+    /**
+     * Returns the message about one group of lines holding the same task, for example
+     * {@code Lines 2 and 5 of data/duke.txt are the same task.}, followed by a note
+     * that all of them were kept.
+     *
+     * @param lineNumbers the lines holding that task, at least two, in the order they
+     *                    appear in the file.
+     */
+    private String describeSameTaskLines(List<Integer> lineNumbers) {
+        int lineCount = lineNumbers.size();
+        assert lineCount >= 2 : "A group of the same task has at least two lines, not " + lineCount;
+        List<String> numberTexts = lineNumbers.stream()
+                .map(String::valueOf)
+                .toList();
+        String namedLines = String.join(", ", numberTexts.subList(0, lineCount - 1))
+                + " and " + numberTexts.get(lineCount - 1);
+        String keptNote = (lineCount == 2)
+                ? "I've kept both — delete the one you don't need."
+                : "I've kept all " + lineCount + " — delete the ones you don't need.";
+        return "Lines " + namedLines + " of " + filePath + " are the same task. " + keptNote;
     }
 
     /**
@@ -224,15 +432,9 @@ public class Storage {
                     + " I couldn't read.");
         }
 
-        boolean isSingleBadLine = badLineCount == 1;
-        messages.add(isSingleBadLine
+        messages.add(badLineCount == 1
                 ? "I've left that line out of your list."
                 : "I've left those " + badLineCount + " lines out of your list.");
-        // Said plainly, because the next command that changes the list rewrites
-        // the whole file, and these lines are not in it to be rewritten.
-        messages.add(isSingleBadLine
-                ? "It will be lost the next time the list changes — fix the file to keep it."
-                : "They will be lost the next time the list changes — fix the file to keep them.");
         return messages;
     }
 
@@ -241,8 +443,20 @@ public class Storage {
      *
      * <p>The whole list is rewritten on every change rather than the one changed
      * task being edited in place. That is more writing than is strictly needed,
-     * but the file always says exactly what the list says, which is not true of
-     * schemes that patch a file in place and can leave it half updated.
+     * but it keeps the file saying exactly what the list says.
+     *
+     * <p>The lines are not written into the save file itself. They go to a temporary
+     * file beside it, which is then moved over it. Writing straight into the save file
+     * empties it first, so a disk filling up, or the chatbot being stopped, partway
+     * through would leave it half written and every task after that point gone. Moved
+     * into place, the file holds the old list or the new one, never part of each. A
+     * temporary file left by a save that failed is removed, and one left by a chatbot
+     * that was stopped is simply overwritten by the next save.
+     *
+     * <p>What this does not guard against is a power cut just after a save, before the
+     * operating system has put the new contents on the disk. Forcing them there before
+     * the move, through a {@link java.nio.channels.FileChannel}, would close that gap at
+     * the price of slower saves, which a task list kept by hand does not need.
      *
      * <p>The lines are built with a stream because each task turns into exactly
      * one line, independently of the others, which is what {@code map} describes.
@@ -251,9 +465,11 @@ public class Storage {
      * @throws BobException if the file or the folder holding it cannot be written.
      */
     public void save(List<Task> tasks) throws BobException {
+        requireRoomToSave();
         List<String> lines = tasks.stream()
                 .map(Storage::toSaveLine)
                 .toList();
+        Path tempFilePath = siblingPath(TEMP_FILE_SUFFIX);
         try {
             Path parentDirectory = filePath.getParent();
             if (parentDirectory != null) {
@@ -261,11 +477,75 @@ public class Storage {
                 // to call on every save rather than only on the first one.
                 Files.createDirectories(parentDirectory);
             }
-            Files.write(filePath, lines, StandardCharsets.UTF_8);
+            Files.write(tempFilePath, lines, StandardCharsets.UTF_8);
+            moveIntoPlace(tempFilePath);
         } catch (IOException e) {
+            deleteLeftover(tempFilePath);
             throw new BobException("I couldn't save your tasks to " + filePath
-                    + " (" + describe(e) + ")."
-                    + "\nThe change is in this session's list, but it won't survive quitting.");
+                    + " (" + describe(e) + ")." + UNSAVED_CHANGE_NOTE);
+        }
+    }
+
+    /**
+     * Checks that nothing already on the disk stands where the save file, or a folder
+     * above it, has to go.
+     *
+     * <p>Saving would fail either way, but with an error that names a path and leaves the
+     * user to work out what is wrong with it. Looked for beforehand, the problem can be
+     * named, along with what to do about it. Whatever is in the way is left alone, since it
+     * may be something the user needs.
+     *
+     * @throws BobException if the save file's place is taken by a folder, or the place of a
+     *                      folder above it by a file.
+     */
+    private void requireRoomToSave() throws BobException {
+        if (Files.isDirectory(filePath)) {
+            throw new BobException("I couldn't save your tasks to " + filePath
+                    + " because it is a folder, not a file." + UNSAVED_CHANGE_NOTE);
+        }
+        // Only walked up as far as the first folder that exists, since everything above
+        // a folder is a folder too.
+        for (Path folder = filePath.getParent(); folder != null && !Files.isDirectory(folder);
+                folder = folder.getParent()) {
+            if (Files.exists(folder)) {
+                throw new BobException("I couldn't save your tasks to " + filePath
+                        + " because \"" + folder + "\" is a file, not a folder."
+                        + "\nMove or rename that file so I can make the folder." + UNSAVED_CHANGE_NOTE);
+            }
+        }
+    }
+
+    /**
+     * Moves a fully written temporary file over the save file.
+     *
+     * <p>An atomic move is asked for first, which swaps the file in one step, so there
+     * is no moment at which the save file is missing or partly replaced. A file system
+     * that cannot move a file that way is given an ordinary replacing move instead,
+     * which is the best it offers.
+     *
+     * @param tempFilePath the temporary file holding the whole new list.
+     * @throws IOException if the file cannot be moved into place.
+     */
+    private void moveIntoPlace(Path tempFilePath) throws IOException {
+        try {
+            Files.move(tempFilePath, filePath, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(tempFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    /**
+     * Removes the temporary file a failed save may have left beside the save file.
+     *
+     * <p>A failure to remove it is ignored. The save has already failed, which is what
+     * the user is told, and a temporary file that could not be removed is overwritten
+     * by the next save that works.
+     */
+    private static void deleteLeftover(Path tempFilePath) {
+        try {
+            Files.deleteIfExists(tempFilePath);
+        } catch (IOException e) {
+            // Deliberately ignored, for the reason given above.
         }
     }
 
@@ -320,13 +600,29 @@ public class Storage {
         return deadline;
     }
 
-    /** Returns the {@link Event} written as {@code E | <done> | <description> | <from> | <to>}. */
+    /**
+     * Returns the {@link Event} written as {@code E | <done> | <description> | <from> | <to>}.
+     *
+     * <p>The start and the end are checked as a pair by {@link Event#requireValidPeriod},
+     * the rule an event typed at the chatbot meets, so a hand-edited file cannot load an
+     * event the user could never have added. Its message is replaced by a shorter one,
+     * for the reason given at {@link #requireDate}.
+     */
     private static Event parseEvent(List<String> fields) throws BobException {
         requireFieldCount(fields, FIELD_COUNT_EVENT, "event");
-        Event event = new Event(
-                requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description"),
-                requireDate(fields.get(FIELD_INDEX_FROM), "start time"),
-                requireDate(fields.get(FIELD_INDEX_TO), "end time"));
+        String description = requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description");
+        TaskDateTime from = requireDate(fields.get(FIELD_INDEX_FROM), "start time");
+        TaskDateTime to = requireDate(fields.get(FIELD_INDEX_TO), "end time");
+        try {
+            Event.requireValidPeriod(from, to);
+        } catch (BobException e) {
+            // The rule has already decided the pair is refused; comparing the two
+            // again only picks which of its two reasons to give.
+            throw new BobException(to.compareTo(from) < 0
+                    ? "the event ends before it starts"
+                    : "the event starts and ends at the same moment");
+        }
+        Event event = new Event(description, from, to);
         setDone(event, fields.get(FIELD_INDEX_DONE));
         return event;
     }
@@ -476,8 +772,15 @@ public class Storage {
      *
      * <p>Some file errors carry no message of their own, so the name of the error
      * is shown instead of an empty pair of brackets.
+     *
+     * <p>The operating system refusing access is put in words. That error's own message
+     * is only the path it refused, which says nothing about why, and which the message
+     * this explanation goes into names already.
      */
     private static String describe(IOException error) {
+        if (error instanceof AccessDeniedException) {
+            return "permission denied";
+        }
         String reason = error.getMessage();
         if (reason == null || reason.isBlank()) {
             return error.getClass().getSimpleName();

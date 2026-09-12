@@ -1,5 +1,7 @@
 package bob.command;
 
+import java.util.Optional;
+
 import bob.BobException;
 import bob.storage.Storage;
 import bob.task.Task;
@@ -33,9 +35,20 @@ public class AddCommand extends Command {
     /**
      * Adds the task to the list, shows it back along with how many tasks there now
      * are, and saves the changed list.
+     *
+     * <p>A task the list already holds is refused instead, so nothing is added or
+     * saved. The task already there is named by its number and shown, since capitals
+     * and spaces are ignored when matching, and it may not look exactly like what was
+     * typed.
      */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) throws BobException {
+        Optional<Integer> duplicateIndex = tasks.findDuplicate(task);
+        if (duplicateIndex.isPresent()) {
+            int index = duplicateIndex.get();
+            // The user counts from 1, the list counts from 0.
+            throw new BobException("Yu already have dis as task " + (index + 1) + ": " + tasks.get(index));
+        }
         tasks.add(task);
         ui.showAddedTask(task, tasks.size());
         storage.save(tasks.asList());

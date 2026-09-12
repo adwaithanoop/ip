@@ -3,6 +3,7 @@ package bob.task;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -33,6 +34,9 @@ import java.util.stream.IntStream;
  * a position that exists, exactly as a plain list would.
  */
 public class TaskList {
+
+    /** A position no task is ever at, given as the one to skip when none is to be skipped. */
+    private static final int NO_INDEX = -1;
 
     /**
      * The tasks themselves, in the order they were added.
@@ -214,5 +218,40 @@ public class TaskList {
                 .sorted(Comparator.comparing(
                         index -> tasks.get(index).getScheduledDate().orElseThrow()))
                 .toList();
+    }
+
+    /**
+     * Returns the position of the first task in the list that is the same task as
+     * {@code task}, in the sense of {@link Task#isSameTaskAs}, or an empty
+     * {@link Optional} when there is none.
+     *
+     * <p>Used to refuse a task the list already holds. A position is returned rather
+     * than a yes or no so that the user can be shown which task it matched: capitals
+     * and spaces are ignored in matching, so that task may not look exactly like the
+     * one they typed.
+     *
+     * @param task the task to look for.
+     * @return the position of the first matching task, counting from 0.
+     */
+    public Optional<Integer> findDuplicate(Task task) {
+        return findDuplicate(task, NO_INDEX);
+    }
+
+    /**
+     * Returns the position of the first task in the list, other than the one at
+     * {@code indexToSkip}, that is the same task as {@code task}.
+     *
+     * <p>This is for an edit, whose result is compared with the list while the task it
+     * was made from is still in it. Skipping that task means an edit that changes only
+     * the capitals of a description is not refused for matching the task it changes.
+     *
+     * @param task        the task to look for.
+     * @param indexToSkip the position of the one task not to compare it with, counting from 0.
+     * @return the position of the first other matching task, counting from 0.
+     */
+    public Optional<Integer> findDuplicate(Task task, int indexToSkip) {
+        return findIndexes(existing -> existing.isSameTaskAs(task)).stream()
+                .filter(index -> index != indexToSkip)
+                .findFirst();
     }
 }

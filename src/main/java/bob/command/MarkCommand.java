@@ -34,10 +34,20 @@ public class MarkCommand extends TaskNumberCommand {
     /**
      * Sets the numbered task's done status, shows the task back with its new
      * status, and saves the changed list.
+     *
+     * <p>A task that already has that status is left as it is and shown back with a
+     * note saying so, and nothing is saved, since nothing changed. That is an ordinary
+     * answer rather than an error: the user wanted the task to end up with that
+     * status, and it has it. It is still said, because a user who typed the wrong task
+     * number is better told than quietly agreed with.
      */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) throws BobException {
         Task task = tasks.get(requireTaskIndex(tasks));
+        if (task.isDone() == isDone) {
+            ui.showAlreadyMarkedTask(task, isDone);
+            return;
+        }
         if (isDone) {
             task.markAsDone();
         } else {

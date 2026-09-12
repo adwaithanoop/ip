@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -251,6 +252,32 @@ public class TaskListTest {
         assertEquals(List.of(0, 1, 3), tasks.findIndexes(task -> task.matchesKeyword("book")));
         assertEquals(List.of(2, 3), tasks.findIndexes(task -> task.matchesKeyword("club")));
         assertEquals(List.of(), tasks.findIndexes(task -> task.matchesKeyword("swim")));
+    }
+
+    @Test
+    public void findDuplicate_sameTaskTwiceInTheList_positionOfTheFirst() {
+        // Only a hand-edited save file can hold the same task twice, but load keeps both.
+        TaskList tasks = listOf(new Todo("read book"), new Todo("return book"), new Todo("Return Book"));
+
+        assertEquals(Optional.of(1), tasks.findDuplicate(new Todo("return  book")));
+    }
+
+    @Test
+    public void findDuplicate_noSameTask_empty() throws BobException {
+        TaskList tasks = listOf(new Todo("read book"), deadlineOn("return book", "2026-12-02"));
+
+        assertEquals(Optional.empty(), tasks.findDuplicate(new Todo("return book")));
+        assertEquals(Optional.empty(), new TaskList().findDuplicate(new Todo("read book")));
+    }
+
+    @Test
+    public void findDuplicate_indexToSkip_taskNotMatchedWithItself() {
+        TaskList tasks = listOf(new Todo("read book"), new Todo("return book"));
+
+        // An edit that recapitalizes task 1 must not be refused for matching task 1...
+        assertEquals(Optional.empty(), tasks.findDuplicate(new Todo("Read Book"), 0));
+        // ...but is still refused for matching a different task.
+        assertEquals(Optional.of(1), tasks.findDuplicate(new Todo("return book"), 0));
     }
 
     /** Returns a task list holding the given tasks, in the order given. */

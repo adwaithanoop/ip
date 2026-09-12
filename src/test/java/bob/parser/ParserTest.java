@@ -63,20 +63,36 @@ public class ParserTest {
     @Test
     public void parse_commandWordRunTogetherWithItsArgument_exceptionThrown() {
         // "todolist" is not "todo" with the description "list", because a command
-        // word only counts when the line goes on with a space after it.
+        // word only counts when the line goes on with whitespace after it.
         assertThrows(BobException.class, () -> Parser.parse("todolist"));
     }
 
     @Test
-    public void parse_argumentAfterCommandThatTakesNone_exceptionThrown() {
-        assertThrows(BobException.class, () -> Parser.parse("bye now"));
-        assertThrows(BobException.class, () -> Parser.parse("list all"));
+    public void parse_argumentAfterCommandThatTakesNone_exceptionSaysItTakesNothing() {
+        BobException byeException = assertThrows(BobException.class, () -> Parser.parse("bye now"));
+        BobException listException = assertThrows(BobException.class, () -> Parser.parse("list\tall"));
+
+        assertEquals("bye takes nothing after it.\nLike dis: bye", byeException.getMessage());
+        assertEquals("list takes nothing after it.\nLike dis: list", listException.getMessage());
     }
 
     @Test
-    public void parse_commandInCapitals_exceptionThrown() {
-        // The chatbot's vocabulary is lower case, and nothing quietly folds case.
-        assertThrows(BobException.class, () -> Parser.parse("TODO read book"));
+    public void parse_commandInWrongCase_exceptionSuggestsTheLowercaseWord() {
+        // The chatbot's vocabulary is lower case, and nothing quietly folds case,
+        // but the user is told which word they probably meant.
+        BobException todoException = assertThrows(BobException.class, () -> Parser.parse("TODO read book"));
+        BobException byeException = assertThrows(BobException.class, () -> Parser.parse("Bye"));
+
+        assertTrue(todoException.getMessage().startsWith("Sorry, I don't know what \"TODO read book\""));
+        assertTrue(todoException.getMessage().endsWith("\nCommands are lowercase. Did yu mean todo?"));
+        assertTrue(byeException.getMessage().endsWith("\nCommands are lowercase. Did yu mean bye?"));
+    }
+
+    @Test
+    public void parse_capitalizedWordThatIsNoCommand_noSuggestion() {
+        BobException exception = assertThrows(BobException.class, () -> Parser.parse("Blah"));
+
+        assertFalse(exception.getMessage().contains("Did yu mean"));
     }
 
     @Test
@@ -107,6 +123,28 @@ public class ParserTest {
         // The spaces are removed before the arguments reach TaskParser, so this is
         // checked through the whole line rather than in TaskParserTest.
         assertEquals("[T][ ] read book", firstTaskFrom("todo    read book   ").toString());
+    }
+
+    @Test
+    public void parse_spacesAroundWholeLine_trimmed() throws BobException {
+        // Trimmed here rather than by whoever read the line, so a line handed
+        // straight to Bob.getResponse is read like one typed at the console.
+        assertInstanceOf(ListCommand.class, Parser.parse("  list\t"));
+    }
+
+    @Test
+    public void parse_tabAfterCommandWord_readLikeASpace() throws BobException {
+        assertEquals("[T][ ] read book", firstTaskFrom("todo\tread book").toString());
+    }
+
+    @Test
+    public void parse_noBreakSpaces_readAsOrdinarySpaces() throws BobException {
+        // Text pasted from a web page often carries U+00A0, which trim() leaves alone.
+        assertInstanceOf(ListCommand.class, Parser.parse("\u00A0list\u00A0"));
+        assertEquals("[T][ ] read book", firstTaskFrom("todo\u00A0read\u00A0book").toString());
+
+        BobException exception = assertThrows(BobException.class, () -> Parser.parse(" \u00A0 "));
+        assertTrue(exception.getMessage().contains("didn't type anything"));
     }
 
     /**

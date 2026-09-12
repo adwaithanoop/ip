@@ -35,12 +35,12 @@ started in, so a directory per test case is what stops one test case from
 loading the tasks another one saved — and it keeps a test run from writing
 anything into the repository.
 
-The one test case that has the program print the path of the data file (TC22)
-expects it written with `/` between the folder and the file name. That is how
-the path prints on macOS and Linux; on Windows the same path prints as
+The two test cases that have the program print the path of the data file (TC22
+and TC38) expect it written with `/` between the folder and the file name. That
+is how the path prints on macOS and Linux; on Windows the same path prints as
 `data\duke.txt`, because the program builds it from its parts and lets the
-operating system supply the separator. On Windows, expect that test case to
-report a difference in those four lines only.
+operating system supply the separator. On Windows, expect those test cases to
+report a difference in the lines naming the file only.
 
 ## The save file
 
@@ -53,6 +53,10 @@ what is on the disk on either side of the run:
   has finished, and the test case fails if it does not match. The block may be
   the single line `(no file)`, which says the program should have left no save
   file at all.
+
+A program that finds a damaged save file also copies it to `data/duke.txt.bak`.
+The runner does not compare that copy, so what it holds is checked by the JUnit
+tests in `StorageTest` instead.
 
 A test case with neither block starts with no save file — the ordinary first
 run — and nothing is checked about what it saves. That is the case for TC1 to
@@ -896,7 +900,9 @@ bye
 Good and bad commands are interleaved, and the running task count in each
 confirmation, together with the `list` at the end, shows that every refused
 command added nothing and marked nothing. In particular the failed `mark 3`
-must not affect the task that `mark 2` later marks.
+must not affect the task that `mark 2` later marks. The closing `unmark 1` is
+answered with the note that there is nothing to change, which is itself the
+evidence that nothing refused along the way marked task 1.
 
 **Input**
 
@@ -994,7 +1000,7 @@ bye
     ____________________________________________________________
 
     ____________________________________________________________
-     Bi-do! Dis one not finish yet:
+     Dis one not finish yet! Nothing to change:
        [T][ ] read book
     ____________________________________________________________
 
@@ -1497,10 +1503,11 @@ bye
 
 **Aim:** Check that `list` and `bye`, which stand alone, are recognised only when
 typed exactly. `bye now` must not end the conversation and `list foo` must not
-list anything; both are unrecognised lines. The commands after them prove the
-conversation carried on, which is the visible consequence of `bye now` not being
-taken as `bye`. Also checks that command words are case-sensitive, so `BYE` is
-not `bye`. This is the counterpart to the `todolist` case in TC9: there, a
+list anything; each is answered by saying the command takes nothing after it.
+The commands after them prove the conversation carried on, which is the visible
+consequence of `bye now` not being taken as `bye`. Also checks that command words
+are case-sensitive, so `BYE` is not `bye`, though the answer suggests the
+lowercase word. This is the counterpart to the `todolist` case in TC9: there, a
 command that *does* take arguments must not match a longer word; here, a command
 that takes none must not match a longer line.
 
@@ -1556,20 +1563,21 @@ bye
 
     ____________________________________________________________
      MINION EMERGENCY!
-     Sorry, I don't know what "bye now" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     bye takes nothing after it.
+     Like dis: bye
     ____________________________________________________________
 
     ____________________________________________________________
      MINION EMERGENCY!
-     Sorry, I don't know what "list foo" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     list takes nothing after it.
+     Like dis: list
     ____________________________________________________________
 
     ____________________________________________________________
      MINION EMERGENCY!
      Sorry, I don't know what "BYE" means.
      Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     Commands are lowercase. Did yu mean bye?
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1746,7 +1754,7 @@ bye
     ____________________________________________________________
 
     ____________________________________________________________
-     Bello again! Bob found 3 tasks from before.
+     Bob found 3 tasks from before.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -1835,7 +1843,7 @@ bye
     ____________________________________________________________
 
     ____________________________________________________________
-     Bello again! Bob found 2 tasks from before.
+     Bob found 2 tasks from before.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -2015,7 +2023,7 @@ bye
     ____________________________________________________________
 
     ____________________________________________________________
-     Bello again! Bob found 2 tasks from before.
+     Bob found 2 tasks from before.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -2054,9 +2062,10 @@ loaded. The last of those is new: a deadline due `someday` was a readable line
 before this increment, and is not one now that dates are understood. Its message
 is the short one written for someone repairing the file, not the three lines of
 advice the chatbot gives someone typing a command. A blank line is not damage and
-is passed over in silence. The warning that the skipped lines will be lost is the
+is passed over in silence. The warning that the skipped lines will be dropped is the
 point of reporting them at all: the next command that changes the list rewrites
-the whole file without them.
+the whole file without them. So the file is first copied, as it was, to
+`data/duke.txt.bak`, and the report ends by saying where the copy is.
 
 **Data file before**
 
@@ -2118,14 +2127,15 @@ bye
     ____________________________________________________________
 
     ____________________________________________________________
-     Bello again! Bob found 2 tasks from before.
+     Bob found 2 tasks from before.
      Line 2 of data/duke.txt isn't a task I can read: "X" is not a kind of task I know (I know T, D and E).
      Line 3 of data/duke.txt isn't a task I can read: a saved deadline has 4 fields, but this line has 3.
      Line 4 of data/duke.txt isn't a task I can read: "2" doesn't say whether the task is done (it should be 1 or 0).
      Line 5 of data/duke.txt isn't a task I can read: the description is empty.
      Line 6 of data/duke.txt isn't a task I can read: the due date "someday" isn't a date (dates are saved as 2026-12-02, or 2026-12-02 1800 with a time).
      I've left those 5 lines out of your list.
-     They will be lost the next time the list changes — fix the file to keep them.
+     They'll be dropped from data/duke.txt the next time the list changes, but the copy still has them.
+     The file as it was is kept in data/duke.txt.bak, so nothing in it is lost.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -2157,10 +2167,12 @@ E | 0 | party | 2026-12-06 2000 | 2026-12-06 2300
 **Aim:** Check the four ways a date can be wrong without being obvious nonsense:
 a day that never happened, a time of day that does not exist, a date written the
 way half the world writes it but the chatbot does not read, and a date with an
-extra word tacked on to it. Each is quoted back in full, so a user who typed two
-dates on one line can see which of them was not understood. The last command
-shows that the chatbot still accepts a well-formed date after all of that, and
-the `list` shows that none of the refused commands stored anything.
+extra word tacked on to it. The first two are in the accepted form, so each is
+told what is wrong with the day or the time it names rather than asked again for
+the form. The other two are quoted back in full, so a user who typed two dates on
+one line can see which of them was not understood. The last command shows that
+the chatbot still accepts a well-formed date after all of that, and the `list`
+shows that none of the refused commands stored anything.
 
 **Input**
 
@@ -2215,16 +2227,12 @@ bye
 
     ____________________________________________________________
      MINION EMERGENCY!
-     I don't understand "2026-02-30" as a date.
-     Write the day as yyyy-mm-dd, and add a 24-hour time if the hour matters.
-     Like dis: 2026-12-02 or 2026-12-02 1800
+     2026-02-30 isn't a real day: February 2026 has 28 days.
     ____________________________________________________________
 
     ____________________________________________________________
      MINION EMERGENCY!
-     I don't understand "2026-12-02 2500" as a date.
-     Write the day as yyyy-mm-dd, and add a 24-hour time if the hour matters.
-     Like dis: 2026-12-02 or 2026-12-02 1800
+     2500 isn't a real time: hours go up to 23 and minutes up to 59.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -2885,17 +2893,19 @@ bye
     ____________________________________________________________
 ```
 
-### TC29 - An event cannot end before it starts
+### TC29 - An event cannot end before it starts, or at the same moment
 
 **Aim:** Check that a pair of dates which are each perfectly readable, but which
 put the end of an event before its start, is refused rather than stored. Both
-dates are quoted back in the message, so a user who typed them the wrong way round
+dates are shown back in the message, so a user who typed them the wrong way round
 can see which the chatbot read as which. Checked on two scales: a start and an end
 days apart, and a start and an end on the same day whose times are the wrong way
 round, which is the case a comparison of days alone would let through. An event
-starting and ending at the same moment is accepted, since that is a point in time
-rather than a contradiction, and it is the boundary the check is written against.
-The `list` at the end shows that only the well-formed events were stored.
+starting and ending at the same moment is refused too, and the user is pointed to a
+deadline, which is what records a single moment. An event starting and ending on
+the same day with no times is a one-day event, and is accepted. Those two are the
+boundary the check is written against. The `list` at the end shows that only the
+well-formed events were stored.
 
 **Input**
 
@@ -2903,6 +2913,7 @@ The `list` at the end shows that only the well-formed events were stored.
 event conference /from 2026-12-05 /to 2026-12-02
 event workshop /from 2026-12-05 1800 /to 2026-12-05 0900
 event standup /from 2026-12-05 0900 /to 2026-12-05 0900
+event open day /from 2026-12-05 /to 2026-12-05
 event trip /from 2026-12-02 /to 2026-12-05
 list
 bye
@@ -2950,18 +2961,23 @@ bye
     ____________________________________________________________
      MINION EMERGENCY!
      An event can't end before it starts.
-     You wrote /from Dec 05 2026 and /to Dec 02 2026 — check whether they are the wrong way round.
+     It would run from Dec 05 2026 to Dec 02 2026.
     ____________________________________________________________
 
     ____________________________________________________________
      MINION EMERGENCY!
      An event can't end before it starts.
-     You wrote /from Dec 05 2026 18:00 and /to Dec 05 2026 09:00 — check whether they are the wrong way round.
+     It would run from Dec 05 2026 18:00 to Dec 05 2026 09:00.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     An event can't start and end at the same moment. For a single moment, use a deadline.
     ____________________________________________________________
 
     ____________________________________________________________
      Okay! Bob add dis:
-       [E][ ] standup (from: Dec 05 2026 09:00 to: Dec 05 2026 09:00)
+       [E][ ] open day (from: Dec 05 2026 to: Dec 05 2026)
      Now yu have 1 task in da list.
     ____________________________________________________________
 
@@ -2973,7 +2989,7 @@ bye
 
     ____________________________________________________________
      Luk at tu! Here da tasks:
-     1.[E][ ] standup (from: Dec 05 2026 09:00 to: Dec 05 2026 09:00)
+     1.[E][ ] open day (from: Dec 05 2026 to: Dec 05 2026)
      2.[E][ ] trip (from: Dec 02 2026 to: Dec 05 2026)
     ____________________________________________________________
 
@@ -3265,7 +3281,7 @@ bye
     ____________________________________________________________
 
     ____________________________________________________________
-     Bello again! Bob found 3 tasks from before.
+     Bob found 3 tasks from before.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -3484,7 +3500,7 @@ bye
     ____________________________________________________________
      MINION EMERGENCY!
      An event can't end before it starts.
-     That change would have it run from Aug 06 2026 17:00 to Aug 06 2026 16:00.
+     It would run from Aug 06 2026 17:00 to Aug 06 2026 16:00.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -3505,4 +3521,967 @@ bye
 T | 0 | read book
 D | 0 | return book | 2026-12-02
 E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1600
+```
+
+### TC34 - Command words in the wrong case or after unusual spaces
+
+**Aim:** Check how a line is read when its command word is not typed as plain
+lowercase followed by a space. `Todo read book` and `MARK 1` are still refused,
+since commands are lowercase, but each answer ends by suggesting the lowercase
+word. The third input line has a tab rather than a space after `todo`, and is
+added like any other todo. The fourth has no-break spaces (U+00A0, as text pasted
+from a web page often does) before `deadline`, after it, and between `return` and
+`book`; they are read as ordinary spaces, so the deadline is added and saved with
+an ordinary space in its description. Both characters are invisible in the input
+block, so edit those two lines with care. The `list` and the save file show that
+only those two tasks were added.
+
+**Input**
+
+```text
+Todo read book
+todo	read book
+ deadline return book /by 2026-12-02
+MARK 1
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Sorry, I don't know what "Todo read book" means.
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     Commands are lowercase. Did yu mean todo?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [T][ ] read book
+     Now yu have 1 task in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] return book (by: Dec 02 2026)
+     Now yu have 2 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Sorry, I don't know what "MARK 1" means.
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     Commands are lowercase. Did yu mean mark?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][ ] read book
+     2.[D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | read book
+D | 0 | return book | 2026-12-02
+```
+
+### TC35 - Task numbers that are too big or more than one
+
+**Aim:** Check the task numbers that are numbers but cannot be carried out as
+one. `mark 99999999999` is too big for any list and is refused as too big,
+rather than as not being a number, which it is; `edit` reads its task number
+the same way and is refused alike. `delete 1 2` names two tasks, and is refused
+with an example that deletes the first of them. A `next` asking for more tasks
+than a number can hold is not refused: like any count larger than the list, it
+shows every dated task. The `list` and the save file at the end show that
+nothing was marked, edited or deleted.
+
+**Input**
+
+```text
+todo read book
+deadline return book /by 2026-12-02
+event project meeting /from 2026-08-06 1400 /to 2026-08-06 1600
+mark 99999999999
+delete 1 2
+edit 99999999999 /desc read novel
+next 99999999999
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [T][ ] read book
+     Now yu have 1 task in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] return book (by: Dec 02 2026)
+     Now yu have 2 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+     Now yu have 3 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     99999999999 is too big to be a task number.
+     I need the number shown next to the task in list, for example: mark 2
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     I can only delete one task at a time.
+     Like dis: delete 1
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     99999999999 is too big to be a task number.
+     I need the number shown next to the task in list, for example: edit 2
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bee-do bee-do! 2 most urgent, soonest first:
+     3.[E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+     2.[D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][ ] read book
+     2.[D][ ] return book (by: Dec 02 2026)
+     3.[E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | read book
+D | 0 | return book | 2026-12-02
+E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1600
+```
+
+### TC36 - Markers inside words, repeated, misplaced or in capitals
+
+**Aim:** Check that a marker counts only as a whole word, and that each way a
+marker can be misused is refused with the explanation that fits it. `/byzantine`
+is part of the first deadline's description rather than its `/by`, and `/tokyo`
+is kept whole in a new description rather than read as `/to`. A marker written
+twice is refused, in an add command and in an edit alike. A deadline given
+`/from`, and an event given `/by`, are told which markers they take. `/desc` in an
+add command is refused as belonging to `edit`. A todo with a date marker is
+pointed to `deadline` for `/by` and to `event` for `/from` and `/to`. An event
+with `/to` before `/from` is asked to swap them, and a marker in capitals is
+answered with the lowercase marker. The `list` and the save file show that only
+the first deadline was added, and only the one edit made.
+
+**Input**
+
+```text
+deadline study /byzantine /by 2026-12-02
+deadline return book /by 2026-12-02 /by 2026-12-03
+deadline return book /by 2026-12-02 /from 2026-12-01
+event project meeting /from 2026-08-06 1400 /to 2026-08-06 1600 /by 2026-08-05
+deadline /desc return book /by 2026-12-02
+todo read book /by 2026-12-02
+todo party /from 2026-12-05 /to 2026-12-06
+event project meeting /to 2026-08-06 1600 /from 2026-08-06 1400
+deadline return book /BY 2026-12-02
+edit 1 /desc fly /tokyo
+edit 1 /desc a /desc b
+edit 1 /DESC read book
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] study /byzantine (by: Dec 02 2026)
+     Now yu have 1 task in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     You wrote /by twice. Give just one.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     A deadline only takes /by, not /from.
+     Like dis: deadline return book /by 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     An event only takes /from and /to, not /by.
+     Like dis: event project meeting /from 2026-12-02 1800 /to 2026-12-02 2000
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     /desc is only used with edit. Write the description straight after deadline.
+     Like dis: deadline return book /by 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     A todo has no dates. Did yu mean deadline?
+     Like dis: deadline return book /by 2026-12-02
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     A todo has no dates. Did yu mean event?
+     Like dis: event project meeting /from 2026-12-02 1800 /to 2026-12-02 2000
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Put /from before /to.
+     Like dis: event project meeting /from 2026-12-02 1800 /to 2026-12-02 2000
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Markers are lowercase. Did yu mean /by?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Tadaa! Dis was:
+       [D][ ] study /byzantine (by: Dec 02 2026)
+     Now is:
+       [D][ ] fly /tokyo (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     You wrote /desc twice. Give just one.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Markers are lowercase. Did yu mean /desc?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[D][ ] fly /tokyo (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+D | 0 | fly /tokyo | 2026-12-02
+```
+
+### TC37 - Days and times that are written correctly but do not exist
+
+**Aim:** Check that a day or a time in the accepted form, but naming one that
+does not exist, is refused with what is wrong with it. `2400` is refused rather
+than quietly read as midnight at the start of the same day, and `1260` is
+refused for its minutes although it is below `2359`. A month past 12, and the
+30th of February in a leap year, are refused with the month or its length. The
+check is the same wherever a date is read: in an event's end, and in the day
+asked about by `on` and `before`, including month `00`. The last deadline is on
+the leap day at the last minute of the day, which does exist, and the `list` and
+the save file show it is the only task added.
+
+**Input**
+
+```text
+deadline pay fees /by 2026-12-02 2400
+deadline pay fees /by 2026-12-02 1260
+deadline pay fees /by 2026-13-01
+deadline pay fees /by 2028-02-30
+event exam week /from 2026-04-27 /to 2026-04-31
+on 2026-02-29
+before 2026-00-10
+deadline pay fees /by 2028-02-29 2359
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     2400 isn't a real time: hours go up to 23 and minutes up to 59.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     1260 isn't a real time: hours go up to 23 and minutes up to 59.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     2026-13-01 isn't a real day: there is no month 13.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     2028-02-30 isn't a real day: February 2028 has 29 days.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     2026-04-31 isn't a real day: April 2026 has 30 days.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     2026-02-29 isn't a real day: February 2026 has 28 days.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     2026-00-10 isn't a real day: there is no month 0.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] pay fees (by: Feb 29 2028 23:59)
+     Now yu have 1 task in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[D][ ] pay fees (by: Feb 29 2028 23:59)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+D | 0 | pay fees | 2028-02-29 2359
+```
+
+### TC38 - Duplicate tasks
+
+**Aim:** Check that a task the list already holds is refused rather than added a
+second time, and that an edit which would make one task the same as another is
+refused too. Tasks are matched loosely: capitals and the spaces between words are
+ignored, and so is whether a task is done, so `todo READ   book` matches the saved
+`read book`, and a new deadline matches one already marked done. The task already
+there is named by its number and shown as it is. The same words with a different
+date, or on a different kind of task, make a different task and are added: a
+deadline due at `0000` is not one due on the day with no time, and an event ending
+an hour later is not the same event. An edit is not compared with the task it
+changes, so recapitalizing task 4 is carried out. The save file starts with the
+same todo on lines 1 and 3, which only a hand-edited file can hold: both are loaded,
+and the load report names the two lines. The `list` and the save file at the end
+show that nothing refused was added or saved.
+
+**Data file before**
+
+```text
+T | 0 | read book
+D | 1 | return book | 2026-12-02
+T | 1 | Read  Book
+E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1600
+```
+
+**Input**
+
+```text
+todo READ   book
+deadline Return Book /by 2026-12-02
+deadline return book /by 2026-12-02 0000
+event project meeting /from 2026-08-06 1400 /to 2026-08-06 1700
+todo return book
+edit 6 /to 2026-08-06 1600
+edit 7 /desc READ BOOK
+edit 4 /desc Project Meeting
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bob found 4 tasks from before.
+     Lines 1 and 3 of data/duke.txt are the same task. I've kept both — delete the one you don't need.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Yu already have dis as task 1: [T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Yu already have dis as task 2: [D][X] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] return book (by: Dec 02 2026 00:00)
+     Now yu have 5 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 17:00)
+     Now yu have 6 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [T][ ] return book
+     Now yu have 7 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Dat change would make it da same as task 4:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Dat change would make it da same as task 1:
+       [T][ ] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Tadaa! Dis was:
+       [E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+     Now is:
+       [E][ ] Project Meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][ ] read book
+     2.[D][X] return book (by: Dec 02 2026)
+     3.[T][X] Read  Book
+     4.[E][ ] Project Meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)
+     5.[D][ ] return book (by: Dec 02 2026 00:00)
+     6.[E][ ] project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 17:00)
+     7.[T][ ] return book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | read book
+D | 1 | return book | 2026-12-02
+T | 1 | Read  Book
+E | 0 | Project Meeting | 2026-08-06 1400 | 2026-08-06 1600
+D | 0 | return book | 2026-12-02 0000
+E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1700
+T | 0 | return book
+```
+
+### TC39 - Marking a task that already has that status
+
+**Aim:** Check that `mark` on a task already done, and `unmark` on a task not done,
+are answered as ordinary replies rather than as complaints: there is no
+`MINION EMERGENCY!` line, since the task ends up as the user asked. The task is
+still shown, with a note that there was nothing to change, so a user who typed the
+wrong number can see which task it was. Nothing is saved. The save file is written
+without the spaces around each bar that a save puts there, so the Data file after
+being byte for byte the Data file before shows that the file was never rewritten.
+
+**Data file before**
+
+```text
+T|1|read book
+D|0|return book|2026-12-02
+```
+
+**Input**
+
+```text
+mark 1
+unmark 2
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bob found 2 tasks from before.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Dis one already finish! Nothing to change:
+       [T][X] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Dis one not finish yet! Nothing to change:
+       [D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][X] read book
+     2.[D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T|1|read book
+D|0|return book|2026-12-02
+```
+
+### TC40 - A damaged save file is copied before it can be overwritten
+
+**Aim:** Check that a save file with lines the chatbot cannot read is copied, as it
+was, to `data/duke.txt.bak` when the chatbot starts, and that the load report says
+where the copy is rather than warning that the skipped lines will be lost. The
+damaged lines are the two events that break the rule an event typed at the chatbot
+meets — one ending before it starts, and one starting and ending at the same
+moment — so this also checks that a hand-edited file cannot load either of them.
+The `todo` afterwards changes the list, and the Data file after shows that
+`data/duke.txt` was then rewritten without the skipped lines, leaving the copy as
+the only place they survive. What the copy holds is checked in `StorageTest`,
+since the runner compares only `data/duke.txt`.
+
+**Data file before**
+
+```text
+T | 0 | read book
+E | 0 | conference | 2026-12-05 | 2026-12-02
+E | 0 | standup | 2026-12-05 0900 | 2026-12-05 0900
+```
+
+**Input**
+
+```text
+todo pay bills
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bob found 1 task from before.
+     Line 2 of data/duke.txt isn't a task I can read: the event ends before it starts.
+     Line 3 of data/duke.txt isn't a task I can read: the event starts and ends at the same moment.
+     I've left those 2 lines out of your list.
+     They'll be dropped from data/duke.txt the next time the list changes, but the copy still has them.
+     The file as it was is kept in data/duke.txt.bak, so nothing in it is lost.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [T][ ] pay bills
+     Now yu have 2 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][ ] read book
+     2.[T][ ] pay bills
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | read book
+T | 0 | pay bills
+```
+
+### TC41 - A save file that starts with a byte order mark
+
+**Aim:** Check that a save file some editors would write, Notepad among them, is
+read like any other. Such an editor puts an invisible character, the byte order
+mark, at the very start of a file it saves as UTF-8. It sits at the start of the
+first line of the Data file before below, where it cannot be seen, and before this
+increment it made that line unreadable, so the first task was reported and left
+out. Now both tasks load with nothing to report. The `mark 1` rewrites the file,
+and the Data file after shows the mark is not written back. An editor that strips
+the invisible character from this plan would turn the test into an ordinary load,
+so check for it if this test case ever passes when it should not.
+
+**Data file before**
+
+```text
+﻿T | 0 | read book
+D | 0 | return book | 2026-12-02
+```
+
+**Input**
+
+```text
+mark 1
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Bob found 2 tasks from before.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Kanpai! Dis one finish:
+       [T][X] read book
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][X] read book
+     2.[D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 1 | read book
+D | 0 | return book | 2026-12-02
 ```

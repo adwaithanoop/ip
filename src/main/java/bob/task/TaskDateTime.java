@@ -2,9 +2,15 @@ package bob.task;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.time.format.TextStyle;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import bob.BobException;
 
@@ -52,8 +58,30 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
     /**
      * How the time of day is typed, and how it is written to the save file:
      * four digits on a 24-hour clock, so {@code 1800} is six in the evening.
+     *
+     * <p>The strict resolver is what refuses {@code 2400}. The default one reads it,
+     * without a word, as midnight at the start of the same day — a day earlier than
+     * the user meant. Strictly, only {@code 0000} to {@code 2359} are times.
      */
-    private static final DateTimeFormatter INPUT_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm");
+    private static final DateTimeFormatter INPUT_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("HHmm").withResolverStyle(ResolverStyle.STRICT);
+
+    /**
+     * A day written in the form {@link #parse} reads, {@code yyyy-mm-dd}, with the
+     * year, the month and the day captured in that order.
+     *
+     * <p>Used only to explain text that could not be read: text of this form that is
+     * still not a day names a month or a day that does not exist.
+     */
+    private static final Pattern DAY_FORM = Pattern.compile("(\\d{4})-(\\d{2})-(\\d{2})");
+
+    /**
+     * A time of day written in the form {@link #parse} reads, four digits, with the
+     * hour and the minute captured in that order.
+     *
+     * <p>Used, like {@link #DAY_FORM}, only to explain text that could not be read.
+     */
+    private static final Pattern TIME_FORM = Pattern.compile("(\\d{2})(\\d{2})");
 
     /**
      * How the day is shown back to the user, for example {@code Dec 02 2026}.
@@ -114,11 +142,15 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
      * December or the 12th of February, and either answer is wrong for half the
      * world; asking for the year first leaves nothing to guess.
      *
+     * <p>Text written in that form can still name a day or a time that does not
+     * exist, such as {@code 2026-02-30} or {@code 2400}. That is refused with a
+     * message saying what is wrong with it, since asking again for the form would
+     * point the user at the one part they had right.
+     *
      * @param text what the user typed after {@code /by}, {@code /from} or {@code /to}.
      * @return the date that text names.
      * @throws BobException if the text is not a day, or a day and a time, in that
-     *                      form — including a day that does not exist, such as
-     *                      {@code 2026-02-30}.
+     *                      form, or if it names a day or a time that does not exist.
      */
     public static TaskDateTime parse(String text) throws BobException {
         String[] parts = text.trim().split("\\s+");
@@ -137,6 +169,10 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
                     : null;
             return new TaskDateTime(date, time);
         } catch (DateTimeParseException e) {
+            requireExistingDay(parts[0]);
+            if (parts.length == 2) {
+                requireExistingTime(parts[1]);
+            }
             throw createUnreadableDateError(text);
         }
     }
@@ -153,13 +189,15 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
      *
      * @param text what the user typed after the command word.
      * @return the day that text names.
-     * @throws BobException if the text is not a day in that form, including a day
-     *                      that does not exist, such as {@code 2026-02-30}.
+     * @throws BobException if the text is not a day in that form, or names a day that
+     *                      does not exist, such as {@code 2026-02-30}.
      */
     public static LocalDate parseDay(String text) throws BobException {
+        String dayText = text.trim();
         try {
-            return LocalDate.parse(text.trim());
+            return LocalDate.parse(dayText);
         } catch (DateTimeParseException e) {
+            requireExistingDay(dayText);
             throw BobException.withExample("I don't understand \"" + text + "\" as a day."
                     + "\nWrite the day as yyyy-mm-dd, with no time after it.", EXAMPLE_DATE);
         }
@@ -177,6 +215,63 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
      */
     public static String formatDay(LocalDate day) {
         return day.format(OUTPUT_DATE_FORMAT);
+    }
+
+    /**
+     * Checks that {@code dayText}, if it is written as {@code yyyy-mm-dd}, names a
+     * day that exists.
+     *
+     * <p>Text in any other form passes unchecked, because what is wrong with it is
+     * its form, and the caller reports that. The month is checked before the day,
+     * since how many days a month has means nothing for a month that does not exist.
+     * {@link YearMonth} knows how long each month is, leap years included.
+     *
+     * @param dayText the word the user typed where a day was expected.
+     * @throws BobException if it is written as a day but names a month or a day that
+     *                      does not exist.
+     */
+    private static void requireExistingDay(String dayText) throws BobException {
+        Matcher matcher = DAY_FORM.matcher(dayText);
+        if (!matcher.matches()) {
+            return;
+        }
+        int month = Integer.parseInt(matcher.group(2));
+        if (month < 1 || month > 12) {
+            throw new BobException(dayText + " isn't a real day: there is no month " + month + ".");
+        }
+        YearMonth yearMonth = YearMonth.of(Integer.parseInt(matcher.group(1)), month);
+        int day = Integer.parseInt(matcher.group(3));
+        if (day < 1 || day > yearMonth.lengthOfMonth()) {
+            // The month is named in English for the reason given at OUTPUT_DATE_FORMAT.
+            String monthName = yearMonth.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+            throw new BobException(dayText + " isn't a real day: " + monthName + " " + yearMonth.getYear()
+                    + " has " + yearMonth.lengthOfMonth() + " days.");
+        }
+    }
+
+    /**
+     * Checks that {@code timeText}, if it is written as four digits, names a time of
+     * day that exists.
+     *
+     * <p>As with {@link #requireExistingDay}, text in any other form passes unchecked.
+     * Both the hour and the minute are named in the message, since {@code 1260} is
+     * below {@code 2359} and a range of times alone would not explain it.
+     *
+     * @param timeText the word the user typed where a time of day was expected.
+     * @throws BobException if it is written as a time but its hour or minute does
+     *                      not exist.
+     */
+    private static void requireExistingTime(String timeText) throws BobException {
+        Matcher matcher = TIME_FORM.matcher(timeText);
+        if (!matcher.matches()) {
+            return;
+        }
+        int hour = Integer.parseInt(matcher.group(1));
+        int minute = Integer.parseInt(matcher.group(2));
+        if (hour > 23 || minute > 59) {
+            throw new BobException(timeText
+                    + " isn't a real time: hours go up to 23 and minutes up to 59.");
+        }
     }
 
     /**
@@ -223,6 +318,17 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
     }
 
     /**
+     * Returns whether the user gave a time of day as well as the day.
+     *
+     * <p>{@link #compareTo} cannot answer this, because it counts a missing time as
+     * the start of the day, so {@code 2026-12-02} and {@code 2026-12-02 0000} compare
+     * as equal although only the second was given a time.
+     */
+    public boolean hasTime() {
+        return time != null;
+    }
+
+    /**
      * Orders dates from earliest to latest, so that sorting a list of them puts
      * the most urgent first.
      *
@@ -248,6 +354,38 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
     /** Returns the time of day, or the start of the day when the user gave no time. */
     private LocalTime getTimeOrStartOfDay() {
         return (time == null) ? LocalTime.MIN : time;
+    }
+
+    /**
+     * Returns whether {@code other} is a date on the same day, with the same time of
+     * day or with no time just as this one has none.
+     *
+     * <p>A day given without a time is not equal to the same day at {@code 0000},
+     * although {@link #compareTo} puts the two level. Ordering has to place a missing
+     * time somewhere, but a task due "on the 2nd" and one due "at midnight on the 2nd"
+     * were written differently and are shown differently, so they are not the same
+     * date. The price is that the ordering is not consistent with {@code equals}: a
+     * sorted set of dates would keep only one of the two.
+     *
+     * @param other the object to compare this date with.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        return other instanceof TaskDateTime otherDate
+                && date.equals(otherDate.date)
+                && Objects.equals(time, otherDate.time);
+    }
+
+    /**
+     * Returns a hash code built from the day and the time of day, the two things
+     * {@link #equals} compares, so that equal dates always share a hash code.
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hash(date, time);
     }
 
     /** Returns for example {@code Dec 02 2026}, or {@code Dec 02 2026 18:00} with a time. */

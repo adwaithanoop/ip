@@ -152,11 +152,63 @@ public abstract class Task {
     }
 
     /**
+     * Returns whether {@code other} is the same task as this one, written again.
+     *
+     * <p>Two tasks are the same when they are the same kind, carry the same dates, and
+     * have descriptions that differ at most in capital letters and in the spaces
+     * between words: {@code Read  Book} is {@code read book} typed a second time, and
+     * the user gains nothing from holding both. Whether either has been done is
+     * ignored, since marking a task done does not make it a different task.
+     *
+     * <p>Only the comparison is loose. Each task keeps its description as it was typed.
+     *
+     * <p>A method with a name of its own rather than an override of {@code equals}.
+     * An equality that ignored capitals and the done status is not what {@code equals}
+     * normally means, and overriding it would bring {@code hashCode} along with it.
+     *
+     * @param other the task to compare this one with.
+     */
+    public boolean isSameTaskAs(Task other) {
+        return getClass() == other.getClass()
+                && normalizeDescription(description).equals(normalizeDescription(other.description))
+                && hasSameDatesAs(other);
+    }
+
+    /**
+     * Returns whether {@code other}, a task of the same kind as this one, carries the
+     * same dates.
+     *
+     * <p>A task with no dates has none to differ in, so this default answers
+     * {@code true}. {@link Deadline} and {@link Event} override it to compare the dates
+     * they add, which keeps {@link #isSameTaskAs} from having to ask which kind of task
+     * it holds.
+     *
+     * @param other a task of the same class as this one.
+     */
+    protected boolean hasSameDatesAs(Task other) {
+        return true;
+    }
+
+    /**
+     * Returns a description in the form two descriptions are compared in: with no
+     * spaces around it, one space between words, and no capital letters.
+     */
+    private static String normalizeDescription(String description) {
+        // Locale.ROOT for the reason given in matchesKeyword.
+        return description.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
+    /**
      * Returns the single character shown inside the status box of a listing:
      * {@code X} for a task that is done, a space for one that is not.
      */
     public String getStatusIcon() {
         return (isDone ? "X" : " ");
+    }
+
+    /** Returns whether the task has been marked as done. */
+    public boolean isDone() {
+        return isDone;
     }
 
     /** Records that the task has been done. */

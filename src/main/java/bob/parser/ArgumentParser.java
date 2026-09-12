@@ -1,6 +1,7 @@
 package bob.parser;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 
 import bob.BobException;
 import bob.command.CommandWord;
@@ -34,10 +35,16 @@ class ArgumentParser {
      * Returns the task number the user typed, counting from 1 to match the
      * numbering shown by {@link CommandWord#LIST}.
      *
-     * <p>Only the two mistakes that are visible in the text itself are caught
-     * here: nothing typed after the command word, and something typed that is not
-     * a number. Whether a number that <em>is</em> a number names a task the user
-     * has is left to the command, which is the one holding the list.
+     * <p>Only the mistakes that are visible in the text itself are caught here:
+     * nothing typed after the command word, several numbers where one was wanted,
+     * a number too big to be a task number, and something typed that is not a
+     * number at all. Whether a number that <em>is</em> a task number names a task
+     * the user has is left to the command, which is the one holding the list.
+     *
+     * <p>A number too big for an {@code int} is refused rather than read as the
+     * largest one that fits. No list is that long, so the user has most likely
+     * typed a key too many, and telling them so is more use than "I don't have a
+     * task numbered 2147483647".
      *
      * <p>The command is passed as a {@link CommandWord} rather than as its keyword, so
      * a caller cannot name a command in the message that does not exist. The
@@ -46,8 +53,8 @@ class ArgumentParser {
      * @param taskNumberText the task number as the user typed it.
      * @param command        the command to name in any error message.
      * @return the number typed, which may still be larger than the list.
-     * @throws BobException if no task number was given, or what was given is not
-     *                      a number.
+     * @throws BobException if no task number was given, several were, or what was
+     *                      given is too big to be a task number or is not a number.
      */
     static int parseTaskNumber(String taskNumberText, CommandWord command) throws BobException {
         String word = command.getKeyword();
@@ -57,12 +64,23 @@ class ArgumentParser {
                     + "\nGive me its number from " + listCommand + ", for example: "
                     + word + " 2");
         }
+
+        // Split at the same whitespace that CommandWord accepts after a keyword.
+        String[] words = taskNumberText.split("\\p{javaWhitespace}+");
+        if (words.length > 1 && Arrays.stream(words).allMatch(ArgumentParser::isDigitsOnly)) {
+            throw BobException.withExample("I can only " + word + " one task at a time.",
+                    word + " " + words[0]);
+        }
+
         try {
             // The user is free to type anything after the command word, so a
             // number is asked for again rather than allowed to crash the chatbot.
             return Integer.parseInt(taskNumberText);
         } catch (NumberFormatException e) {
-            throw new BobException("\"" + taskNumberText + "\" isn't a task number."
+            String problem = isDigitsOnly(taskNumberText)
+                    ? taskNumberText + " is too big to be a task number."
+                    : "\"" + taskNumberText + "\" isn't a task number.";
+            throw new BobException(problem
                     + "\nI need the number shown next to the task in " + listCommand
                     + ", for example: " + word + " 2");
         }
@@ -98,6 +116,10 @@ class ArgumentParser {
      * since a user who typed one has misunderstood the command and would learn
      * nothing from an empty answer.
      *
+     * <p>A count too big for an {@code int} is not refused, unlike a task number
+     * that big. Asking for more tasks than the list holds already shows all of
+     * them, so the largest count that fits is taken instead, and asks for the same.
+     *
      * @param countText the count as the user typed it after {@code next}.
      * @return how many tasks to show, always one or more.
      * @throws BobException if nothing was typed after {@code next}, or what was
@@ -111,8 +133,11 @@ class ArgumentParser {
         try {
             count = Integer.parseInt(countText);
         } catch (NumberFormatException e) {
-            throw BobException.withExample("\"" + countText + "\" isn't a number of tasks.",
-                    NEXT_EXAMPLE);
+            if (!isDigitsOnly(countText)) {
+                throw BobException.withExample("\"" + countText + "\" isn't a number of tasks.",
+                        NEXT_EXAMPLE);
+            }
+            count = Integer.MAX_VALUE;
         }
         if (count < 1) {
             throw BobException.withExample("I can show you one task or more, but not " + count + ".",
@@ -153,5 +178,18 @@ class ArgumentParser {
      */
     private static String getDayExample(CommandWord command) {
         return command.getKeyword() + " " + TaskDateTime.EXAMPLE_DATE;
+    }
+
+    /**
+     * Returns whether {@code text} is made only of the digits 0 to 9.
+     *
+     * <p>Such text is a whole number even when {@link Integer#parseInt} refuses it,
+     * which happens when the number is too big for an {@code int}. Telling that
+     * apart from text that is no number at all is what lets the two be answered
+     * differently. A sign is not allowed, so a hugely negative number is still
+     * answered as not being a task number rather than as too big to be one.
+     */
+    private static boolean isDigitsOnly(String text) {
+        return text.matches("[0-9]+");
     }
 }

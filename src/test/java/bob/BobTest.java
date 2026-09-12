@@ -162,6 +162,18 @@ public class BobTest {
     }
 
     @Test
+    public void getResponse_spacesAroundLine_readAsTheCommandInside() {
+        Bob bob = bobWithSavedLines();
+
+        // getResponse is public, so its line need not come from the window, which
+        // trims its own; the line is trimmed where it is parsed, for every caller.
+        String response = bob.getResponse("  list  ");
+
+        assertEquals("No tasks yet! Bob bored...", response);
+        assertFalse(bob.isLastResponseError());
+    }
+
+    @Test
     public void getResponse_changedList_writtenToTheSaveFile() throws IOException {
         Bob bob = bobWithSavedLines();
 
@@ -170,6 +182,42 @@ public class BobTest {
         // The window's chatbot saves as the console's does; a task added in one
         // session has to be there in the next.
         assertEquals("T | 0 | read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
+    @Test
+    public void getResponse_taskAlreadyInTheList_refusedAsAnErrorAndNotSaved() throws IOException {
+        Bob bob = bobWithSavedLines("T | 0 | read book");
+
+        String response = bob.getResponse("todo Read  Book");
+
+        // The task already there is shown as it is, not as the new line was typed.
+        assertEquals("MINION EMERGENCY!\nYu already have dis as task 1: [T][ ] read book", response);
+        assertTrue(bob.isLastResponseError());
+        assertEquals("T | 0 | read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
+    @Test
+    public void getResponse_markTaskAlreadyDone_answeredNotAsAnErrorAndNothingSaved() throws IOException {
+        // Written without the spaces a save puts around each bar, so a file still
+        // written this way afterwards shows that nothing was saved.
+        Bob bob = bobWithSavedLines("T|1|read book");
+
+        String response = bob.getResponse("mark 1");
+
+        assertEquals("Dis one already finish! Nothing to change:\n  [T][X] read book", response);
+        assertFalse(bob.isLastResponseError());
+        assertEquals("T|1|read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
+    @Test
+    public void getResponse_unmarkTaskNotDone_answeredNotAsAnErrorAndNothingSaved() throws IOException {
+        Bob bob = bobWithSavedLines("T|0|read book");
+
+        String response = bob.getResponse("unmark 1");
+
+        assertEquals("Dis one not finish yet! Nothing to change:\n  [T][ ] read book", response);
+        assertFalse(bob.isLastResponseError());
+        assertEquals("T|0|read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
     }
 
     @Test

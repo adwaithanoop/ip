@@ -141,6 +141,22 @@ public class DeadlineTest {
         assertThrows(BobException.class, () -> deadline.withEdit(new TaskEdit(null, date, null, date)));
     }
 
+    @Test
+    public void isSameTaskAs_sameDueDateDescriptionInOtherCapitals_true() throws BobException {
+        Deadline retyped = new Deadline("Return  Book", TaskDateTime.parse("2026-12-02 1800"));
+
+        assertTrue(deadlineOn("2026-12-02 1800").isSameTaskAs(retyped));
+    }
+
+    @Test
+    public void isSameTaskAs_differentDueDate_false() throws BobException {
+        Deadline deadline = deadlineOn("2026-12-02");
+
+        assertFalse(deadline.isSameTaskAs(deadlineOn("2026-12-03")));
+        // Due on the day and due at midnight on it were written differently.
+        assertFalse(deadline.isSameTaskAs(deadlineOn("2026-12-02 0000")));
+    }
+
     /** Returns a deadline called {@code return book} due at {@code date}. */
     private static Deadline deadlineOn(String date) throws BobException {
         return new Deadline("return book", TaskDateTime.parse(date));

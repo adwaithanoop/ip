@@ -249,14 +249,19 @@ public class Ui {
     }
 
     /**
-     * Returns the next line the user typed, with surrounding spaces removed.
+     * Returns the next line the user typed, exactly as they typed it.
+     *
+     * <p>Surrounding spaces are left in place for {@link bob.parser.Parser Parser}
+     * to remove. A window hands its lines to the chatbot without coming through
+     * here, so trimming in the parser is what makes the two front ends read a line
+     * alike.
      *
      * <p>Call only when {@link #hasNextCommand()} has just said there is one.
      *
-     * @return one whole line as the user typed it, trimmed.
+     * @return one whole line as the user typed it.
      */
     public String readCommand() {
-        return scanner.nextLine().trim();
+        return scanner.nextLine();
     }
 
     /**
@@ -352,6 +357,23 @@ public class Ui {
         showLine(isDone
                 ? "Kanpai! Dis one finish:"
                 : "Bi-do! Dis one not finish yet:");
+        showLine("  " + task);
+    }
+
+    /**
+     * Says that a task already had the status it was just asked for, showing it so
+     * the user can check it is the task they meant.
+     *
+     * <p>Worded as an ordinary answer rather than as a complaint, since the task ends
+     * up just as the user asked.
+     *
+     * @param task   the task, which has not changed.
+     * @param isDone the status it was asked for, and already has.
+     */
+    public void showAlreadyMarkedTask(Task task, boolean isDone) {
+        showLine(isDone
+                ? "Dis one already finish! Nothing to change:"
+                : "Dis one not finish yet! Nothing to change:");
         showLine("  " + task);
     }
 

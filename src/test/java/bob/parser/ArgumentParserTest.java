@@ -33,12 +33,57 @@ public class ArgumentParserTest {
     }
 
     @Test
+    public void parseTaskNumber_numberTooBigForInt_exceptionSaysTooBig() {
+        // It is a number, just not one any list could reach, so "isn't a task
+        // number" would be the wrong complaint.
+        BobException exception = assertThrows(BobException.class, () ->
+                ArgumentParser.parseTaskNumber("99999999999", CommandWord.MARK));
+
+        assertEquals("99999999999 is too big to be a task number."
+                + "\nI need the number shown next to the task in list, for example: mark 2",
+                exception.getMessage());
+    }
+
+    @Test
+    public void parseTaskNumber_hugeNegativeNumber_exceptionSaysNotATaskNumber() {
+        // Only digits count as a number too big, so a sign makes it no task number.
+        BobException exception = assertThrows(BobException.class, () ->
+                ArgumentParser.parseTaskNumber("-99999999999", CommandWord.DELETE));
+
+        assertTrue(exception.getMessage().startsWith("\"-99999999999\" isn't a task number."));
+    }
+
+    @Test
+    public void parseTaskNumber_severalNumbers_exceptionSaysOneAtATime() {
+        BobException deleteException = assertThrows(BobException.class, () ->
+                ArgumentParser.parseTaskNumber("1 3", CommandWord.DELETE));
+        BobException markException = assertThrows(BobException.class, () ->
+                ArgumentParser.parseTaskNumber("2\t5  7", CommandWord.MARK));
+
+        // The example uses the first number typed, so it shows the user their own
+        // command, done one task at a time.
+        assertEquals("I can only delete one task at a time.\nLike dis: delete 1",
+                deleteException.getMessage());
+        assertEquals("I can only mark one task at a time.\nLike dis: mark 2",
+                markException.getMessage());
+    }
+
+    @Test
+    public void parseTaskNumber_numbersMixedWithWords_exceptionSaysNotATaskNumber() {
+        BobException exception = assertThrows(BobException.class, () ->
+                ArgumentParser.parseTaskNumber("1 and 3", CommandWord.DELETE));
+
+        assertTrue(exception.getMessage().startsWith("\"1 and 3\" isn't a task number."));
+    }
+
+    @Test
     public void parseTaskNumber_numberOutsideTheList_accepted() throws BobException {
         // Whether a number names a task the user actually has is a fact about the
         // list, not about the text, so it is not this class's complaint to make.
         assertEquals(0, ArgumentParser.parseTaskNumber("0", CommandWord.MARK));
         assertEquals(99, ArgumentParser.parseTaskNumber("99", CommandWord.MARK));
         assertEquals(-1, ArgumentParser.parseTaskNumber("-1", CommandWord.DELETE));
+        assertEquals(Integer.MAX_VALUE, ArgumentParser.parseTaskNumber("2147483647", CommandWord.MARK));
     }
 
     @Test
@@ -81,12 +126,20 @@ public class ArgumentParserTest {
         // Showing nothing would leave a user who typed this none the wiser.
         assertThrows(BobException.class, () -> ArgumentParser.parseCount("0"));
         assertThrows(BobException.class, () -> ArgumentParser.parseCount("-3"));
+        assertThrows(BobException.class, () -> ArgumentParser.parseCount("-99999999999"));
     }
 
     @Test
     public void parseCount_oneOrMore_accepted() throws BobException {
         assertEquals(1, ArgumentParser.parseCount("1"));
         assertEquals(100, ArgumentParser.parseCount("100"));
+    }
+
+    @Test
+    public void parseCount_numberTooBigForInt_largestCountReturned() throws BobException {
+        // More tasks than any list holds asks for all of them, as "next 99" does
+        // on a short list, so it is answered rather than refused.
+        assertEquals(Integer.MAX_VALUE, ArgumentParser.parseCount("99999999999"));
     }
 
     @Test
