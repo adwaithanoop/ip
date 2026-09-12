@@ -8,7 +8,7 @@ import java.util.Optional;
 import bob.BobException;
 
 /**
- * A task that runs from one point in time to another, for example
+ * Represents a task that runs from one point in time to another, for example
  * {@code project meeting (from: Aug 06 2026 14:00 to: Aug 06 2026 16:00)}.
  *
  * <p>As with {@link Deadline}, the start and the end are kept as {@link TaskDateTime}

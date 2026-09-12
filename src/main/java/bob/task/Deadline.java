@@ -7,8 +7,8 @@ import java.util.Optional;
 import bob.BobException;
 
 /**
- * A task that has to be done before a given point in time, for example
- * {@code return book (by: Dec 02 2026)}.
+ * Represents a task that has to be done before a given point in time, for
+ * example {@code return book (by: Dec 02 2026)}.
  *
  * <p>The due date is kept as a {@link TaskDateTime} rather than as the text the user
  * typed, so the chatbot understands when the task is due instead of merely

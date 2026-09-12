@@ -6,7 +6,7 @@ import bob.task.TaskList;
 import bob.ui.Ui;
 
 /**
- * One thing the user has asked the chatbot to do, ready to be carried out.
+ * Represents one thing the user has asked the chatbot to do, ready to be carried out.
  *
  * <p>What each command does used to be a branch of a {@code switch} in
  * {@link bob.Bob Bob}, and the arguments each one needed were picked apart in a method

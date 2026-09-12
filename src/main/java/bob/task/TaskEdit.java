@@ -1,8 +1,8 @@
 package bob.task;
 
 /**
- * The changes one {@code edit} asks for: a new description, a new due date, a new
- * start or a new end, any of which may be left out.
+ * Represents the changes one {@code edit} asks for: a new description, a new due
+ * date, a new start or a new end, any of which may be left out.
  *
  * <p>The four are held together as one value rather than passed around as four
  * separate arguments, because three of them are dates: a method taking them side by

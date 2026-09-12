@@ -3,7 +3,7 @@ package bob.task;
 import bob.BobException;
 
 /**
- * A task with no date or time attached to it, for example
+ * Represents a task with no date or time attached to it, for example
  * {@code borrow book}. It adds nothing to {@link Task} beyond its
  * type icon and its refusal of a date when it is edited, since there is
  * nothing more to remember about it.

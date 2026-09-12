@@ -5,7 +5,7 @@ import java.io.InputStream;
 import javafx.scene.image.Image;
 
 /**
- * The pictures the window is built from.
+ * Holds the pictures the window is built from.
  *
  * <p>These were loaded where they were used, which was fine while the only place
  * that used them was the conversation. The window's icon needs the same picture of
@@ -38,8 +38,8 @@ public final class Images {
     public static final Image USER = load(USER_PATH);
 
     /**
-     * Never made: this class is a place to keep the pictures, not a thing in its
-     * own right, so a private constructor stops one being created by mistake.
+     * Prevents this class from being instantiated. It is a place to keep the
+     * pictures, not a thing in its own right, so there is no reason to make one.
      */
     private Images() {
     }

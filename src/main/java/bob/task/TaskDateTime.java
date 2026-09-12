@@ -9,8 +9,8 @@ import java.util.Locale;
 import bob.BobException;
 
 /**
- * A point in time attached to a task: the day it falls on, and the time of day
- * when the user gave one.
+ * Represents a point in time attached to a task: the day it falls on, and the
+ * time of day when the user gave one.
  *
  * <p>{@link Deadline} and {@link Event} used to keep whatever the user typed as
  * plain text, so {@code 2026-12-02}, {@code Sunday} and {@code no idea :-p} were

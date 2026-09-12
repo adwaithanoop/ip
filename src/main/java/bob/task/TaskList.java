@@ -7,8 +7,8 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 /**
- * The tasks the user has told the chatbot about, in the order they were added,
- * together with the operations the chatbot performs on them.
+ * Holds the tasks the user has told the chatbot about, in the order they were
+ * added, together with the operations the chatbot performs on them.
  *
  * <p>This was a bare {@link ArrayList} field in {@link bob.Bob Bob}, reached into
  * directly by every command. Every one of them therefore had to know that the

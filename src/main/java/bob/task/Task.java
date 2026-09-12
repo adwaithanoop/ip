@@ -10,7 +10,7 @@ import java.util.Optional;
 import bob.BobException;
 
 /**
- * A single task the chatbot remembers: what the user wants to do,
+ * Represents a single task the chatbot remembers: what the user wants to do,
  * and whether it has been done yet.
  *
  * <p>This class holds only what every kind of task has in common. The kinds the
