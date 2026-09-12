@@ -249,14 +249,19 @@ public class Ui {
     }
 
     /**
-     * Returns the next line the user typed, with surrounding spaces removed.
+     * Returns the next line the user typed, exactly as they typed it.
+     *
+     * <p>Surrounding spaces are left in place for {@link bob.parser.Parser Parser}
+     * to remove. A window hands its lines to the chatbot without coming through
+     * here, so trimming in the parser is what makes the two front ends read a line
+     * alike.
      *
      * <p>Call only when {@link #hasNextCommand()} has just said there is one.
      *
-     * @return one whole line as the user typed it, trimmed.
+     * @return one whole line as the user typed it.
      */
     public String readCommand() {
-        return scanner.nextLine().trim();
+        return scanner.nextLine();
     }
 
     /**

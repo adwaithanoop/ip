@@ -162,6 +162,18 @@ public class BobTest {
     }
 
     @Test
+    public void getResponse_spacesAroundLine_readAsTheCommandInside() {
+        Bob bob = bobWithSavedLines();
+
+        // getResponse is public, so its line need not come from the window, which
+        // trims its own; the line is trimmed where it is parsed, for every caller.
+        String response = bob.getResponse("  list  ");
+
+        assertEquals("No tasks yet! Bob bored...", response);
+        assertFalse(bob.isLastResponseError());
+    }
+
+    @Test
     public void getResponse_changedList_writtenToTheSaveFile() throws IOException {
         Bob bob = bobWithSavedLines();
 

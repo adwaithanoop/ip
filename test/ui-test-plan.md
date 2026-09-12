@@ -1497,10 +1497,11 @@ bye
 
 **Aim:** Check that `list` and `bye`, which stand alone, are recognised only when
 typed exactly. `bye now` must not end the conversation and `list foo` must not
-list anything; both are unrecognised lines. The commands after them prove the
-conversation carried on, which is the visible consequence of `bye now` not being
-taken as `bye`. Also checks that command words are case-sensitive, so `BYE` is
-not `bye`. This is the counterpart to the `todolist` case in TC9: there, a
+list anything; each is answered by saying the command takes nothing after it.
+The commands after them prove the conversation carried on, which is the visible
+consequence of `bye now` not being taken as `bye`. Also checks that command words
+are case-sensitive, so `BYE` is not `bye`, though the answer suggests the
+lowercase word. This is the counterpart to the `todolist` case in TC9: there, a
 command that *does* take arguments must not match a longer word; here, a command
 that takes none must not match a longer line.
 
@@ -1556,20 +1557,21 @@ bye
 
     ____________________________________________________________
      MINION EMERGENCY!
-     Sorry, I don't know what "bye now" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     bye takes nothing after it.
+     Like dis: bye
     ____________________________________________________________
 
     ____________________________________________________________
      MINION EMERGENCY!
-     Sorry, I don't know what "list foo" means.
-     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     list takes nothing after it.
+     Like dis: list
     ____________________________________________________________
 
     ____________________________________________________________
      MINION EMERGENCY!
      Sorry, I don't know what "BYE" means.
      Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     Commands are lowercase. Did yu mean bye?
     ____________________________________________________________
 
     ____________________________________________________________
@@ -3505,4 +3507,111 @@ bye
 T | 0 | read book
 D | 0 | return book | 2026-12-02
 E | 0 | project meeting | 2026-08-06 1400 | 2026-08-06 1600
+```
+
+### TC34 - Command words in the wrong case or after unusual spaces
+
+**Aim:** Check how a line is read when its command word is not typed as plain
+lowercase followed by a space. `Todo read book` and `MARK 1` are still refused,
+since commands are lowercase, but each answer ends by suggesting the lowercase
+word. The third input line has a tab rather than a space after `todo`, and is
+added like any other todo. The fourth has no-break spaces (U+00A0, as text pasted
+from a web page often does) before `deadline`, after it, and between `return` and
+`book`; they are read as ordinary spaces, so the deadline is added and saved with
+an ordinary space in its description. Both characters are invisible in the input
+block, so edit those two lines with care. The `list` and the save file show that
+only those two tasks were added.
+
+**Input**
+
+```text
+Todo read book
+todo	read book
+ deadline return book /by 2026-12-02
+MARK 1
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Sorry, I don't know what "Todo read book" means.
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     Commands are lowercase. Did yu mean todo?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [T][ ] read book
+     Now yu have 1 task in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] return book (by: Dec 02 2026)
+     Now yu have 2 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     Sorry, I don't know what "MARK 1" means.
+     Try one of: todo, deadline, event, list, on, before, after, next, find, mark, unmark, delete, edit, bye
+     Commands are lowercase. Did yu mean mark?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[T][ ] read book
+     2.[D][ ] return book (by: Dec 02 2026)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+T | 0 | read book
+D | 0 | return book | 2026-12-02
 ```

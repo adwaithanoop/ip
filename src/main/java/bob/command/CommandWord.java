@@ -112,9 +112,11 @@ public enum CommandWord {
      * Returns whether {@code line} is this command.
      *
      * <p>A command that takes arguments matches its keyword either alone or
-     * followed by a space and the arguments. Requiring that space is what keeps
-     * {@code todolist} from being read as {@code todo} with the description
-     * {@code list}. Matching the bare keyword as well is what lets {@code mark}
+     * followed by whitespace and the arguments. Requiring that whitespace is what
+     * keeps {@code todolist} from being read as {@code todo} with the description
+     * {@code list}. Any whitespace will do, not only a space, so a tab typed or
+     * pasted after the keyword is read the same way as a space would be.
+     * Matching the bare keyword as well is what lets {@code mark}
      * on its own be answered with "which task?" rather than "I don't know what
      * that means": the command is recognized first, and only then is it found to
      * be incomplete.
@@ -125,10 +127,13 @@ public enum CommandWord {
      * @param line one whole line as the user typed it, with surrounding spaces removed.
      */
     public boolean matches(String line) {
-        if (canTakeArguments) {
-            return line.equals(keyword) || line.startsWith(keyword + " ");
+        if (line.equals(keyword)) {
+            return true;
         }
-        return line.equals(keyword);
+        return canTakeArguments
+                && line.startsWith(keyword)
+                && line.length() > keyword.length()
+                && Character.isWhitespace(line.charAt(keyword.length()));
     }
 
     /**
@@ -141,10 +146,9 @@ public enum CommandWord {
         // The arithmetic below counts past the keyword, so it is only meaningful
         // on a line that begins with it — which is what matches() has checked.
         assert matches(line) : "Arguments read from a line that is not " + keyword + ": " + line;
-        if (line.length() <= keyword.length()) {
-            return "";
-        }
-        return line.substring(keyword.length() + 1).trim();
+        // Whatever whitespace separates the keyword from the arguments is trimmed
+        // off with the rest; on a line holding the keyword alone, nothing is left.
+        return line.substring(keyword.length()).trim();
     }
 
     /**
@@ -168,6 +172,23 @@ public enum CommandWord {
     public static Optional<CommandWord> parse(String line) {
         return Arrays.stream(values())
                 .filter(command -> command.matches(line))
+                .findFirst();
+    }
+
+    /**
+     * Returns the command whose keyword is exactly {@code word}, if there is one.
+     *
+     * <p>Unlike {@link #parse}, this looks at a single word rather than a whole
+     * line, so whether the command may take arguments plays no part. That is what
+     * explaining an unrecognized line needs: whether it at least began with a
+     * command word, or would have if its letters were lowercase.
+     *
+     * @param word a single word, with no whitespace in it.
+     * @return the command with that keyword, or an empty {@code Optional} if there is none.
+     */
+    public static Optional<CommandWord> findByKeyword(String word) {
+        return Arrays.stream(values())
+                .filter(command -> command.keyword.equals(word))
                 .findFirst();
     }
 
