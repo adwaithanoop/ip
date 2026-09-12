@@ -119,6 +119,32 @@ public class EditParserTest {
         assertEquals("[E][ ] trip (from: Dec 01 2026 to: Dec 03 2026)", task.toString());
     }
 
+    @Test
+    public void parseEdit_markerTextInsideAWord_keptInTheValue() throws BobException {
+        // /tokyo is not /to, so all of it is the new description.
+        Task task = taskAfterEdit(new Deadline("return book", TaskDateTime.parse("2026-12-02 1800")),
+                "1 /desc fly /tokyo");
+
+        assertEquals("[D][ ] fly /tokyo (by: Dec 02 2026 18:00)", task.toString());
+    }
+
+    @Test
+    public void parseEdit_markerWrittenTwice_exceptionThrown() {
+        // Neither description is kept, since keeping either would be a guess.
+        BobException exception = assertThrows(BobException.class, () ->
+                EditParser.parseEdit("1 /desc read book /desc read novel"));
+
+        assertEquals("You wrote /desc twice. Give just one.", exception.getMessage());
+    }
+
+    @Test
+    public void parseEdit_markerInCapitals_exceptionSuggestsLowercase() {
+        BobException exception = assertThrows(BobException.class, () ->
+                EditParser.parseEdit("1 /DESC read book"));
+
+        assertEquals("Markers are lowercase. Did yu mean /desc?", exception.getMessage());
+    }
+
     /** Returns an event called {@code meeting} running from 18:00 to 20:00 on one day. */
     private static Event meetingFrom1800To2000() throws BobException {
         return new Event("meeting", TaskDateTime.parse("2026-12-02 1800"),
