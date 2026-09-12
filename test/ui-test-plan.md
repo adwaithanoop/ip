@@ -2885,17 +2885,19 @@ bye
     ____________________________________________________________
 ```
 
-### TC29 - An event cannot end before it starts
+### TC29 - An event cannot end before it starts, or at the same moment
 
 **Aim:** Check that a pair of dates which are each perfectly readable, but which
 put the end of an event before its start, is refused rather than stored. Both
-dates are quoted back in the message, so a user who typed them the wrong way round
+dates are shown back in the message, so a user who typed them the wrong way round
 can see which the chatbot read as which. Checked on two scales: a start and an end
 days apart, and a start and an end on the same day whose times are the wrong way
 round, which is the case a comparison of days alone would let through. An event
-starting and ending at the same moment is accepted, since that is a point in time
-rather than a contradiction, and it is the boundary the check is written against.
-The `list` at the end shows that only the well-formed events were stored.
+starting and ending at the same moment is refused too, and the user is pointed to a
+deadline, which is what records a single moment. An event starting and ending on
+the same day with no times is a one-day event, and is accepted. Those two are the
+boundary the check is written against. The `list` at the end shows that only the
+well-formed events were stored.
 
 **Input**
 
@@ -2903,6 +2905,7 @@ The `list` at the end shows that only the well-formed events were stored.
 event conference /from 2026-12-05 /to 2026-12-02
 event workshop /from 2026-12-05 1800 /to 2026-12-05 0900
 event standup /from 2026-12-05 0900 /to 2026-12-05 0900
+event open day /from 2026-12-05 /to 2026-12-05
 event trip /from 2026-12-02 /to 2026-12-05
 list
 bye
@@ -2950,18 +2953,23 @@ bye
     ____________________________________________________________
      MINION EMERGENCY!
      An event can't end before it starts.
-     You wrote /from Dec 05 2026 and /to Dec 02 2026 — check whether they are the wrong way round.
+     It would run from Dec 05 2026 to Dec 02 2026.
     ____________________________________________________________
 
     ____________________________________________________________
      MINION EMERGENCY!
      An event can't end before it starts.
-     You wrote /from Dec 05 2026 18:00 and /to Dec 05 2026 09:00 — check whether they are the wrong way round.
+     It would run from Dec 05 2026 18:00 to Dec 05 2026 09:00.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     An event can't start and end at the same moment. For a single moment, use a deadline.
     ____________________________________________________________
 
     ____________________________________________________________
      Okay! Bob add dis:
-       [E][ ] standup (from: Dec 05 2026 09:00 to: Dec 05 2026 09:00)
+       [E][ ] open day (from: Dec 05 2026 to: Dec 05 2026)
      Now yu have 1 task in da list.
     ____________________________________________________________
 
@@ -2973,7 +2981,7 @@ bye
 
     ____________________________________________________________
      Luk at tu! Here da tasks:
-     1.[E][ ] standup (from: Dec 05 2026 09:00 to: Dec 05 2026 09:00)
+     1.[E][ ] open day (from: Dec 05 2026 to: Dec 05 2026)
      2.[E][ ] trip (from: Dec 02 2026 to: Dec 05 2026)
     ____________________________________________________________
 
@@ -3484,7 +3492,7 @@ bye
     ____________________________________________________________
      MINION EMERGENCY!
      An event can't end before it starts.
-     That change would have it run from Aug 06 2026 17:00 to Aug 06 2026 16:00.
+     It would run from Aug 06 2026 17:00 to Aug 06 2026 16:00.
     ____________________________________________________________
 
     ____________________________________________________________

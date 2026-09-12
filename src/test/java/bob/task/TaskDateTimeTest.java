@@ -62,6 +62,14 @@ public class TaskDateTimeTest {
     }
 
     @Test
+    public void hasTime_dayWithOrWithoutATime_trueOnlyWhenOneWasGiven() throws BobException {
+        assertFalse(TaskDateTime.parse("2026-12-02").hasTime());
+        assertTrue(TaskDateTime.parse("2026-12-02 1800").hasTime());
+        // Midnight is a time the user gave, although it sorts with a day given none.
+        assertTrue(TaskDateTime.parse("2026-12-02 0000").hasTime());
+    }
+
+    @Test
     public void parse_boundaryTimes_accepted() throws BobException {
         assertEquals("Dec 02 2026 23:59", TaskDateTime.parse("2026-12-02 2359").toString());
         assertEquals("Dec 02 2026 00:01", TaskDateTime.parse("2026-12-02 0001").toString());

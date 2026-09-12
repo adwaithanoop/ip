@@ -153,6 +153,33 @@ public class StorageTest {
     }
 
     @Test
+    public void load_eventWhoseEndsBreakTheRule_linesReportedAndSkipped() throws IOException {
+        // The rule an event typed at the chatbot meets, so a hand-edited file cannot
+        // load an event the user could never have added.
+        Storage storage = storageWithLines(
+                "E | 0 | conference | 2026-12-05 | 2026-12-02",
+                "E | 0 | standup | 2026-12-05 0900 | 2026-12-05 0900");
+
+        Storage.LoadResult result = storage.load();
+
+        assertEquals(List.of(), result.tasks());
+        assertTrue(result.messages().get(0).startsWith("Line 1 "));
+        assertTrue(result.messages().get(0).endsWith(": the event ends before it starts."));
+        assertTrue(result.messages().get(1).startsWith("Line 2 "));
+        assertTrue(result.messages().get(1).endsWith(": the event starts and ends at the same moment."));
+    }
+
+    @Test
+    public void load_oneDayEventWithoutTimes_loaded() throws IOException {
+        Storage storage = storageWithLines("E | 0 | open day | 2026-12-05 | 2026-12-05");
+
+        Storage.LoadResult result = storage.load();
+
+        assertEquals(List.of(), result.messages());
+        assertEquals("[E][ ] open day (from: Dec 05 2026 to: Dec 05 2026)", result.tasks().get(0).toString());
+    }
+
+    @Test
     public void load_oneBadLine_messagesWordedInTheSingular() throws IOException {
         Storage storage = storageWithLines("nonsense");
 

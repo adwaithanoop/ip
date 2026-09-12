@@ -193,19 +193,28 @@ public class TaskParserTest {
     }
 
     @Test
-    public void parseEvent_endSameAsStart_eventBuilt() throws BobException {
-        // A moment in time is a thing a user may mean, so it is not refused.
-        Event event = TaskParser.parseEvent("photo /from 2026-12-02 1800 /to 2026-12-02 1800");
+    public void parseEvent_endSameMomentAsStart_exceptionSuggestsDeadline() {
+        BobException exception = assertThrows(BobException.class, () ->
+                TaskParser.parseEvent("photo /from 2026-12-02 1800 /to 2026-12-02 1800"));
 
-        assertEquals("[E][ ] photo (from: Dec 02 2026 18:00 to: Dec 02 2026 18:00)", event.toString());
+        assertEquals("An event can't start and end at the same moment."
+                + " For a single moment, use a deadline.", exception.getMessage());
     }
 
     @Test
-    public void parseEvent_endBeforeStart_exceptionThrown() {
+    public void parseEvent_sameDayWithoutTimes_oneDayEventBuilt() throws BobException {
+        Event event = TaskParser.parseEvent("open day /from 2026-12-02 /to 2026-12-02");
+
+        assertEquals("[E][ ] open day (from: Dec 02 2026 to: Dec 02 2026)", event.toString());
+    }
+
+    @Test
+    public void parseEvent_endBeforeStart_exceptionShowsBothDates() {
         BobException exception = assertThrows(BobException.class, () ->
                 TaskParser.parseEvent("meeting /from 2026-12-02 2000 /to 2026-12-02 1800"));
 
-        assertTrue(exception.getMessage().contains("can't end before it starts"));
+        assertEquals("An event can't end before it starts."
+                + "\nIt would run from Dec 02 2026 20:00 to Dec 02 2026 18:00.", exception.getMessage());
     }
 
     @Test

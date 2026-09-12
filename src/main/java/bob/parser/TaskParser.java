@@ -146,14 +146,15 @@ class TaskParser {
      * <p>As with a deadline, both times are handed to {@link TaskDateTime#parse}, so
      * an event is only built once the chatbot has understood when it runs. Having
      * understood both, it can also check that they make sense together, which is
-     * what {@link #requireEndNotBeforeStart} does.
+     * what {@link Event#requireValidPeriod} does.
      *
      * @param arguments the text following the command word.
      * @throws BobException if a marker is written twice, in the wrong case, is not one
      *                      an event takes or is out of order, if a marker, the
      *                      description, the start or the end is missing, if the
      *                      start or the end is not a date, or if the end comes
-     *                      before the start.
+     *                      before the start or, with both times given, at the same
+     *                      moment.
      */
     static Event parseEvent(String arguments) throws BobException {
         MarkedArguments marked = MarkedArguments.parse(arguments);
@@ -186,7 +187,7 @@ class TaskParser {
         }
         TaskDateTime from = TaskDateTime.parse(fromText.get());
         TaskDateTime to = TaskDateTime.parse(toText.get());
-        requireEndNotBeforeStart(from, to);
+        Event.requireValidPeriod(from, to);
         return new Event(description, from, to);
     }
 
@@ -245,37 +246,5 @@ class TaskParser {
                     + CommandWord.EDIT.getKeyword() + ". Write the description straight after "
                     + command.getKeyword() + ".", example);
         }
-    }
-
-    /**
-     * Checks that an event does not end before it starts.
-     *
-     * <p>Two dates that are each perfectly readable can still be an impossible
-     * pair, and the pair is only worth checking once both have been understood —
-     * which is why this is a step of its own after {@link TaskDateTime#parse}.
-     *
-     * <p>Both dates are shown back in the message, in the friendly form rather than
-     * as typed, so a user who typed them the wrong way round can see which the
-     * chatbot read as the start and which as the end.
-     *
-     * <p>An event that starts and ends at the same moment is allowed: it is a point
-     * in time rather than a contradiction.
-     *
-     * <p>This is checked here, while the command is being read, rather than in
-     * {@link Event} itself, because here there is still a user to tell. An event
-     * read from a hand-edited save file does not come through this method, and so
-     * is loaded as written.
-     *
-     * @param from when the event starts.
-     * @param to   when it ends.
-     * @throws BobException if the end comes before the start.
-     */
-    private static void requireEndNotBeforeStart(TaskDateTime from, TaskDateTime to) throws BobException {
-        if (to.compareTo(from) >= 0) {
-            return;
-        }
-        throw new BobException("An event can't end before it starts."
-                + "\nYou wrote " + FROM_KEYWORD + " " + from + " and " + TO_KEYWORD + " " + to
-                + " — check whether they are the wrong way round.");
     }
 }

@@ -317,6 +317,17 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
     }
 
     /**
+     * Returns whether the user gave a time of day as well as the day.
+     *
+     * <p>{@link #compareTo} cannot answer this, because it counts a missing time as
+     * the start of the day, so {@code 2026-12-02} and {@code 2026-12-02 0000} compare
+     * as equal although only the second was given a time.
+     */
+    public boolean hasTime() {
+        return time != null;
+    }
+
+    /**
      * Orders dates from earliest to latest, so that sorting a list of them puts
      * the most urgent first.
      *

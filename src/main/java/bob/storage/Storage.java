@@ -320,13 +320,29 @@ public class Storage {
         return deadline;
     }
 
-    /** Returns the {@link Event} written as {@code E | <done> | <description> | <from> | <to>}. */
+    /**
+     * Returns the {@link Event} written as {@code E | <done> | <description> | <from> | <to>}.
+     *
+     * <p>The start and the end are checked as a pair by {@link Event#requireValidPeriod},
+     * the rule an event typed at the chatbot meets, so a hand-edited file cannot load an
+     * event the user could never have added. Its message is replaced by a shorter one,
+     * for the reason given at {@link #requireDate}.
+     */
     private static Event parseEvent(List<String> fields) throws BobException {
         requireFieldCount(fields, FIELD_COUNT_EVENT, "event");
-        Event event = new Event(
-                requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description"),
-                requireDate(fields.get(FIELD_INDEX_FROM), "start time"),
-                requireDate(fields.get(FIELD_INDEX_TO), "end time"));
+        String description = requireNonEmpty(fields.get(FIELD_INDEX_DESCRIPTION), "description");
+        TaskDateTime from = requireDate(fields.get(FIELD_INDEX_FROM), "start time");
+        TaskDateTime to = requireDate(fields.get(FIELD_INDEX_TO), "end time");
+        try {
+            Event.requireValidPeriod(from, to);
+        } catch (BobException e) {
+            // The rule has already decided the pair is refused; comparing the two
+            // again only picks which of its two reasons to give.
+            throw new BobException(to.compareTo(from) < 0
+                    ? "the event ends before it starts"
+                    : "the event starts and ends at the same moment");
+        }
+        Event event = new Event(description, from, to);
         setDone(event, fields.get(FIELD_INDEX_DONE));
         return event;
     }

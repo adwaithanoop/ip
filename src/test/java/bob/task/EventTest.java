@@ -1,5 +1,6 @@
 package bob.task;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,6 +26,10 @@ import bob.BobException;
  * <p>The other date questions are deliberately <em>not</em> widened: an event is
  * placed by its start for ordering and for "before" and "after". The test at the
  * end pins that down, since it looks like an oversight until it is stated.
+ *
+ * <p>{@link Event#requireValidPeriod} is tested closely too, because adding, editing
+ * and loading an event all rely on it. Its boundary is an end at the same moment as
+ * the start: refused when both ends have a time, allowed for a one-day event without.
  */
 public class EventTest {
 
@@ -142,6 +147,44 @@ public class EventTest {
     }
 
     @Test
+    public void requireValidPeriod_endBeforeStart_exceptionShowsBothDates() throws BobException {
+        TaskDateTime from = TaskDateTime.parse("2026-12-05 1800");
+        TaskDateTime to = TaskDateTime.parse("2026-12-05 0900");
+
+        BobException exception = assertThrows(BobException.class, () -> Event.requireValidPeriod(from, to));
+
+        assertEquals("An event can't end before it starts."
+                + "\nIt would run from Dec 05 2026 18:00 to Dec 05 2026 09:00.", exception.getMessage());
+    }
+
+    @Test
+    public void requireValidPeriod_sameMomentWithTimes_exceptionSuggestsDeadline() throws BobException {
+        TaskDateTime from = TaskDateTime.parse("2026-12-05 0900");
+        TaskDateTime to = TaskDateTime.parse("2026-12-05 0900");
+
+        BobException exception = assertThrows(BobException.class, () -> Event.requireValidPeriod(from, to));
+
+        assertEquals("An event can't start and end at the same moment."
+                + " For a single moment, use a deadline.", exception.getMessage());
+    }
+
+    @Test
+    public void requireValidPeriod_sameDayWithoutBothTimes_accepted() {
+        // A one-day event covers the whole day, so it is not a single moment.
+        assertDoesNotThrow(() -> Event.requireValidPeriod(TaskDateTime.parse("2026-12-05"),
+                TaskDateTime.parse("2026-12-05")));
+        // These compare as equal, but only one end was given a time.
+        assertDoesNotThrow(() -> Event.requireValidPeriod(TaskDateTime.parse("2026-12-05"),
+                TaskDateTime.parse("2026-12-05 0000")));
+    }
+
+    @Test
+    public void requireValidPeriod_endOneMinuteAfterStart_accepted() {
+        assertDoesNotThrow(() -> Event.requireValidPeriod(TaskDateTime.parse("2026-12-05 0900"),
+                TaskDateTime.parse("2026-12-05 0901")));
+    }
+
+    @Test
     public void withEdit_endOnly_startKept() throws BobException {
         Task edited = eventFrom("2026-12-01", "2026-12-05").withEdit(endsEdit(null, "2026-12-07"));
 
@@ -166,7 +209,7 @@ public class EventTest {
 
         // The start is shown too, though it was not typed, since it is what the new end clashes with.
         assertEquals("An event can't end before it starts."
-                + "\nThat change would have it run from Dec 02 2026 18:00 to Dec 02 2026 17:00.",
+                + "\nIt would run from Dec 02 2026 18:00 to Dec 02 2026 17:00.",
                 exception.getMessage());
     }
 
@@ -178,25 +221,31 @@ public class EventTest {
     }
 
     @Test
-    public void withEdit_startMovedOntoEnd_accepted() throws BobException {
+    public void withEdit_startMovedOntoEndWithTimes_exceptionThrown() throws BobException {
         Event event = eventFrom("2026-12-02 1800", "2026-12-02 2000");
 
-        Task edited = event.withEdit(endsEdit("2026-12-02 2000", null));
+        BobException exception = assertThrows(BobException.class, () ->
+                event.withEdit(endsEdit("2026-12-02 2000", null)));
 
-        // A moment in time is allowed here, as it is when an event is added.
-        assertEquals("[E][ ] orientation (from: Dec 02 2026 20:00 to: Dec 02 2026 20:00)",
-                edited.toString());
+        // Refused as it is when an event is added, since both use the same rule.
+        assertEquals("An event can't start and end at the same moment."
+                + " For a single moment, use a deadline.", exception.getMessage());
     }
 
     @Test
-    public void withEdit_descriptionOnlyOnEventWithEndsReversed_accepted() throws BobException {
-        // Only a hand-edited save file can hold such an event. Rewording it is not
-        // what put its ends the wrong way round, so the rewording is not refused.
-        Event event = eventFrom("2026-12-05", "2026-12-01");
+    public void withEdit_startMovedOntoEndDayWithoutTimes_accepted() throws BobException {
+        Task edited = eventFrom("2026-12-01", "2026-12-05").withEdit(endsEdit("2026-12-05", null));
+
+        assertEquals("[E][ ] orientation (from: Dec 05 2026 to: Dec 05 2026)", edited.toString());
+    }
+
+    @Test
+    public void withEdit_descriptionOnly_endsKept() throws BobException {
+        Event event = eventFrom("2026-12-01", "2026-12-05");
 
         Task edited = event.withEdit(new TaskEdit("orientation week", null, null, null));
 
-        assertEquals("[E][ ] orientation week (from: Dec 05 2026 to: Dec 01 2026)", edited.toString());
+        assertEquals("[E][ ] orientation week (from: Dec 01 2026 to: Dec 05 2026)", edited.toString());
     }
 
     @Test
