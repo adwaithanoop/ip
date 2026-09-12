@@ -70,6 +70,8 @@ import bob.ui.Ui;
  * mistyped command never ends the conversation.
  * A failure to save is reported the same way, so it is seen rather than passing
  * silently, and the conversation carries on.
+ * Even a bug in the chatbot itself is caught there, as a last resort, so that it
+ * costs the user one command rather than the whole conversation.
  *
  * <p>The chatbot has two front ends, and this class serves both. {@link #run()}
  * holds the conversation at a console, reading lines and printing answers until
@@ -82,6 +84,17 @@ import bob.ui.Ui;
  * settled when it is made, by {@code new Bob(...)} or by {@link #forGui}.
  */
 public class Bob {
+
+    /**
+     * Explanation shown when a command stopped partway because of a mistake in the
+     * chatbot itself, rather than in what the user typed.
+     *
+     * <p>It cannot say what went wrong, since nothing expected it to. What it can
+     * do is warn that the command may have been carried out only in part, and say
+     * how the user can see for themselves how far it got.
+     */
+    private static final String UNEXPECTED_ERROR_MESSAGE =
+            "Something went wrong inside Bob while doing that. Type list to check what changed.";
 
     /** Everything printed to the user, and every line read back from them. */
     private final Ui ui;
@@ -243,10 +256,17 @@ public class Bob {
      * as the answer, and the caller carries on — so a mistake costs the user a
      * line, not the whole conversation.
      *
+     * <p>It is also the last line of defense against a bug. A
+     * {@link RuntimeException} reaching here means the chatbot itself went wrong
+     * partway through a command, not that the user typed something wrong, so there
+     * is nothing specific to explain — only a warning that the command may be half
+     * done. Letting it escape instead would end a console conversation over one
+     * faulty command, and leave a window with no answer at all.
+     *
      * <p>Because it is the one place, it is also where {@link #isLastResponseError}
-     * is settled: the {@code catch} below is reached by every answer that is a
-     * complaint and by no answer that is not, so nothing else has to be consulted
-     * to know which of the two the user is about to be given.
+     * is settled: the two {@code catch} blocks below are reached by every answer
+     * that is a complaint and by no answer that is not, so nothing else has to be
+     * consulted to know which of the two the user is about to be given.
      */
     private void handleCommand(String fullCommand) {
         isLastResponseError = false;
@@ -259,6 +279,15 @@ public class Bob {
             isExit = command.isExit();
         } catch (BobException e) {
             ui.showError(e.getMessage());
+            isLastResponseError = true;
+        } catch (RuntimeException e) {
+            // A deliberately broad catch: this is the top-level, last-resort handler,
+            // and a bug could surface as any kind of RuntimeException. The stack trace
+            // still goes to System.err so the bug is not hidden from whoever fixes it.
+            // A failed assertion is an Error, not a RuntimeException, so it is not
+            // caught here and still stops the program as it is meant to.
+            ui.showError(UNEXPECTED_ERROR_MESSAGE);
+            e.printStackTrace();
             isLastResponseError = true;
         }
     }
