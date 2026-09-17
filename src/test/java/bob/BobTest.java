@@ -14,9 +14,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Tests the four methods a window holds its conversation through —
- * {@link Bob#getGreeting()}, {@link Bob#getResponse}, {@link Bob#isExit()} and
- * {@link Bob#isLastResponseError()}.
+ * Tests the methods a window holds its conversation through —
+ * {@link Bob#getGreeting()}, {@link Bob#getResponse}, {@link Bob#isExit()},
+ * {@link Bob#isLastResponseError()}, and {@link Bob#hasUnsavedChanges()} and
+ * {@link Bob#getResponseToClosing()} for when the window is closed.
  *
  * <p>The rest of this class is tested through the text UI test plan, which runs
  * the console chatbot end to end and checks everything it prints. These three
@@ -282,6 +283,53 @@ public class BobTest {
         String response = bob.getResponse("bye");
 
         assertEquals("Your changes are saved now.\nPoopaye! Bob go find banana, see yu soon!", response);
+        assertTrue(bob.isExit());
+        assertEquals("T | 0 | read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
+    @Test
+    public void hasUnsavedChanges_saveFailed_trueUntilASaveWorks() throws IOException {
+        Bob bob = bobWithFolderForSaveFile();
+        assertFalse(bob.hasUnsavedChanges());
+
+        bob.getResponse("todo read book");
+        assertTrue(bob.hasUnsavedChanges());
+
+        Files.delete(saveFile());
+        bob.getResponse("todo return book");
+        assertFalse(bob.hasUnsavedChanges());
+    }
+
+    @Test
+    public void getResponseToClosing_changeThatStillCannotBeSaved_answeredAsByeIs() throws IOException {
+        Bob bob = bobWithFolderForSaveFile();
+        bob.getResponse("todo read book");
+
+        String firstClose = bob.getResponseToClosing();
+
+        // Closing the window is a goodbye, so the first try is held back just as a
+        // first bye is, and the window stays open to show why.
+        assertTrue(firstClose.startsWith("MINION EMERGENCY!\nI couldn't save your tasks to "));
+        assertTrue(bob.isLastResponseError());
+        assertFalse(bob.isExit());
+
+        String secondClose = bob.getResponseToClosing();
+
+        assertEquals("Bob quit without saving yur changes. Dey gone!\n"
+                + "Poopaye! Bob go find banana, see yu soon!", secondClose);
+        assertTrue(bob.isExit());
+    }
+
+    @Test
+    public void getResponseToClosing_problemFixedBeforeClosing_changeSavedAndQuits() throws IOException {
+        Bob bob = bobWithFolderForSaveFile();
+        bob.getResponse("todo read book");
+        Files.delete(saveFile());
+
+        String response = bob.getResponseToClosing();
+
+        assertEquals("Your changes are saved now.\nPoopaye! Bob go find banana, see yu soon!", response);
+        assertFalse(bob.hasUnsavedChanges());
         assertTrue(bob.isExit());
         assertEquals("T | 0 | read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
     }

@@ -9,6 +9,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 
 /**
@@ -138,22 +139,8 @@ public class MainWindow extends AnchorPane {
      * nothing but spaces is left properly empty — showing its prompt again — rather
      * than looking blank while quietly refusing to send.
      *
-     * <p>The chatbot's bubble appears straight away but empty, and is filled in
-     * after {@link #TYPING_PAUSE}, so that the answer looks composed rather than
-     * looked up. What the chatbot said is settled before either bubble is shown —
-     * the pause is in the showing, not in the answering — which is why the answer
-     * and everything about it are read out of {@link Bob} here rather than inside
-     * the lambda: by the time that runs, the chatbot may have been asked something
-     * else and be describing that instead.
-     *
-     * <p>An answer the chatbot could not give is colored differently, so that a
-     * mistyped command does not look like a command that worked.
-     *
-     * <p>Saying goodbye closes the window, but not at once. The farewell is shown
-     * first and the window closes a moment later, so the user sees the chatbot
-     * answer rather than the window vanishing as they press the key. Typing is
-     * disabled from the moment the goodbye is understood, so nothing can be sent to
-     * a chatbot that has already said goodbye.
+     * <p>The chatbot is asked before either bubble is shown, and its answer is then
+     * shown by {@link #showReply}.
      */
     @FXML
     private void handleUserInput() {
@@ -166,12 +153,68 @@ public class MainWindow extends AnchorPane {
             return;
         }
 
-        String response = bob.getResponse(input);
+        dialogContainer.getChildren().add(DialogBox.getUserDialog(input, Images.USER));
+        showReply(bob.getResponse(input));
+    }
+
+    /**
+     * Keeps the window open when the user closes it with a change still unsaved, and
+     * answers as if they had said goodbye instead.
+     *
+     * <p>Run by {@link Main} when the window's close button is clicked. Closing at once
+     * would lose a change an earlier save failed to write, without a word, which is
+     * what {@code bye} was changed to prevent. So the close is cancelled and the
+     * chatbot is asked for its goodbye: the save is tried once more, the window closes
+     * after the farewell if it worked, and stays open with the reason if it did not.
+     * Closing a second time then quits without saving, as a second {@code bye} does,
+     * so a problem the user cannot fix never traps them in the window.
+     *
+     * <p>With nothing unsaved, or once the chatbot has already said goodbye, the event
+     * is left alone and the window closes at once, as it always has.
+     *
+     * @param event the request to close the window, consumed to keep it open.
+     */
+    public void handleCloseRequest(WindowEvent event) {
+        assert bob != null : "The window was closed before it was given a chatbot";
+        if (bob.isExit() || !bob.hasUnsavedChanges()) {
+            return;
+        }
+        event.consume();
+        showReply(bob.getResponseToClosing());
+    }
+
+    /**
+     * Shows the chatbot's answer to what it was just asked, and closes the window
+     * after it if that answer was a goodbye.
+     *
+     * <p>Shared by typing a line and closing the window, so that an answer looks the
+     * same however the chatbot came to give it.
+     *
+     * <p>The chatbot's bubble appears straight away but empty, and is filled in
+     * after {@link #TYPING_PAUSE}, so that the answer looks composed rather than
+     * looked up. What the chatbot said is settled before the bubble is shown — the
+     * pause is in the showing, not in the answering — which is why everything about
+     * the answer is read out of {@link Bob} here rather than inside the lambda: by
+     * the time that runs, the chatbot may have been asked something else and be
+     * describing that instead.
+     *
+     * <p>An answer the chatbot could not give is colored differently, so that a
+     * mistyped command does not look like a command that worked.
+     *
+     * <p>Saying goodbye closes the window, but not at once. The farewell is shown
+     * first and the window closes a moment later, so the user sees the chatbot
+     * answer rather than the window vanishing as they press the key. Typing is
+     * disabled from the moment the goodbye is understood, so nothing can be sent to
+     * a chatbot that has already said goodbye.
+     *
+     * @param response the text the chatbot answered with.
+     */
+    private void showReply(String response) {
         boolean isError = bob.isLastResponseError();
         boolean isExiting = bob.isExit();
 
         DialogBox reply = DialogBox.getTypingBobDialog(Images.BOB);
-        dialogContainer.getChildren().addAll(DialogBox.getUserDialog(input, Images.USER), reply);
+        dialogContainer.getChildren().add(reply);
 
         if (isExiting) {
             userInput.setDisable(true);
