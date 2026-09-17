@@ -15,6 +15,10 @@ import bob.BobException;
  * values rather than as the text the user typed, so both are dates the chatbot
  * has understood.
  *
+ * <p>A day given with no time is read as the whole of that day: the start of it for
+ * {@code from}, the end of it for {@code to}. So an event may run from an hour of a day
+ * to the end of that same day.
+ *
  * <p>An event may not end before it starts, nor start and end at the same moment.
  * That rule is {@link #requireValidPeriod}, and it is checked on every route by which
  * an event reaches the task list: when one is added, by {@link bob.parser.Parser Parser};
@@ -59,10 +63,15 @@ public class Event extends Task {
      *
      * <p>An end before the start is refused, and both dates are shown back in the
      * friendly form, so a user who typed them the wrong way round can see which was
-     * read as which. An end at the same moment as the start is refused too, but only
-     * when both have a time: {@code 2026-12-05 0900} to {@code 2026-12-05 0900} lasts no
-     * time at all, which is what a deadline records, while {@code 2026-12-05} to
-     * {@code 2026-12-05} is a whole day.
+     * read as which. An end at the same moment as the start is refused too, since an
+     * event lasting no time at all is what a deadline records.
+     *
+     * <p>A day with no time is read as the whole of that day, so it means the start of
+     * the day in {@code from} and the end of it in {@code to}. That is what makes
+     * {@code 2026-12-05} to {@code 2026-12-05} a whole day rather than nothing, and it
+     * lets an event run from an hour of a day to the end of that same day. The pair
+     * {@code 2026-12-05} to {@code 2026-12-05 0000} is refused by the rule above: the
+     * start counts as midnight, and so does the end the user asked for.
      *
      * <p>Kept in this class rather than in the parser that reads a new event, so that
      * adding, editing and loading an event share one rule and cannot drift apart.
@@ -73,15 +82,29 @@ public class Event extends Task {
      *                      when both have a time.
      */
     public static void requireValidPeriod(TaskDateTime from, TaskDateTime to) throws BobException {
-        int comparison = to.compareTo(from);
-        if (comparison < 0) {
+        if (endsBeforeStart(from, to)) {
             throw new BobException("An event can't end before it starts."
                     + "\nIt would run from " + from + " to " + to + ".");
         }
-        if (comparison == 0 && from.hasTime() && to.hasTime()) {
+        if (to.asPeriodEnd().equals(from.asPeriodStart())) {
             throw new BobException("An event can't start and end at the same moment."
                     + " For a single moment, use a deadline.");
         }
+    }
+
+    /**
+     * Returns whether an event running from {@code from} to {@code to} would be over
+     * before it began.
+     *
+     * <p>Split out of {@link #requireValidPeriod} so that {@link bob.storage.Storage
+     * Storage}, which gives its own shorter wording for a damaged line, can tell which
+     * of the two broken rules it is looking at without comparing the dates its own way.
+     *
+     * @param from when the event would start.
+     * @param to   when it would end.
+     */
+    public static boolean endsBeforeStart(TaskDateTime from, TaskDateTime to) {
+        return to.asPeriodEnd().isBefore(from.asPeriodStart());
     }
 
     /** Returns {@link #TYPE_ICON}, the {@code E} that marks an event. */

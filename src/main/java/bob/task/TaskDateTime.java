@@ -1,6 +1,7 @@
 package bob.task;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -354,6 +355,30 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
     /** Returns the time of day, or the start of the day when the user gave no time. */
     private LocalTime getTimeOrStartOfDay() {
         return (time == null) ? LocalTime.MIN : time;
+    }
+
+    /**
+     * Returns the moment at which this date begins: the time of day the user gave, or
+     * the start of the day when they gave none.
+     *
+     * <p>Used with {@link #asPeriodEnd} to measure a stretch of time, such as the one an
+     * {@link Event} runs for. A day with no time means the whole of that day, so which
+     * moment of it is meant depends on which end of the stretch the date is: "from the
+     * 2nd to the 2nd" is a day long, not nothing at all.
+     */
+    public LocalDateTime asPeriodStart() {
+        return date.atTime(getTimeOrStartOfDay());
+    }
+
+    /**
+     * Returns the moment at which this date ends: the time of day the user gave, or the
+     * last moment of the day when they gave none.
+     *
+     * <p>The counterpart of {@link #asPeriodStart}, where the reason for the two is
+     * given.
+     */
+    public LocalDateTime asPeriodEnd() {
+        return date.atTime((time == null) ? LocalTime.MAX : time);
     }
 
     /**
