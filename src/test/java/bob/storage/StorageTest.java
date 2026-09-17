@@ -49,7 +49,7 @@ public class StorageTest {
 
     @Test
     public void load_noFileYet_emptyListAndNothingToSay() {
-        Storage.LoadResult result = storageAt("duke.txt").load();
+        Storage.LoadResult result = storageAt("bob.txt").load();
 
         // The ordinary first run is not a problem, so it is not reported as one.
         assertEquals(List.of(), result.tasks());
@@ -134,7 +134,7 @@ public class StorageTest {
 
         // The backslashes survive the save that used to make their loss permanent.
         assertEquals(List.of("T | 0 | copy C:\\\\temp\\\\notes"),
-                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+                Files.readAllLines(tempDirectory.resolve("bob.txt"), StandardCharsets.UTF_8));
         assertEquals("[T][ ] copy C:\\temp\\notes", storage.load().tasks().get(0).toString());
     }
 
@@ -237,7 +237,7 @@ public class StorageTest {
         assertEquals(3, result.tasks().size());
         // Tasks 1 and 3 are the numbers delete takes; lines 1 and 4 are where they are in the file.
         assertEquals(List.of("Tasks 1 and 3 in your list"
-                + " (lines 1 and 4 of " + tempDirectory.resolve("duke.txt") + ")"
+                + " (lines 1 and 4 of " + tempDirectory.resolve("bob.txt") + ")"
                 + " are the same task. I've kept both — delete the one you don't need."), result.messages());
     }
 
@@ -252,7 +252,7 @@ public class StorageTest {
         List<String> messages = storage.load().messages();
 
         assertEquals(List.of("Tasks 1, 2 and 4 in your list"
-                + " (lines 1, 2 and 4 of " + tempDirectory.resolve("duke.txt") + ")"
+                + " (lines 1, 2 and 4 of " + tempDirectory.resolve("bob.txt") + ")"
                 + " are the same task. I've kept all 3 — delete the ones you don't need."), messages);
     }
 
@@ -296,7 +296,7 @@ public class StorageTest {
         List<String> messages = storage.load().messages();
 
         assertTrue(messages.contains("I've left those 2 lines out of your list."));
-        assertTrue(messages.contains("They'll be dropped from " + tempDirectory.resolve("duke.txt")
+        assertTrue(messages.contains("They'll be dropped from " + tempDirectory.resolve("bob.txt")
                 + " the next time the list changes, but the copy still has them."));
     }
 
@@ -325,26 +325,26 @@ public class StorageTest {
 
     @Test
     public void load_folderWhereFileShouldBe_emptyListAndSaidPlainly() throws IOException {
-        Files.createDirectory(tempDirectory.resolve("duke.txt"));
+        Files.createDirectory(tempDirectory.resolve("bob.txt"));
 
-        Storage.LoadResult result = storageAt("duke.txt").load();
+        Storage.LoadResult result = storageAt("bob.txt").load();
 
         assertEquals(List.of(), result.tasks());
         // Not a warning that the file will be overwritten, which no save could do to a folder.
         List<String> expectedMessages = List.of(
-                tempDirectory.resolve("duke.txt")
+                tempDirectory.resolve("bob.txt")
                         + " is a folder, not a file, so your tasks can't be saved.",
                 "Move or rename that folder, then start Bob again.");
         assertEquals(expectedMessages, result.messages());
         // A folder holds no tasks to keep, and copying one would only make an empty folder.
-        assertFalse(Files.exists(tempDirectory.resolve("duke.txt.bak")));
+        assertFalse(Files.exists(tempDirectory.resolve("bob.txt.bak")));
     }
 
     @Test
     public void load_fileStartingWithByteOrderMark_firstLineReadAsUsual() throws IOException {
         // Written in UTF-8, the character U+FEFF is the three bytes Notepad puts at the
         // start of a file it saves.
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         Files.writeString(path, "\uFEFFT | 0 | read book\nT | 1 | return book\n", StandardCharsets.UTF_8);
 
         Storage.LoadResult result = new Storage(path).load();
@@ -358,13 +358,13 @@ public class StorageTest {
     public void load_fileThatIsNotUtf8_fileCopiedAsItWasAndCopyReported() throws IOException {
         // The byte 0xFF never appears in UTF-8, so the file cannot be read as text at all.
         byte[] contents = {'T', ' ', '|', ' ', '0', ' ', '|', ' ', (byte) 0xFF};
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         Files.write(path, contents);
 
         Storage.LoadResult result = new Storage(path).load();
 
         assertEquals(List.of(), result.tasks());
-        assertArrayEquals(contents, Files.readAllBytes(tempDirectory.resolve("duke.txt.bak")));
+        assertArrayEquals(contents, Files.readAllBytes(tempDirectory.resolve("bob.txt.bak")));
         // The first message quotes the error, whose wording is Java's rather than this project's.
         List<String> expectedWarningAndNote = List.of(
                 "I'm starting with an empty list. That file will be overwritten the next time the list"
@@ -377,13 +377,13 @@ public class StorageTest {
     @Test
     public void load_badLine_fileCopiedAsItWasAndCopyReported() throws IOException {
         Storage storage = storageWithLines("T | 0 | read book", "nonsense", "", "T | 1 | return book");
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         byte[] contentsBeforeLoad = Files.readAllBytes(path);
 
         List<String> messages = storage.load().messages();
 
         // The copy is the file byte for byte, the blank and the damaged line included.
-        assertArrayEquals(contentsBeforeLoad, Files.readAllBytes(tempDirectory.resolve("duke.txt.bak")));
+        assertArrayEquals(contentsBeforeLoad, Files.readAllBytes(tempDirectory.resolve("bob.txt.bak")));
         List<String> expectedSummary = List.of(
                 "I've left that line out of your list.",
                 "It'll be dropped from " + path + " the next time the list changes,"
@@ -399,12 +399,12 @@ public class StorageTest {
 
         storage.load();
 
-        assertFalse(Files.exists(tempDirectory.resolve("duke.txt.bak")));
+        assertFalse(Files.exists(tempDirectory.resolve("bob.txt.bak")));
     }
 
     @Test
     public void load_backupLeftByAnEarlierStart_replaced() throws IOException {
-        Path backupPath = tempDirectory.resolve("duke.txt.bak");
+        Path backupPath = tempDirectory.resolve("bob.txt.bak");
         Files.writeString(backupPath, "a copy made on an earlier start");
         Storage storage = storageWithLines("nonsense");
 
@@ -417,7 +417,7 @@ public class StorageTest {
     public void load_backupCannotBeMade_warnedToCopyTheFileByHand() throws IOException {
         Storage storage = storageWithLines("nonsense");
         // A folder with something in it, where the copy would go, cannot be replaced by the copy.
-        Path blockedPath = tempDirectory.resolve("duke.txt.bak");
+        Path blockedPath = tempDirectory.resolve("bob.txt.bak");
         Files.createDirectory(blockedPath);
         Files.writeString(blockedPath.resolve("inside.txt"), "keeps the folder from being replaced");
 
@@ -428,14 +428,14 @@ public class StorageTest {
         assertEquals("It will be lost the next time the list changes — fix the file to keep it.",
                 messages.get(2));
         assertTrue(messages.get(3).startsWith("I couldn't make a backup at " + blockedPath + " ("));
-        assertEquals("Copy " + tempDirectory.resolve("duke.txt")
+        assertEquals("Copy " + tempDirectory.resolve("bob.txt")
                 + " somewhere safe yourself before changing the list.", messages.get(4));
     }
 
     @Test
     public void load_unreadableFileThatCannotBeCopied_warnedItWillNotBeSavedOver() throws IOException {
         Storage storage = storageWithLines("T | 0 | read book");
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         makeUnreadable(path);
 
         Storage.LoadResult result = storage.load();
@@ -453,80 +453,80 @@ public class StorageTest {
 
     @Test
     public void save_tasks_writtenOneToALineWithBarsBetweenFields() throws BobException, IOException {
-        Storage storage = storageAt("duke.txt");
+        Storage storage = storageAt("bob.txt");
         Todo todo = new Todo("read book");
         todo.markAsDone();
 
         storage.save(List.of(todo, new Deadline("return book", TaskDateTime.parse("2026-12-02"))));
 
         assertEquals(List.of("T | 1 | read book", "D | 0 | return book | 2026-12-02"),
-                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+                Files.readAllLines(tempDirectory.resolve("bob.txt"), StandardCharsets.UTF_8));
     }
 
     @Test
     public void save_missingFolder_folderCreated() throws BobException {
-        Storage storage = storageAt("data", "nested", "duke.txt");
+        Storage storage = storageAt("data", "nested", "bob.txt");
 
         storage.save(List.of(new Todo("read book")));
 
-        assertTrue(Files.exists(tempDirectory.resolve("data").resolve("nested").resolve("duke.txt")));
+        assertTrue(Files.exists(tempDirectory.resolve("data").resolve("nested").resolve("bob.txt")));
     }
 
     @Test
     public void save_shorterListThanBefore_oldLinesGone() throws BobException, IOException {
-        Storage storage = storageAt("duke.txt");
+        Storage storage = storageAt("bob.txt");
         storage.save(List.of(new Todo("read book"), new Todo("return book")));
 
         storage.save(List.of(new Todo("read book")));
 
         // The whole file is rewritten, so it always says exactly what the list says.
         assertEquals(List.of("T | 0 | read book"),
-                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+                Files.readAllLines(tempDirectory.resolve("bob.txt"), StandardCharsets.UTF_8));
     }
 
     @Test
     public void save_emptyList_fileIsEmpty() throws BobException, IOException {
-        Storage storage = storageAt("duke.txt");
+        Storage storage = storageAt("bob.txt");
         storage.save(List.of(new Todo("read book")));
 
         storage.save(List.of());
 
         assertEquals(List.of(),
-                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+                Files.readAllLines(tempDirectory.resolve("bob.txt"), StandardCharsets.UTF_8));
     }
 
     @Test
     public void save_overAnExistingFile_replacedWithNoTemporaryFileLeft() throws BobException, IOException {
-        Storage storage = storageAt("duke.txt");
+        Storage storage = storageAt("bob.txt");
         storage.save(List.of(new Todo("read book")));
 
         storage.save(List.of(new Todo("return book")));
 
         assertEquals(List.of("T | 0 | return book"),
-                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+                Files.readAllLines(tempDirectory.resolve("bob.txt"), StandardCharsets.UTF_8));
         // The list is written beside the save file and moved over it, leaving nothing behind.
-        assertFalse(Files.exists(tempDirectory.resolve("duke.txt.tmp")));
+        assertFalse(Files.exists(tempDirectory.resolve("bob.txt.tmp")));
     }
 
     @Test
     public void save_temporaryFileLeftByAStoppedSave_overwritten() throws BobException, IOException {
-        Path leftover = tempDirectory.resolve("duke.txt.tmp");
+        Path leftover = tempDirectory.resolve("bob.txt.tmp");
         Files.writeString(leftover, "half a line from a save that was cut off");
 
-        storageAt("duke.txt").save(List.of(new Todo("read book")));
+        storageAt("bob.txt").save(List.of(new Todo("read book")));
 
         assertEquals(List.of("T | 0 | read book"),
-                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+                Files.readAllLines(tempDirectory.resolve("bob.txt"), StandardCharsets.UTF_8));
         assertFalse(Files.exists(leftover));
     }
 
     @Test
     public void save_newListCannotBeWritten_oldFileKeptWhole() throws BobException, IOException {
-        Storage storage = storageAt("duke.txt");
+        Storage storage = storageAt("bob.txt");
         storage.save(List.of(new Todo("read book"), new Todo("return book")));
         // A folder with something in it, where the temporary file would go, makes writing
         // the new list fail once the old file is already there, as a full disk would.
-        Path blockedPath = tempDirectory.resolve("duke.txt.tmp");
+        Path blockedPath = tempDirectory.resolve("bob.txt.tmp");
         Files.createDirectory(blockedPath);
         Files.writeString(blockedPath.resolve("inside.txt"), "keeps the folder from being removed");
 
@@ -534,13 +534,13 @@ public class StorageTest {
 
         // Writing straight into the save file would have emptied it before failing.
         assertEquals(List.of("T | 0 | read book", "T | 0 | return book"),
-                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+                Files.readAllLines(tempDirectory.resolve("bob.txt"), StandardCharsets.UTF_8));
     }
 
     @Test
     public void save_overUnreadableFileThatCannotBeCopied_refusedAndFileKeptWhole() throws IOException {
         Storage storage = storageWithLines("T | 0 | read book", "T | 1 | return book");
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         makeUnreadable(path);
         storage.load();
 
@@ -562,7 +562,7 @@ public class StorageTest {
     @Test
     public void save_unreadableFileMovedAway_savedAsUsualFromThenOn() throws BobException, IOException {
         Storage storage = storageWithLines("T | 0 | read book");
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         makeUnreadable(path);
         storage.load();
         Files.move(path, tempDirectory.resolve("moved.txt"));
@@ -578,7 +578,7 @@ public class StorageTest {
     @Test
     public void save_unreadableFileReadOnALaterLoad_savedAsUsual() throws BobException, IOException {
         Storage storage = storageWithLines("T | 0 | read book");
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         makeUnreadable(path);
         storage.load();
         makeReadable(path);
@@ -593,7 +593,7 @@ public class StorageTest {
     @Test
     public void save_overUnreadableFileThatWasCopied_overwritten() throws BobException, IOException {
         // The byte 0xFF never appears in UTF-8, so the file cannot be read, but it can be copied.
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         Files.write(path, new byte[] {'T', ' ', '|', ' ', '0', ' ', '|', ' ', (byte) 0xFF});
         Storage storage = new Storage(path);
         storage.load();
@@ -606,17 +606,17 @@ public class StorageTest {
 
     @Test
     public void save_folderWhereFileShouldBe_refusedPlainlyWithNoTemporaryFileLeft() throws IOException {
-        Path folder = tempDirectory.resolve("duke.txt");
+        Path folder = tempDirectory.resolve("bob.txt");
         Files.createDirectory(folder);
 
         BobException error = assertThrows(BobException.class, () ->
-                storageAt("duke.txt").save(List.of(new Todo("read book"))));
+                storageAt("bob.txt").save(List.of(new Todo("read book"))));
 
         String expectedMessage = "I couldn't save your tasks to " + folder
                 + " because it is a folder, not a file."
                 + "\nThe change is in this session's list, but it won't survive quitting.";
         assertEquals(expectedMessage, error.getMessage());
-        assertFalse(Files.exists(tempDirectory.resolve("duke.txt.tmp")));
+        assertFalse(Files.exists(tempDirectory.resolve("bob.txt.tmp")));
     }
 
     @Test
@@ -625,9 +625,9 @@ public class StorageTest {
         Files.writeString(file, "not a folder");
 
         BobException error = assertThrows(BobException.class, () ->
-                storageAt("data", "duke.txt").save(List.of(new Todo("read book"))));
+                storageAt("data", "bob.txt").save(List.of(new Todo("read book"))));
 
-        String expectedMessage = "I couldn't save your tasks to " + file.resolve("duke.txt")
+        String expectedMessage = "I couldn't save your tasks to " + file.resolve("bob.txt")
                 + " because \"" + file + "\" is a file, not a folder."
                 + "\nMove or rename that file so I can make the folder."
                 + "\nThe change is in this session's list, but it won't survive quitting.";
@@ -638,8 +638,8 @@ public class StorageTest {
 
     @Test
     public void hasUnsavedChanges_saveFailed_true() throws IOException {
-        Files.createDirectory(tempDirectory.resolve("duke.txt"));
-        Storage storage = storageAt("duke.txt");
+        Files.createDirectory(tempDirectory.resolve("bob.txt"));
+        Storage storage = storageAt("bob.txt");
         assertFalse(storage.hasUnsavedChanges());
 
         assertThrows(BobException.class, () -> storage.save(List.of(new Todo("read book"))));
@@ -650,9 +650,9 @@ public class StorageTest {
     @Test
     public void hasUnsavedChanges_saveWorksAfterAFailedOne_falseAndWarningForgotten()
             throws BobException, IOException {
-        Path folder = tempDirectory.resolve("duke.txt");
+        Path folder = tempDirectory.resolve("bob.txt");
         Files.createDirectory(folder);
-        Storage storage = storageAt("duke.txt");
+        Storage storage = storageAt("bob.txt");
         assertThrows(BobException.class, () -> storage.save(List.of(new Todo("read book"))));
         storage.markUnsavedChangesWarningGiven();
         Files.delete(folder);
@@ -666,8 +666,8 @@ public class StorageTest {
 
     @Test
     public void isUnsavedChangesWarningGiven_saveFailsAgainAfterWarning_stillTrue() throws IOException {
-        Files.createDirectory(tempDirectory.resolve("duke.txt"));
-        Storage storage = storageAt("duke.txt");
+        Files.createDirectory(tempDirectory.resolve("bob.txt"));
+        Storage storage = storageAt("bob.txt");
         assertThrows(BobException.class, () -> storage.save(List.of(new Todo("read book"))));
         storage.markUnsavedChangesWarningGiven();
 
@@ -701,7 +701,7 @@ public class StorageTest {
 
     @Test
     public void saveThenLoad_everyKindOfTask_readBackUnchanged() throws BobException {
-        Storage storage = storageAt("duke.txt");
+        Storage storage = storageAt("bob.txt");
         Event event = new Event("project meeting",
                 TaskDateTime.parse("2026-12-02 1800"), TaskDateTime.parse("2026-12-03 2000"));
         Deadline deadline = new Deadline("return book", TaskDateTime.parse("2026-12-02"));
@@ -719,7 +719,7 @@ public class StorageTest {
 
     /** Checks that a description survives being saved and read back unchanged. */
     private void assertSurvivesRoundTrip(String description) throws BobException {
-        Storage storage = storageAt("duke.txt");
+        Storage storage = storageAt("bob.txt");
 
         storage.save(List.of(new Todo(description)));
         Storage.LoadResult result = storage.load();
@@ -759,7 +759,7 @@ public class StorageTest {
 
     /** Returns storage backed by a save file already holding {@code lines}. */
     private Storage storageWithLines(String... lines) throws IOException {
-        Path path = tempDirectory.resolve("duke.txt");
+        Path path = tempDirectory.resolve("bob.txt");
         Files.write(path, List.of(lines), StandardCharsets.UTF_8);
         return new Storage(path);
     }

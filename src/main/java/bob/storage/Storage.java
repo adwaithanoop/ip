@@ -62,10 +62,10 @@ public class Storage {
      *
      * <p>The path is built from its parts rather than written out as one piece of
      * text, so that the separator between them is the one the operating system
-     * running the chatbot uses. A path spelled {@code "data/duke.txt"} would carry
+     * running the chatbot uses. A path spelled {@code "data/bob.txt"} would carry
      * an assumption about that separator that this project has no reason to make.
      */
-    public static final Path DEFAULT_FILE_PATH = Path.of("data", "duke.txt");
+    public static final Path DEFAULT_FILE_PATH = Path.of("data", "bob.txt");
 
     /** Text written between the fields of a saved task. */
     private static final String FIELD_SEPARATOR = " | ";
@@ -78,13 +78,13 @@ public class Storage {
 
     /**
      * Added to the save file's name to name the temporary file a save writes first, so
-     * that {@code data/duke.txt} is saved by way of {@code data/duke.txt.tmp}.
+     * that {@code data/bob.txt} is saved by way of {@code data/bob.txt.tmp}.
      */
     private static final String TEMP_FILE_SUFFIX = ".tmp";
 
     /**
      * Added to the save file's name to name the copy kept of a damaged save file, so
-     * that {@code data/duke.txt} is backed up as {@code data/duke.txt.bak}.
+     * that {@code data/bob.txt} is backed up as {@code data/bob.txt.bak}.
      */
     private static final String BACKUP_FILE_SUFFIX = ".bak";
 
@@ -214,7 +214,7 @@ public class Storage {
      * </ul>
      *
      * <p>In the two cases where something in the file is left out of the list, the
-     * file is also copied to a backup beside it, such as {@code data/duke.txt.bak},
+     * file is also copied to a backup beside it, such as {@code data/bob.txt.bak},
      * and the user is told where. The next change to the list overwrites the file, so
      * without the copy it would be the end of whatever was left out.
      */
@@ -354,7 +354,7 @@ public class Storage {
     }
 
     /**
-     * Copies the save file to a backup beside it, such as {@code data/duke.txt.bak},
+     * Copies the save file to a backup beside it, such as {@code data/bob.txt.bak},
      * and returns what the user should be told: the warning that fits whether the copy
      * was made, followed by where the copy is or why there is none.
      *
@@ -405,7 +405,7 @@ public class Storage {
 
     /**
      * Returns the path of a file in the save file's folder, named after the save file
-     * with {@code suffix} added, such as {@code data/duke.txt.bak}.
+     * with {@code suffix} added, such as {@code data/bob.txt.bak}.
      */
     private Path siblingPath(String suffix) {
         return filePath.resolveSibling(filePath.getFileName() + suffix);
@@ -454,7 +454,7 @@ public class Storage {
 
     /**
      * Returns the message about one group of lines holding the same task, for example
-     * {@code Tasks 1 and 2 in your list (lines 2 and 5 of data/duke.txt) are the same task.},
+     * {@code Tasks 1 and 2 in your list (lines 2 and 5 of data/bob.txt) are the same task.},
      * followed by a note that all of them were kept.
      *
      * <p>The tasks are named first by their numbers in the list, since those are the

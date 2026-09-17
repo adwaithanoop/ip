@@ -156,7 +156,7 @@ public class ParserTest {
         TaskList tasks = new TaskList();
         // The collecting Ui, so that running the command leaves the test session's
         // own output alone. What it says is not what is being tested here.
-        command.execute(tasks, Ui.forGui(), new Storage(tempDirectory.resolve("duke.txt")));
+        command.execute(tasks, Ui.forGui(), new Storage(tempDirectory.resolve("bob.txt")));
         return tasks.get(0);
     }
 }

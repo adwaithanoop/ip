@@ -336,7 +336,7 @@ public class BobTest {
 
     /** Returns the save file this test's chatbots use. */
     private Path saveFile() {
-        return tempDirectory.resolve("duke.txt");
+        return tempDirectory.resolve("bob.txt");
     }
 
     /**
