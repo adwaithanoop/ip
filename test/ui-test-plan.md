@@ -9,7 +9,7 @@ adding a test case here is all that is needed to have it run.
 
 - **Main class:** `bob.Bob`
 - **Source directory:** `src/main/java`
-- **Data file:** `data/duke.txt`
+- **Data file:** `data/bob.txt`
 
 The chatbot now has two front ends, and this plan tests the console one. The
 main class above is therefore `bob.Bob`, which still holds the whole
@@ -38,7 +38,7 @@ anything into the repository.
 The test cases that have the program print the path of the data file (TC22,
 TC38, TC40 and TC43) expect it written with `/` between the folder and the file name. That
 is how the path prints on macOS and Linux; on Windows the same path prints as
-`data\duke.txt`, because the program builds it from its parts and lets the
+`data\bob.txt`, because the program builds it from its parts and lets the
 operating system supply the separator. On Windows, expect those test cases to
 report a difference in the lines naming the file only.
 
@@ -47,14 +47,14 @@ report a difference in the lines naming the file only.
 Because the task list now outlives a run of the program, a test case may say
 what is on the disk on either side of the run:
 
-- a **Data file before** block is written to `data/duke.txt` before the program
+- a **Data file before** block is written to `data/bob.txt` before the program
   starts, standing for tasks saved in an earlier session;
-- a **Data file after** block is compared with `data/duke.txt` once the program
+- a **Data file after** block is compared with `data/bob.txt` once the program
   has finished, and the test case fails if it does not match. The block may be
   the single line `(no file)`, which says the program should have left no save
   file at all.
 
-A program that finds a damaged save file also copies it to `data/duke.txt.bak`.
+A program that finds a damaged save file also copies it to `data/bob.txt.bak`.
 The runner does not compare that copy, so what it holds is checked by the JUnit
 tests in `StorageTest` instead.
 
@@ -2073,7 +2073,7 @@ advice the chatbot gives someone typing a command. A blank line is not damage an
 is passed over in silence. The warning that the skipped lines will be dropped is the
 point of reporting them at all: the next command that changes the list rewrites
 the whole file without them. So the file is first copied, as it was, to
-`data/duke.txt.bak`, and the report ends by saying where the copy is.
+`data/bob.txt.bak`, and the report ends by saying where the copy is.
 
 **Data file before**
 
@@ -2136,14 +2136,14 @@ bye
 
     ____________________________________________________________
      Bob found 2 tasks from before.
-     Line 2 of data/duke.txt isn't a task I can read: "X" is not a kind of task I know (I know T, D and E).
-     Line 3 of data/duke.txt isn't a task I can read: a saved deadline has 4 fields, but this line has 3.
-     Line 4 of data/duke.txt isn't a task I can read: "2" doesn't say whether the task is done (it should be 1 or 0).
-     Line 5 of data/duke.txt isn't a task I can read: the description is empty.
-     Line 6 of data/duke.txt isn't a task I can read: the due date "someday" isn't a date (dates are saved as 2026-12-02, or 2026-12-02 1800 with a time).
+     Line 2 of data/bob.txt isn't a task I can read: "X" is not a kind of task I know (I know T, D and E).
+     Line 3 of data/bob.txt isn't a task I can read: a saved deadline has 4 fields, but this line has 3.
+     Line 4 of data/bob.txt isn't a task I can read: "2" doesn't say whether the task is done (it should be 1 or 0).
+     Line 5 of data/bob.txt isn't a task I can read: the description is empty.
+     Line 6 of data/bob.txt isn't a task I can read: the due date "someday" isn't a date (dates are saved as 2026-12-02, or 2026-12-02 1800 with a time).
      I've left those 5 lines out of your list.
-     They'll be dropped from data/duke.txt the next time the list changes, but the copy still has them.
-     The file as it was is kept in data/duke.txt.bak, so nothing in it is lost.
+     They'll be dropped from data/bob.txt the next time the list changes, but the copy still has them.
+     The file as it was is kept in data/bob.txt.bak, so nothing in it is lost.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -4126,7 +4126,7 @@ bye
 
     ____________________________________________________________
      Bob found 4 tasks from before.
-     Tasks 1 and 3 in your list (lines 1 and 3 of data/duke.txt) are the same task. I've kept both — delete the one you don't need.
+     Tasks 1 and 3 in your list (lines 1 and 3 of data/bob.txt) are the same task. I've kept both — delete the one you don't need.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -4304,15 +4304,15 @@ D|0|return book|2026-12-02
 ### TC40 - A damaged save file is copied before it can be overwritten
 
 **Aim:** Check that a save file with lines the chatbot cannot read is copied, as it
-was, to `data/duke.txt.bak` when the chatbot starts, and that the load report says
+was, to `data/bob.txt.bak` when the chatbot starts, and that the load report says
 where the copy is rather than warning that the skipped lines will be lost. The
 damaged lines are the two events that break the rule an event typed at the chatbot
 meets — one ending before it starts, and one starting and ending at the same
 moment — so this also checks that a hand-edited file cannot load either of them.
 The `todo` afterwards changes the list, and the Data file after shows that
-`data/duke.txt` was then rewritten without the skipped lines, leaving the copy as
+`data/bob.txt` was then rewritten without the skipped lines, leaving the copy as
 the only place they survive. What the copy holds is checked in `StorageTest`,
-since the runner compares only `data/duke.txt`.
+since the runner compares only `data/bob.txt`.
 
 **Data file before**
 
@@ -4371,11 +4371,11 @@ bye
 
     ____________________________________________________________
      Bob found 1 task from before.
-     Line 2 of data/duke.txt isn't a task I can read: the event ends before it starts.
-     Line 3 of data/duke.txt isn't a task I can read: the event starts and ends at the same moment.
+     Line 2 of data/bob.txt isn't a task I can read: the event ends before it starts.
+     Line 3 of data/bob.txt isn't a task I can read: the event starts and ends at the same moment.
      I've left those 2 lines out of your list.
-     They'll be dropped from data/duke.txt the next time the list changes, but the copy still has them.
-     The file as it was is kept in data/duke.txt.bak, so nothing in it is lost.
+     They'll be dropped from data/bob.txt the next time the list changes, but the copy still has them.
+     The file as it was is kept in data/bob.txt.bak, so nothing in it is lost.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -4656,7 +4656,7 @@ bye
 
     ____________________________________________________________
      Bob found 4 tasks from before.
-     Tasks 1 and 3 in your list (lines 1 and 4 of data/duke.txt) are the same task. I've kept both — delete the one you don't need.
+     Tasks 1 and 3 in your list (lines 1 and 4 of data/bob.txt) are the same task. I've kept both — delete the one you don't need.
     ____________________________________________________________
 
     ____________________________________________________________

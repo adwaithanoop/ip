@@ -90,8 +90,8 @@ the project root with:
 java -jar build/libs/bob.jar
 ```
 
-Bob saves tasks automatically in `data/duke.txt`, relative to the folder from which the JAR is run. If Bob finds
-lines in that file it cannot read, it copies the file to `data/duke.txt.bak` before changing anything.
+Bob saves tasks automatically in `data/bob.txt`, relative to the folder from which the JAR is run. If Bob finds
+lines in that file it cannot read, it copies the file to `data/bob.txt.bak` before changing anything.
 
 A ready-made `bob.jar` can also be downloaded from the [latest release](https://github.com/adwaithanoop/ip/releases)
 and run the same way, with JDK 25. The JAR runs on Windows and Linux with an Intel or AMD processor, and on Apple

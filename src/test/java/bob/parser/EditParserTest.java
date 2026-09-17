@@ -160,7 +160,7 @@ public class EditParserTest {
         tasks.add(task);
         // The collecting Ui, so that running the command leaves the test session's
         // own output alone. What it says is not what is being tested here.
-        Storage storage = new Storage(tempDirectory.resolve("duke.txt"));
+        Storage storage = new Storage(tempDirectory.resolve("bob.txt"));
         EditParser.parseEdit(arguments).execute(tasks, Ui.forGui(), storage);
         return tasks.get(0);
     }
