@@ -155,6 +155,18 @@ public class TodoTest {
     }
 
     @Test
+    public void matchesKeyword_extraSpacesOnEitherSide_returnsTrue() {
+        // The duplicate check ignores extra spaces, so a search must too: adding
+        // "sports club" a second time is refused for matching the task below, and a
+        // search that missed it would leave the user unable to find what they have.
+        Todo todo = new Todo("join sports  club");
+
+        assertTrue(todo.matchesKeyword("sports club"));
+        assertTrue(new Todo("join sports club").matchesKeyword("sports   club"));
+        assertTrue(todo.matchesKeyword(" sports club "));
+    }
+
+    @Test
     public void matchesKeyword_partOfAWord_returnsTrue() {
         // Half a word is a search someone means, so the keyword is looked for
         // anywhere in the description rather than as a whole word.

@@ -128,10 +128,13 @@ public abstract class Task {
     /**
      * Returns whether this task's description contains {@code keyword}.
      *
-     * <p>Case is ignored, so a user searching for {@code Book} still finds a task
-     * they wrote as {@code read book}. Comparing the text exactly as typed would
-     * be marginally simpler, but it would make a search fail for the one reason a
-     * user is least likely to think of.
+     * <p>Case and the spaces between words are ignored, so a user searching for
+     * {@code Book} still finds a task they wrote as {@code read book}, and
+     * {@code find sports club} finds one typed as {@code sports  club}. Comparing
+     * the text exactly as typed would be marginally simpler, but it would make a
+     * search fail for the two reasons a user is least likely to think of. Extra
+     * spaces are ignored by {@link #isSameTaskAs} as well, so a search cannot miss a
+     * task that adding it a second time would be refused for matching.
      *
      * <p>The keyword is looked for anywhere in the description rather than as a
      * whole word of its own, so {@code book} finds {@code bookshop} too. That is
@@ -146,9 +149,7 @@ public abstract class Task {
      * @param keyword the text to look for, as the user typed it.
      */
     public boolean matchesKeyword(String keyword) {
-        // Locale.ROOT rather than the machine's own locale, so that lowercasing
-        // means the same thing wherever the chatbot is run.
-        return description.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
+        return normalizeForMatching(description).contains(normalizeForMatching(keyword));
     }
 
     /**
@@ -170,7 +171,7 @@ public abstract class Task {
      */
     public boolean isSameTaskAs(Task other) {
         return getClass() == other.getClass()
-                && normalizeDescription(description).equals(normalizeDescription(other.description))
+                && normalizeForMatching(description).equals(normalizeForMatching(other.description))
                 && hasSameDatesAs(other);
     }
 
@@ -190,12 +191,16 @@ public abstract class Task {
     }
 
     /**
-     * Returns a description in the form two descriptions are compared in: with no
+     * Returns text in the form descriptions and keywords are compared in: with no
      * spaces around it, one space between words, and no capital letters.
+     *
+     * <p>Used by {@link #isSameTaskAs} and {@link #matchesKeyword} alike, so that the
+     * two cannot disagree about which differences between two pieces of text matter.
      */
-    private static String normalizeDescription(String description) {
-        // Locale.ROOT for the reason given in matchesKeyword.
-        return description.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    private static String normalizeForMatching(String text) {
+        // Locale.ROOT rather than the machine's own locale, so that lowercasing
+        // means the same thing wherever the chatbot is run.
+        return text.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     /**
