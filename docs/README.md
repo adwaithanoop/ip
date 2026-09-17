@@ -237,6 +237,8 @@ Format: `find <keyword>`
 * Capital letters don't matter: `find BOOK` finds `borrow book`.
 * Part of a word is enough: `find book` also finds `bookshop`.
 * The keyword may have spaces in it, such as `find project meeting`.
+* Extra spaces between words don't matter: `find project meeting` finds
+  `project  meeting` as well.
 
 Example: `find book`
 
