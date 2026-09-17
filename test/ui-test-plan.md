@@ -3930,11 +3930,14 @@ D | 0 | fly /tokyo | 2026-12-02
 does not exist, is refused with what is wrong with it. `2400` is refused rather
 than quietly read as midnight at the start of the same day, and `1260` is
 refused for its minutes although it is below `2359`. A month past 12, and the
-30th of February in a leap year, are refused with the month or its length. The
-check is the same wherever a date is read: in an event's end, and in the day
-asked about by `on` and `before`, including month `00`. The last deadline is on
-the leap day at the last minute of the day, which does exist, and the `list` and
-the save file show it is the only task added.
+30th of February in a leap year, are refused with the month or its length. A part
+written as `00` is refused as the thing that does not exist, whether it is the
+month or the day: `2026-12-00` says there is no day 0, rather than that December
+has 31 days, which is true and would send the user looking for a month long
+enough to hold a day 0. The check is the same wherever a date is read: in an
+event's end, and in the day asked about by `on` and `before`. The last deadline
+is on the leap day at the last minute of the day, which does exist, and the
+`list` and the save file show it is the only task added.
 
 **Input**
 
@@ -3942,6 +3945,7 @@ the save file show it is the only task added.
 deadline pay fees /by 2026-12-02 2400
 deadline pay fees /by 2026-12-02 1260
 deadline pay fees /by 2026-13-01
+deadline pay fees /by 2026-12-00
 deadline pay fees /by 2028-02-30
 event exam week /from 2026-04-27 /to 2026-04-31
 on 2026-02-29
@@ -4003,6 +4007,11 @@ bye
     ____________________________________________________________
      MINION EMERGENCY!
      2026-13-01 isn't a real day: there is no month 13.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     2026-12-00 isn't a real day: there is no day 0.
     ____________________________________________________________
 
     ____________________________________________________________

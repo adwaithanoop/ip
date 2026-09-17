@@ -256,6 +256,12 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
      * and a month means nothing in a year that does not exist either. {@link YearMonth}
      * knows how long each month is, leap years included.
      *
+     * <p>A part written as zero is reported as the thing that does not exist, rather
+     * than by the length of whatever contains it. The counting starts at one, so a
+     * zero is out of range at either end for the same reason, and saying that
+     * December has 31 days would leave the user looking for a 31-day month to put
+     * their day 0 in.
+     *
      * @param dayText the word the user typed where a day was expected.
      * @throws BobException if it is written as a day but names a year, a month or a day
      *                      that does not exist.
@@ -274,9 +280,13 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
         if (month < 1 || month > 12) {
             throw new BobException(dayText + " isn't a real day: there is no month " + month + ".");
         }
-        YearMonth yearMonth = YearMonth.of(Integer.parseInt(matcher.group(1)), month);
+        YearMonth yearMonth = YearMonth.of(year, month);
         int day = Integer.parseInt(matcher.group(3));
-        if (day < 1 || day > yearMonth.lengthOfMonth()) {
+        if (day < 1) {
+            // Only 00 can reach this, since the form allows no sign.
+            throw new BobException(dayText + " isn't a real day: there is no day 0.");
+        }
+        if (day > yearMonth.lengthOfMonth()) {
             // The month is named in English for the reason given at OUTPUT_DATE_FORMAT.
             String monthName = yearMonth.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
             throw new BobException(dayText + " isn't a real day: " + monthName + " " + yearMonth.getYear()

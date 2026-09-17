@@ -154,7 +154,12 @@ public class TaskDateTimeTest {
                 messageFromParsing("2028-02-30"));
         assertEquals("2026-04-31 isn't a real day: April 2026 has 30 days.",
                 messageFromParsing("2026-04-31"));
-        assertEquals("2026-12-00 isn't a real day: December 2026 has 31 days.",
+    }
+
+    @Test
+    public void parse_dayZero_exceptionSaysThereIsNoDayZero() {
+        // How long December is says nothing about a day 0, which no month has.
+        assertEquals("2026-12-00 isn't a real day: there is no day 0.",
                 messageFromParsing("2026-12-00"));
     }
 
