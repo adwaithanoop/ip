@@ -78,6 +78,10 @@ Format: `event <description> /from yyyy-mm-dd /to yyyy-mm-dd`
 
 * `/from` comes before `/to`.
 * An event can't end before it starts.
+* A day written with no time means the whole of that day: it starts at the
+  beginning of the day in `/from`, and ends at the end of it in `/to`. So
+  `/from 2026-12-02 1800 /to 2026-12-02` runs from six in the evening until the
+  day is over.
 
 Examples:
 

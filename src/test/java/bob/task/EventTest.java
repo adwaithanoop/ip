@@ -169,13 +169,42 @@ public class EventTest {
     }
 
     @Test
-    public void requireValidPeriod_sameDayWithoutBothTimes_accepted() {
-        // A one-day event covers the whole day, so it is not a single moment.
+    public void requireValidPeriod_sameDayWithoutTimes_accepted() {
+        // A day with no time means the whole of that day, so a one-day event runs from
+        // the start of the 5th to the end of it, and is not a single moment.
         assertDoesNotThrow(() -> Event.requireValidPeriod(TaskDateTime.parse("2026-12-05"),
                 TaskDateTime.parse("2026-12-05")));
-        // These compare as equal, but only one end was given a time.
-        assertDoesNotThrow(() -> Event.requireValidPeriod(TaskDateTime.parse("2026-12-05"),
-                TaskDateTime.parse("2026-12-05 0000")));
+    }
+
+    @Test
+    public void requireValidPeriod_endDayWithoutATimeAfterATimedStart_accepted() {
+        // The end is the end of the 5th, which is after 18:00 on the 5th.
+        assertDoesNotThrow(() -> Event.requireValidPeriod(TaskDateTime.parse("2026-12-05 1800"),
+                TaskDateTime.parse("2026-12-05")));
+    }
+
+    @Test
+    public void requireValidPeriod_startDayWithoutATimeEndingAtMidnight_refused() throws BobException {
+        TaskDateTime from = TaskDateTime.parse("2026-12-05");
+        TaskDateTime to = TaskDateTime.parse("2026-12-05 0000");
+
+        // The start counts as midnight at the start of the 5th, which is the very
+        // moment the user asked the event to end at.
+        BobException exception = assertThrows(BobException.class, () -> Event.requireValidPeriod(from, to));
+
+        assertEquals("An event can't start and end at the same moment."
+                + " For a single moment, use a deadline.", exception.getMessage());
+    }
+
+    @Test
+    public void requireValidPeriod_endDayBeforeATimedStartOnTheSameDay_exceptionThrown() throws BobException {
+        TaskDateTime from = TaskDateTime.parse("2026-12-06 0900");
+        TaskDateTime to = TaskDateTime.parse("2026-12-05");
+
+        // The end of the 5th is still before 09:00 on the 6th.
+        BobException exception = assertThrows(BobException.class, () -> Event.requireValidPeriod(from, to));
+
+        assertTrue(exception.getMessage().startsWith("An event can't end before it starts."));
     }
 
     @Test

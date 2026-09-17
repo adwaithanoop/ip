@@ -213,6 +213,30 @@ public class StorageTest {
     }
 
     @Test
+    public void load_eventEndingAtMidnightOfItsUndatedStartDay_lineReportedAndSkipped() throws IOException {
+        // The end day with no time in the line above means the end of the 5th, but here
+        // the user asked for midnight, which is where the start day already puts it.
+        Storage storage = storageWithLines("E | 0 | blip | 2026-12-05 | 2026-12-05 0000");
+
+        Storage.LoadResult result = storage.load();
+
+        assertEquals(List.of(), result.tasks());
+        assertTrue(result.messages().get(0).endsWith(": the event starts and ends at the same moment."));
+    }
+
+    @Test
+    public void load_eventEndingOnItsStartDayWithoutATime_loaded() throws IOException {
+        Storage storage = storageWithLines("E | 0 | party | 2026-12-05 1800 | 2026-12-05");
+
+        Storage.LoadResult result = storage.load();
+
+        // The end is the end of the 5th, so the event runs from six in the evening
+        // until the day is over.
+        assertEquals(List.of(), result.messages());
+        assertEquals("[E][ ] party (from: Dec 05 2026 18:00 to: Dec 05 2026)", result.tasks().get(0).toString());
+    }
+
+    @Test
     public void load_oneDayEventWithoutTimes_loaded() throws IOException {
         Storage storage = storageWithLines("E | 0 | open day | 2026-12-05 | 2026-12-05");
 

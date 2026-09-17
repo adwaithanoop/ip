@@ -769,7 +769,7 @@ public class Storage {
         } catch (BobException e) {
             // The rule has already decided the pair is refused; comparing the two
             // again only picks which of its two reasons to give.
-            throw new BobException(to.compareTo(from) < 0
+            throw new BobException(Event.endsBeforeStart(from, to)
                     ? "the event ends before it starts"
                     : "the event starts and ends at the same moment");
         }
