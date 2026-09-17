@@ -234,9 +234,70 @@ public class BobTest {
         assertTrue(bob.isExit());
     }
 
+    @Test
+    public void getResponse_byeWithChangeThatStillCannotBeSaved_heldBackOnceThenQuits() throws IOException {
+        Bob bob = bobWithFolderForSaveFile();
+        bob.getResponse("todo read book");
+
+        String firstBye = bob.getResponse("bye");
+
+        String expectedWarning = "MINION EMERGENCY!\nI couldn't save your tasks to " + saveFile()
+                + " because it is a folder, not a file."
+                + "\nThe change is in this session's list, but it won't survive quitting."
+                + "\nFix that and type bye to try again."
+                + " If it still can't be saved, bye will quit without saving.";
+        assertEquals(expectedWarning, firstBye);
+        assertTrue(bob.isLastResponseError());
+        // The window stays open, so the user can still fix the problem.
+        assertFalse(bob.isExit());
+
+        String secondBye = bob.getResponse("bye");
+
+        assertEquals("Bob quit without saving yur changes. Dey gone!\n"
+                + "Poopaye! Bob go find banana, see yu soon!", secondBye);
+        assertFalse(bob.isLastResponseError());
+        assertTrue(bob.isExit());
+    }
+
+    @Test
+    public void getResponse_byeAfterProblemFixed_changeSavedAndQuits() throws IOException {
+        Bob bob = bobWithFolderForSaveFile();
+        bob.getResponse("todo read book");
+        bob.getResponse("bye");
+        Files.delete(saveFile());
+
+        String response = bob.getResponse("bye");
+
+        assertEquals("Your changes are saved now.\nPoopaye! Bob go find banana, see yu soon!", response);
+        assertTrue(bob.isExit());
+        assertEquals("T | 0 | read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
+    @Test
+    public void getResponse_byeWhenProblemFixedBeforeIt_savedWithoutHoldingBack() throws IOException {
+        Bob bob = bobWithFolderForSaveFile();
+        bob.getResponse("todo read book");
+        Files.delete(saveFile());
+
+        String response = bob.getResponse("bye");
+
+        assertEquals("Your changes are saved now.\nPoopaye! Bob go find banana, see yu soon!", response);
+        assertTrue(bob.isExit());
+        assertEquals("T | 0 | read book", Files.readString(saveFile(), StandardCharsets.UTF_8).strip());
+    }
+
     /** Returns the save file this test's chatbots use. */
     private Path saveFile() {
         return tempDirectory.resolve("duke.txt");
+    }
+
+    /**
+     * Returns a chatbot for a window whose save file's place is taken by a folder, so
+     * that every save fails until the folder is deleted.
+     */
+    private Bob bobWithFolderForSaveFile() throws IOException {
+        Files.createDirectory(saveFile());
+        return Bob.forGui(saveFile());
     }
 
     /**

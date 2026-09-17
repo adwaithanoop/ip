@@ -223,7 +223,8 @@ public class Bob {
      * because the input ran out — which happens when it is piped in from a file
      * with no {@code bye} on the end. Only the first prints a farewell of its
      * own, through {@link bob.command.ExitCommand ExitCommand}, so the second is given one here. A user
-     * whose input simply stopped is still owed a sign-off.
+     * whose input simply stopped is still owed a sign-off, and the same last try at
+     * saving changes that an earlier save failed to write.
      */
     public void run() {
         ui.showGreeting();
@@ -237,9 +238,32 @@ public class Bob {
         ui.close();
         if (!isExit) {
             ui.openBlock();
+            saveBeforeInputEnds();
             ui.showFarewell();
             ui.closeBlock();
         }
+    }
+
+    /**
+     * Tries once more to save changes an earlier save failed to write, when the input
+     * runs out without a {@code bye}, and says whether they are now saved or are being
+     * left behind.
+     *
+     * <p>The same last try {@link bob.command.ExitCommand ExitCommand} makes, except that
+     * a failure cannot hold back the goodbye: with the input gone, nobody is left to fix
+     * the problem and try again.
+     */
+    private void saveBeforeInputEnds() {
+        if (!storage.hasUnsavedChanges()) {
+            return;
+        }
+        try {
+            storage.save(tasks.asList());
+        } catch (BobException e) {
+            ui.showQuitWithoutSaving();
+            return;
+        }
+        ui.showSavedBeforeQuitting();
     }
 
     /**
