@@ -223,7 +223,7 @@ public class StorageTest {
     }
 
     @Test
-    public void load_sameTaskOnTwoLines_bothLoadedAndReported() throws IOException {
+    public void load_sameTaskOnTwoLines_bothLoadedAndReportedByListNumberFirst() throws IOException {
         // The blank line makes the file's line numbers differ from the list's.
         Storage storage = storageWithLines(
                 "T | 0 | read book",
@@ -235,7 +235,9 @@ public class StorageTest {
 
         // Both are kept: they differ in ways the user may care about, here the done status.
         assertEquals(3, result.tasks().size());
-        assertEquals(List.of("Lines 1 and 4 of " + tempDirectory.resolve("duke.txt")
+        // Tasks 1 and 3 are the numbers delete takes; lines 1 and 4 are where they are in the file.
+        assertEquals(List.of("Tasks 1 and 3 in your list"
+                + " (lines 1 and 4 of " + tempDirectory.resolve("duke.txt") + ")"
                 + " are the same task. I've kept both — delete the one you don't need."), result.messages());
     }
 
@@ -249,7 +251,8 @@ public class StorageTest {
 
         List<String> messages = storage.load().messages();
 
-        assertEquals(List.of("Lines 1, 2 and 4 of " + tempDirectory.resolve("duke.txt")
+        assertEquals(List.of("Tasks 1, 2 and 4 in your list"
+                + " (lines 1, 2 and 4 of " + tempDirectory.resolve("duke.txt") + ")"
                 + " are the same task. I've kept all 3 — delete the ones you don't need."), messages);
     }
 
@@ -271,7 +274,10 @@ public class StorageTest {
         List<String> messages = storage.load().messages();
 
         assertTrue(messages.get(0).startsWith("Line 2 "));
-        assertTrue(messages.get(messages.size() - 1).startsWith("Lines 1 and 3 "));
+        // The unreadable line is left out of the list, so the list counts 1 and 2
+        // where the file counts 1 and 3.
+        String lastMessage = messages.get(messages.size() - 1);
+        assertTrue(lastMessage.startsWith("Tasks 1 and 2 in your list (lines 1 and 3 "));
     }
 
     @Test

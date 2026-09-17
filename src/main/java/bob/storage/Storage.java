@@ -436,15 +436,17 @@ public class Storage {
             if (isAlreadyReported[i]) {
                 continue;
             }
-            List<Integer> sameTaskLineNumbers = new ArrayList<>(List.of(lineNumbers.get(i)));
+            // The tasks are loaded into the list in the order they were read, so a task's
+            // position here is its position in the list.
+            List<Integer> sameTaskIndexes = new ArrayList<>(List.of(i));
             for (int j = i + 1; j < tasks.size(); j++) {
                 if (tasks.get(i).isSameTaskAs(tasks.get(j))) {
-                    sameTaskLineNumbers.add(lineNumbers.get(j));
+                    sameTaskIndexes.add(j);
                     isAlreadyReported[j] = true;
                 }
             }
-            if (sameTaskLineNumbers.size() > 1) {
-                messages.add(describeSameTaskLines(sameTaskLineNumbers));
+            if (sameTaskIndexes.size() > 1) {
+                messages.add(describeSameTaskLines(sameTaskIndexes, lineNumbers));
             }
         }
         return messages;
@@ -452,24 +454,49 @@ public class Storage {
 
     /**
      * Returns the message about one group of lines holding the same task, for example
-     * {@code Lines 2 and 5 of data/duke.txt are the same task.}, followed by a note
-     * that all of them were kept.
+     * {@code Tasks 1 and 2 in your list (lines 2 and 5 of data/duke.txt) are the same task.},
+     * followed by a note that all of them were kept.
      *
-     * @param lineNumbers the lines holding that task, at least two, in the order they
-     *                    appear in the file.
+     * <p>The tasks are named first by their numbers in the list, since those are the
+     * numbers {@code delete} takes. The file's line numbers follow for anyone fixing the
+     * file by hand. Naming only the lines would send a user who types {@code delete} to
+     * the wrong task, or to none, whenever a blank or unreadable line comes before them.
+     *
+     * @param taskIndexes the positions in the list of the tasks in the group, at least
+     *                    two, counting from 0, in the order they appear in the file.
+     * @param lineNumbers the line every loaded task was read from, counting from 1, in
+     *                    the order of the list.
      */
-    private String describeSameTaskLines(List<Integer> lineNumbers) {
-        int lineCount = lineNumbers.size();
-        assert lineCount >= 2 : "A group of the same task has at least two lines, not " + lineCount;
-        List<String> numberTexts = lineNumbers.stream()
+    private String describeSameTaskLines(List<Integer> taskIndexes, List<Integer> lineNumbers) {
+        int taskCount = taskIndexes.size();
+        assert taskCount >= 2 : "A group of the same task has at least two lines, not " + taskCount;
+        // The user counts tasks from 1, the list counts from 0.
+        List<Integer> taskNumbers = taskIndexes.stream()
+                .map(index -> index + 1)
+                .toList();
+        List<Integer> sameTaskLineNumbers = taskIndexes.stream()
+                .map(lineNumbers::get)
+                .toList();
+        String keptNote = (taskCount == 2)
+                ? "I've kept both — delete the one you don't need."
+                : "I've kept all " + taskCount + " — delete the ones you don't need.";
+        return "Tasks " + joinNumbers(taskNumbers) + " in your list"
+                + " (lines " + joinNumbers(sameTaskLineNumbers) + " of " + filePath + ")"
+                + " are the same task. " + keptNote;
+    }
+
+    /**
+     * Returns numbers written out as a person would list them, such as {@code 1, 2 and 4}.
+     *
+     * @param numbers the numbers to write out, at least two.
+     */
+    private static String joinNumbers(List<Integer> numbers) {
+        assert numbers.size() >= 2 : "Only two or more numbers are joined, not " + numbers.size();
+        List<String> numberTexts = numbers.stream()
                 .map(String::valueOf)
                 .toList();
-        String namedLines = String.join(", ", numberTexts.subList(0, lineCount - 1))
-                + " and " + numberTexts.get(lineCount - 1);
-        String keptNote = (lineCount == 2)
-                ? "I've kept both — delete the one you don't need."
-                : "I've kept all " + lineCount + " — delete the ones you don't need.";
-        return "Lines " + namedLines + " of " + filePath + " are the same task. " + keptNote;
+        int lastIndex = numberTexts.size() - 1;
+        return String.join(", ", numberTexts.subList(0, lastIndex)) + " and " + numberTexts.get(lastIndex);
     }
 
     /**
