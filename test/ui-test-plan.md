@@ -2398,7 +2398,10 @@ bye
 
 **Aim:** Check that `before` lists what comes earlier than a day, and that the
 day named is itself excluded — `before 2026-12-02` must not show the deadline due
-on the 2nd, so that `before` and `on` for one day never show the same task twice.
+on the 2nd, so that `before` and `on` for one day never show the same *deadline*
+twice. An event is placed by the day it starts, so a multi-day event that has
+already begun is listed by both, which is what `on` is for: the day asked about is
+one the event is running on, and it also comes after the day the event started.
 Checked from both sides: the same task does appear once the day asked about is
 moved past it. As with `on`, a todo has no date and so is never listed, and a day
 with nothing before it says so.
