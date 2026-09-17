@@ -33,7 +33,8 @@ Bob tracks three kinds of task:
 * Commands are lowercase: `list` works, but `LIST` does not.
 * `<task number>` is the number shown next to a task by `list`.
 * Write a date as `yyyy-mm-dd`, for example `2026-12-02`. Add a 24-hour time after it, such as
-  `2026-12-02 1800` for 6pm, when the hour matters.
+  `2026-12-02 1800` for 6pm, when the hour matters. The year is four digits, from `0001`
+  to `9999`.
 * When you get something wrong, Bob says what went wrong and shows an example of the command
   written correctly.
 

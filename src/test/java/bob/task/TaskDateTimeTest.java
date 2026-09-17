@@ -114,6 +114,35 @@ public class TaskDateTimeTest {
     }
 
     @Test
+    public void parse_yearZero_exceptionSaysThereIsNoYearZero() {
+        assertEquals("0000-06-01 isn't a real day: there is no year 0.",
+                messageFromParsing("0000-06-01"));
+    }
+
+    @Test
+    public void parse_yearOutsideFourDigits_refusedAsNotADate() {
+        // LocalDate would read these signed forms, which the chatbot never mentions:
+        // +10000-01-01 was a date while 10000-01-01 was not, which cannot be explained.
+        assertTrue(messageFromParsing("+10000-01-01").startsWith("I don't understand"));
+        assertTrue(messageFromParsing("-0001-06-01").startsWith("I don't understand"));
+        assertTrue(messageFromParsing("10000-01-01").startsWith("I don't understand"));
+    }
+
+    @Test
+    public void parse_firstAndLastYearAccepted() throws BobException {
+        assertEquals("Jan 01 0001", TaskDateTime.parse("0001-01-01").toString());
+        assertEquals("Dec 31 9999", TaskDateTime.parse("9999-12-31").toString());
+    }
+
+    @Test
+    public void formatDay_anyYear_writesTheYearItself() {
+        // The format counts the year straight through rather than within an era, so a
+        // year at or below zero could not be shown as the year after it.
+        assertEquals("Jun 01 0000", TaskDateTime.formatDay(LocalDate.of(0, 6, 1)));
+        assertEquals("Jun 01 0001", TaskDateTime.formatDay(LocalDate.of(1, 6, 1)));
+    }
+
+    @Test
     public void parse_dayPastTheEndOfItsMonth_exceptionSaysHowLongTheMonthIs() {
         // The 30th of February never happens, and neither does the 29th in a
         // year that is not a leap year.

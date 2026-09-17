@@ -10,6 +10,7 @@ import java.time.format.ResolverStyle;
 import java.time.format.TextStyle;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -90,9 +91,16 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
      * <p>The language is stated here rather than left to the computer the chatbot
      * runs on, so that the month is always named in English instead of changing
      * with that computer's regional settings.
+     *
+     * <p>The year is {@code uuuu}, the year as it is counted straight through zero
+     * and on into the negative, rather than {@code yyyy}, the year within an era.
+     * The two agree from year 1 onwards, which is every date anyone is likely to
+     * type, but {@code yyyy} shows the year {@code 0000} as {@code 0001} and every
+     * year before it one out as well, since it counts 1 BC as year 1 of its era and
+     * says nothing about which era it means.
      */
     private static final DateTimeFormatter OUTPUT_DATE_FORMAT =
-            DateTimeFormatter.ofPattern("MMM dd yyyy", Locale.ENGLISH);
+            DateTimeFormatter.ofPattern("MMM dd uuuu", Locale.ENGLISH);
 
     /**
      * How the time of day is shown back to the user, for example {@code 18:00}.
@@ -161,21 +169,45 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
         // split always returns at least one part, and the check above has ruled out
         // more than two, so the two cases read below are the only ones left.
         assert parts.length == 1 || parts.length == 2 : "Unexpected " + parts.length + " parts";
+        LocalDate date = readDay(parts[0]).orElseThrow(() -> createUnreadableDateError(text));
+        if (parts.length == 1) {
+            return new TaskDateTime(date, null);
+        }
+        requireExistingTime(parts[1]);
         try {
-            // LocalDate reads the yyyy-mm-dd form by itself, and refuses a day
-            // that never happened, such as the 30th of February.
-            LocalDate date = LocalDate.parse(parts[0]);
-            LocalTime time = (parts.length == 2)
-                    ? LocalTime.parse(parts[1], INPUT_TIME_FORMAT)
-                    : null;
-            return new TaskDateTime(date, time);
+            return new TaskDateTime(date, LocalTime.parse(parts[1], INPUT_TIME_FORMAT));
         } catch (DateTimeParseException e) {
-            requireExistingDay(parts[0]);
-            if (parts.length == 2) {
-                requireExistingTime(parts[1]);
-            }
+            // Four digits naming a time that exists have been read above, so what is
+            // left is text of some other shape, such as 6pm or 18:00.
             throw createUnreadableDateError(text);
         }
+    }
+
+    /**
+     * Returns the day {@code dayText} names, or nothing at all when it is not written
+     * as {@code yyyy-mm-dd} — which is for the caller to report, since only the caller
+     * knows whether it was asking for a day or for a date with a time.
+     *
+     * <p>Only that one form is read, so the year is four digits and runs from
+     * {@code 0001} to {@code 9999}. {@link LocalDate} by itself would also accept a
+     * year outside those, written with a sign, as {@code +10000-01-01} or
+     * {@code -0001-06-01}. Nobody keeps tasks in those years, the chatbot tells every
+     * user to write a date as {@code yyyy-mm-dd}, and accepting a form it never
+     * mentions made {@code +10000-01-01} a date while {@code 10000-01-01} was not.
+     *
+     * @param dayText the word the user typed where a day was expected.
+     * @return the day that text names, or nothing if it is not written as a day.
+     * @throws BobException if it is written as a day but names a year, a month or a
+     *                      day that does not exist.
+     */
+    private static Optional<LocalDate> readDay(String dayText) throws BobException {
+        if (!DAY_FORM.matcher(dayText).matches()) {
+            return Optional.empty();
+        }
+        requireExistingDay(dayText);
+        // Every part has been checked above, so there is nothing left for LocalDate
+        // to refuse.
+        return Optional.of(LocalDate.parse(dayText));
     }
 
     /**
@@ -195,13 +227,9 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
      */
     public static LocalDate parseDay(String text) throws BobException {
         String dayText = text.trim();
-        try {
-            return LocalDate.parse(dayText);
-        } catch (DateTimeParseException e) {
-            requireExistingDay(dayText);
-            throw BobException.withExample("I don't understand \"" + text + "\" as a day."
-                    + "\nWrite the day as yyyy-mm-dd, with no time after it.", EXAMPLE_DATE);
-        }
+        return readDay(dayText).orElseThrow(() ->
+                BobException.withExample("I don't understand \"" + text + "\" as a day."
+                        + "\nWrite the day as yyyy-mm-dd, with no time after it.", EXAMPLE_DATE));
     }
 
     /**
@@ -223,18 +251,24 @@ public class TaskDateTime implements Comparable<TaskDateTime> {
      * day that exists.
      *
      * <p>Text in any other form passes unchecked, because what is wrong with it is
-     * its form, and the caller reports that. The month is checked before the day,
-     * since how many days a month has means nothing for a month that does not exist.
-     * {@link YearMonth} knows how long each month is, leap years included.
+     * its form, and the caller reports that. The parts are checked from the largest
+     * down: how many days a month has means nothing for a month that does not exist,
+     * and a month means nothing in a year that does not exist either. {@link YearMonth}
+     * knows how long each month is, leap years included.
      *
      * @param dayText the word the user typed where a day was expected.
-     * @throws BobException if it is written as a day but names a month or a day that
-     *                      does not exist.
+     * @throws BobException if it is written as a day but names a year, a month or a day
+     *                      that does not exist.
      */
     private static void requireExistingDay(String dayText) throws BobException {
         Matcher matcher = DAY_FORM.matcher(dayText);
         if (!matcher.matches()) {
             return;
+        }
+        int year = Integer.parseInt(matcher.group(1));
+        if (year < 1) {
+            // Only 0000 can reach this, since the form allows no sign.
+            throw new BobException(dayText + " isn't a real day: there is no year 0.");
         }
         int month = Integer.parseInt(matcher.group(2));
         if (month < 1 || month > 12) {
