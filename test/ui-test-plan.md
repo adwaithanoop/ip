@@ -62,6 +62,10 @@ A save file the program is not allowed to read, which it refuses to save over, h
 no test case here either: the runner can write a Data file before but cannot take
 away its permissions. `StorageTest` checks that case instead.
 
+For the same reason no test case here makes a save fail, so what `bye` does after
+one — trying the save again, and holding back quitting once if it still fails — is
+checked in `BobTest`, through the methods a window uses.
+
 A test case with neither block starts with no save file — the ordinary first
 run — and nothing is checked about what it saves. That is the case for TC1 to
 TC16 below, all of which were written before the chatbot saved anything, and

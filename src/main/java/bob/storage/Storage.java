@@ -145,6 +145,26 @@ public class Storage {
     private boolean shouldKeepUnreadFile;
 
     /**
+     * Whether the last task list given to {@link #save} is not on the disk, because that
+     * save failed and none has worked since.
+     *
+     * <p>Remembered so that quitting can try the save once more, rather than dropping the
+     * changes without a word. A command that changes nothing never saves, so without it
+     * nothing would try again until the user happened to make another change.
+     */
+    private boolean hasUnsavedChanges;
+
+    /**
+     * Whether the user has already been told, on trying to quit, that the unsaved changes
+     * still could not be saved.
+     *
+     * <p>Kept here beside {@link #hasUnsavedChanges} because it has to outlast the command
+     * that gave the warning: the next attempt to quit reads it, to know that it may go
+     * ahead without saving. Cleared by the next save that works.
+     */
+    private boolean isUnsavedChangesWarningGiven;
+
+    /**
      * Creates storage backed by one file. The file does not have to exist yet:
      * it is created, along with any missing folders above it, the first time
      * the task list is saved.
@@ -513,6 +533,8 @@ public class Storage {
      *                      the file is one {@link #load} could neither read nor copy.
      */
     public void save(List<Task> tasks) throws BobException {
+        // Set before anything can fail, and cleared only once the list is on the disk.
+        hasUnsavedChanges = true;
         requireNoUnreadFileInTheWay();
         requireRoomToSave();
         List<String> lines = tasks.stream()
@@ -533,6 +555,32 @@ public class Storage {
             throw new BobException("I couldn't save your tasks to " + filePath
                     + " (" + describe(e) + ")." + UNSAVED_CHANGE_NOTE);
         }
+        hasUnsavedChanges = false;
+        isUnsavedChangesWarningGiven = false;
+    }
+
+    /**
+     * Returns whether the last task list given to {@link #save} failed to reach the disk,
+     * with no save having worked since.
+     */
+    public boolean hasUnsavedChanges() {
+        return hasUnsavedChanges;
+    }
+
+    /**
+     * Returns whether the user has been told, on trying to quit, that the unsaved changes
+     * could not be saved, with no save having worked since.
+     */
+    public boolean isUnsavedChangesWarningGiven() {
+        return isUnsavedChangesWarningGiven;
+    }
+
+    /**
+     * Records that the user has been told, on trying to quit, that the unsaved changes
+     * could not be saved, so that the next attempt to quit may go ahead without them.
+     */
+    public void markUnsavedChangesWarningGiven() {
+        isUnsavedChangesWarningGiven = true;
     }
 
     /**

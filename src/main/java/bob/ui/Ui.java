@@ -238,6 +238,24 @@ public class Ui {
     }
 
     /**
+     * Prints that changes an earlier save failed to write have now been saved, as the
+     * chatbot quits.
+     */
+    public void showSavedBeforeQuitting() {
+        showLine("Your changes are saved now.");
+    }
+
+    /**
+     * Prints that the chatbot is quitting with changes it could not save.
+     *
+     * <p>Not shown as an error. Why the save failed was shown when the change was made,
+     * and quitting anyway is what the user asked for.
+     */
+    public void showQuitWithoutSaving() {
+        showLine(NAME + " quit without saving yur changes. Dey gone!");
+    }
+
+    /**
      * Returns whether the user has typed another line for the chatbot to read.
      *
      * <p>This is asked rather than assumed, so the chatbot also ends cleanly when

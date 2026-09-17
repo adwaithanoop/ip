@@ -596,6 +596,47 @@ public class StorageTest {
     }
 
     @Test
+    public void hasUnsavedChanges_saveFailed_true() throws IOException {
+        Files.createDirectory(tempDirectory.resolve("duke.txt"));
+        Storage storage = storageAt("duke.txt");
+        assertFalse(storage.hasUnsavedChanges());
+
+        assertThrows(BobException.class, () -> storage.save(List.of(new Todo("read book"))));
+
+        assertTrue(storage.hasUnsavedChanges());
+    }
+
+    @Test
+    public void hasUnsavedChanges_saveWorksAfterAFailedOne_falseAndWarningForgotten()
+            throws BobException, IOException {
+        Path folder = tempDirectory.resolve("duke.txt");
+        Files.createDirectory(folder);
+        Storage storage = storageAt("duke.txt");
+        assertThrows(BobException.class, () -> storage.save(List.of(new Todo("read book"))));
+        storage.markUnsavedChangesWarningGiven();
+        Files.delete(folder);
+
+        storage.save(List.of(new Todo("read book")));
+
+        assertFalse(storage.hasUnsavedChanges());
+        // A later failure is a new problem, which the user has not been warned about yet.
+        assertFalse(storage.isUnsavedChangesWarningGiven());
+    }
+
+    @Test
+    public void isUnsavedChangesWarningGiven_saveFailsAgainAfterWarning_stillTrue() throws IOException {
+        Files.createDirectory(tempDirectory.resolve("duke.txt"));
+        Storage storage = storageAt("duke.txt");
+        assertThrows(BobException.class, () -> storage.save(List.of(new Todo("read book"))));
+        storage.markUnsavedChangesWarningGiven();
+
+        // The save quitting tries again must not make the user be warned a second time.
+        assertThrows(BobException.class, () -> storage.save(List.of(new Todo("read book"))));
+
+        assertTrue(storage.isUnsavedChangesWarningGiven());
+    }
+
+    @Test
     public void saveThenLoad_descriptionHoldingASeparator_readBackUnchanged() throws BobException {
         assertSurvivesRoundTrip("tidy up | then rest");
     }
