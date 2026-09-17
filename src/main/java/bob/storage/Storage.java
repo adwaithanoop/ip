@@ -136,6 +136,15 @@ public class Storage {
     private final Path filePath;
 
     /**
+     * Whether saving over the file is refused, because {@link #load} could neither read
+     * it nor copy it, so the file may be the only place the tasks in it are kept.
+     *
+     * <p>Not {@code final}: it is cleared again by a later load that reads the file, and
+     * by a save that finds the file gone, since then there is nothing left to lose.
+     */
+    private boolean shouldKeepUnreadFile;
+
+    /**
      * Creates storage backed by one file. The file does not have to exist yet:
      * it is created, along with any missing folders above it, the first time
      * the task list is saved.
@@ -173,8 +182,9 @@ public class Storage {
      *       reported as an empty list with nothing to say;</li>
      *   <li>a folder where the file should be gives an empty list, and says so along
      *       with what to do about it, since no save can replace a folder;</li>
-     *   <li>a file that cannot be read at all gives an empty list and a warning
-     *       that it will be overwritten;</li>
+     *   <li>a file that cannot be read at all gives an empty list, and a warning
+     *       that it will be overwritten or, if it cannot even be copied, that it
+     *       will not be;</li>
      *   <li>a line that cannot be understood is skipped and reported, so one
      *       damaged line does not cost the user the tasks on all the others;</li>
      *   <li>lines holding the same task are all loaded, and reported together, so
@@ -187,6 +197,8 @@ public class Storage {
      * without the copy it would be the end of whatever was left out.
      */
     public LoadResult load() {
+        // Set again below if this load, like an earlier one, cannot read the file.
+        shouldKeepUnreadFile = false;
         if (!Files.exists(filePath)) {
             return new LoadResult(List.of(), List.of());
         }
@@ -201,16 +213,43 @@ public class Storage {
         try {
             lines = removeByteOrderMark(Files.readAllLines(filePath, StandardCharsets.UTF_8));
         } catch (IOException e) {
-            List<String> messages = new ArrayList<>();
-            messages.add("I couldn't read " + filePath + " (" + describe(e) + ").");
-            messages.addAll(backUpDamagedFile(
-                    "I'm starting with an empty list. That file will be overwritten the next time the list"
-                            + " changes, but the copy stays as it is.",
-                    "I'm starting with an empty list, and that file will be overwritten"
-                            + " the next time the list changes."));
-            return new LoadResult(List.of(), messages);
+            return reportUnreadableFile(e);
         }
         return readTasks(lines);
+    }
+
+    /**
+     * Returns an empty list, and what the user should be told, for a save file that is
+     * there but cannot be read at all.
+     *
+     * <p>The file is copied to a backup first. If the copy is made, the file is
+     * overwritten by the next change like any other, since the copy keeps what was in it.
+     * If not — as when the operating system refuses to let the file be read, which stops
+     * the copy for the same reason — the file is the only place those tasks are kept, so
+     * saving over it is refused for the rest of the session. Without that, the next change
+     * would replace them all: replacing the file needs leave to write to its folder, not
+     * to read the file, so nothing else stops it.
+     *
+     * @param readError why the file could not be read.
+     */
+    private LoadResult reportUnreadableFile(IOException readError) {
+        List<String> messages = new ArrayList<>();
+        messages.add("I couldn't read " + filePath + " (" + describe(readError) + ").");
+        Path backupFilePath = siblingPath(BACKUP_FILE_SUFFIX);
+        try {
+            Files.copy(filePath, backupFilePath, StandardCopyOption.REPLACE_EXISTING);
+            messages.add("I'm starting with an empty list. That file will be overwritten"
+                    + " the next time the list changes, but the copy stays as it is.");
+            messages.add(describeBackup(backupFilePath));
+        } catch (IOException copyError) {
+            shouldKeepUnreadFile = true;
+            messages.add("I'm starting with an empty list, and I won't save over that file,"
+                    + " so nothing in it is lost.");
+            messages.add(describeFailedBackup(backupFilePath, copyError));
+            messages.add("Changes won't be saved until you fix that file and start Bob again,"
+                    + " or move it somewhere else.");
+        }
+        return new LoadResult(List.of(), messages);
     }
 
     /**
@@ -297,7 +336,7 @@ public class Storage {
      * and returns what the user should be told: the warning that fits whether the copy
      * was made, followed by where the copy is or why there is none.
      *
-     * <p>Only called when loading has left something out of the list. The next change
+     * <p>Only called when loading has left lines out of the list. The next change
      * to the list rewrites the save file from the tasks that were loaded, so without a
      * copy whatever was left out would be gone for good. The copy is made here, at
      * load, rather than just before that first save, so that the user is told where it
@@ -326,12 +365,20 @@ public class Storage {
         try {
             Files.copy(filePath, backupFilePath, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            return List.of(warningIfNotCopied,
-                    "I couldn't make a backup at " + backupFilePath + " (" + describe(e) + ").",
+            return List.of(warningIfNotCopied, describeFailedBackup(backupFilePath, e),
                     "Copy " + filePath + " somewhere safe yourself before changing the list.");
         }
-        return List.of(warningIfCopied,
-                "The file as it was is kept in " + backupFilePath + ", so nothing in it is lost.");
+        return List.of(warningIfCopied, describeBackup(backupFilePath));
+    }
+
+    /** Returns the message telling the user where the copy of the save file was made. */
+    private static String describeBackup(Path backupFilePath) {
+        return "The file as it was is kept in " + backupFilePath + ", so nothing in it is lost.";
+    }
+
+    /** Returns the message telling the user that the copy of the save file could not be made, and why. */
+    private static String describeFailedBackup(Path backupFilePath, IOException error) {
+        return "I couldn't make a backup at " + backupFilePath + " (" + describe(error) + ").";
     }
 
     /**
@@ -462,9 +509,11 @@ public class Storage {
      * one line, independently of the others, which is what {@code map} describes.
      *
      * @param tasks the task list as it now stands.
-     * @throws BobException if the file or the folder holding it cannot be written.
+     * @throws BobException if the file or the folder holding it cannot be written, or if
+     *                      the file is one {@link #load} could neither read nor copy.
      */
     public void save(List<Task> tasks) throws BobException {
+        requireNoUnreadFileInTheWay();
         requireRoomToSave();
         List<String> lines = tasks.stream()
                 .map(Storage::toSaveLine)
@@ -484,6 +533,31 @@ public class Storage {
             throw new BobException("I couldn't save your tasks to " + filePath
                     + " (" + describe(e) + ")." + UNSAVED_CHANGE_NOTE);
         }
+    }
+
+    /**
+     * Checks that saving would not overwrite a file that {@link #load} could neither read
+     * nor copy, and so would not destroy tasks that were never loaded into the list.
+     *
+     * <p>Once the file is gone, saving is allowed again for the rest of the session: the user
+     * has moved it somewhere else, so whatever is in it is safe. {@code notExists} is asked
+     * rather than {@code exists}, because a folder that cannot be looked into makes
+     * {@code exists} answer no without the file being gone.
+     *
+     * @throws BobException if saving would overwrite such a file.
+     */
+    private void requireNoUnreadFileInTheWay() throws BobException {
+        if (!shouldKeepUnreadFile) {
+            return;
+        }
+        if (Files.notExists(filePath)) {
+            shouldKeepUnreadFile = false;
+            return;
+        }
+        throw new BobException("I won't save over " + filePath
+                + ", because I couldn't read the tasks already in it."
+                + "\nFix that file and start Bob again, or move it somewhere else so I can start a new one."
+                + UNSAVED_CHANGE_NOTE);
     }
 
     /**
