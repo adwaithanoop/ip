@@ -58,6 +58,10 @@ A program that finds a damaged save file also copies it to `data/duke.txt.bak`.
 The runner does not compare that copy, so what it holds is checked by the JUnit
 tests in `StorageTest` instead.
 
+A save file the program is not allowed to read, which it refuses to save over, has
+no test case here either: the runner can write a Data file before but cannot take
+away its permissions. `StorageTest` checks that case instead.
+
 A test case with neither block starts with no save file — the ordinary first
 run — and nothing is checked about what it saves. That is the case for TC1 to
 TC16 below, all of which were written before the chatbot saved anything, and

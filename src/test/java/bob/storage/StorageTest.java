@@ -5,12 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -387,6 +392,25 @@ public class StorageTest {
     }
 
     @Test
+    public void load_unreadableFileThatCannotBeCopied_warnedItWillNotBeSavedOver() throws IOException {
+        Storage storage = storageWithLines("T | 0 | read book");
+        Path path = tempDirectory.resolve("duke.txt");
+        makeUnreadable(path);
+
+        Storage.LoadResult result = storage.load();
+
+        assertEquals(List.of(), result.tasks());
+        List<String> expectedMessages = List.of(
+                "I couldn't read " + path + " (permission denied).",
+                "I'm starting with an empty list, and I won't save over that file,"
+                        + " so nothing in it is lost.",
+                "I couldn't make a backup at " + path + ".bak (permission denied).",
+                "Changes won't be saved until you fix that file and start Bob again,"
+                        + " or move it somewhere else.");
+        assertEquals(expectedMessages, result.messages());
+    }
+
+    @Test
     public void save_tasks_writtenOneToALineWithBarsBetweenFields() throws BobException, IOException {
         Storage storage = storageAt("duke.txt");
         Todo todo = new Todo("read book");
@@ -470,6 +494,73 @@ public class StorageTest {
         // Writing straight into the save file would have emptied it before failing.
         assertEquals(List.of("T | 0 | read book", "T | 0 | return book"),
                 Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void save_overUnreadableFileThatCannotBeCopied_refusedAndFileKeptWhole() throws IOException {
+        Storage storage = storageWithLines("T | 0 | read book", "T | 1 | return book");
+        Path path = tempDirectory.resolve("duke.txt");
+        makeUnreadable(path);
+        storage.load();
+
+        BobException error = assertThrows(BobException.class, () ->
+                storage.save(List.of(new Todo("pay bills"))));
+
+        String expectedMessage = "I won't save over " + path
+                + ", because I couldn't read the tasks already in it."
+                + "\nFix that file and start Bob again, or move it somewhere else so I can start a new one."
+                + "\nThe change is in this session's list, but it won't survive quitting.";
+        assertEquals(expectedMessage, error.getMessage());
+        // Replacing the file needs leave to write to its folder, not to read the file,
+        // so the refusal is all that kept these tasks.
+        makeReadable(path);
+        assertEquals(List.of("T | 0 | read book", "T | 1 | return book"),
+                Files.readAllLines(path, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void save_unreadableFileMovedAway_savedAsUsualFromThenOn() throws BobException, IOException {
+        Storage storage = storageWithLines("T | 0 | read book");
+        Path path = tempDirectory.resolve("duke.txt");
+        makeUnreadable(path);
+        storage.load();
+        Files.move(path, tempDirectory.resolve("moved.txt"));
+
+        storage.save(List.of(new Todo("pay bills")));
+        // This save finds a file again, but it is the one the save above made.
+        storage.save(List.of(new Todo("pay bills"), new Todo("walk dog")));
+
+        assertEquals(List.of("T | 0 | pay bills", "T | 0 | walk dog"),
+                Files.readAllLines(path, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void save_unreadableFileReadOnALaterLoad_savedAsUsual() throws BobException, IOException {
+        Storage storage = storageWithLines("T | 0 | read book");
+        Path path = tempDirectory.resolve("duke.txt");
+        makeUnreadable(path);
+        storage.load();
+        makeReadable(path);
+        Task loadedTask = storage.load().tasks().get(0);
+
+        storage.save(List.of(loadedTask, new Todo("pay bills")));
+
+        assertEquals(List.of("T | 0 | read book", "T | 0 | pay bills"),
+                Files.readAllLines(path, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void save_overUnreadableFileThatWasCopied_overwritten() throws BobException, IOException {
+        // The byte 0xFF never appears in UTF-8, so the file cannot be read, but it can be copied.
+        Path path = tempDirectory.resolve("duke.txt");
+        Files.write(path, new byte[] {'T', ' ', '|', ' ', '0', ' ', '|', ' ', (byte) 0xFF});
+        Storage storage = new Storage(path);
+        storage.load();
+
+        storage.save(List.of(new Todo("pay bills")));
+
+        // Nothing is lost by saving over it, since the copy keeps the file as it was.
+        assertEquals(List.of("T | 0 | pay bills"), Files.readAllLines(path, StandardCharsets.UTF_8));
     }
 
     @Test
@@ -563,6 +654,25 @@ public class StorageTest {
             path = path.resolve(name);
         }
         return new Storage(path);
+    }
+
+    /**
+     * Takes away every permission on a file, so that it can be neither read nor copied.
+     *
+     * <p>The calling test is skipped where that cannot be done: on a file system without
+     * POSIX permissions, such as Windows', or for a user whom permissions do not stop,
+     * such as root.
+     */
+    private static void makeUnreadable(Path path) throws IOException {
+        assumeTrue(FileSystems.getDefault().supportedFileAttributeViews().contains("posix"),
+                "file permissions cannot be taken away on this file system");
+        Files.setPosixFilePermissions(path, Set.of());
+        assumeFalse(Files.isReadable(path), "permissions do not stop this user reading the file");
+    }
+
+    /** Gives the owner of a file back leave to read and write it. */
+    private static void makeReadable(Path path) throws IOException {
+        Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
     }
 
     /** Returns storage backed by a save file already holding {@code lines}. */
