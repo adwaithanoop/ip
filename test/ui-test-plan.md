@@ -2398,7 +2398,10 @@ bye
 
 **Aim:** Check that `before` lists what comes earlier than a day, and that the
 day named is itself excluded — `before 2026-12-02` must not show the deadline due
-on the 2nd, so that `before` and `on` for one day never show the same task twice.
+on the 2nd, so that `before` and `on` for one day never show the same *deadline*
+twice. An event is placed by the day it starts, so a multi-day event that has
+already begun is listed by both, which is what `on` is for: the day asked about is
+one the event is running on, and it also comes after the day the event started.
 Checked from both sides: the same task does appear once the day asked about is
 moved past it. As with `on`, a todo has no date and so is never listed, and a day
 with nothing before it says so.
@@ -2639,10 +2642,14 @@ text that is not a day, each naming the command that was typed in its example. T
 also reject a day with a time tacked on to it: these commands answer questions about
 whole days, and quietly ignoring the `1800` would hide that the question asked was
 not the question answered. `next` rejects a missing count, a count that is not a
-number, and counts of zero and below, which ask for nothing at all. The `list` at
-the end shows that no refused command stored anything, and the absent save file
-shows that these four commands write nothing to the disk — they only look at the
-list, so there is never anything to save.
+number, and counts of zero and below, which ask for nothing at all. A count below
+one is refused for being below one however long it is written: `-99999999999` was
+told it was not a number of tasks, which it plainly is, while `-2` was told it was
+too small. A count written with a `+` is read as the number it is and answered, so
+`next +5` on an empty list is told there are no dates rather than refused. The
+`list` at the end shows that no refused command stored anything, and the absent save
+file shows that these four commands write nothing to the disk — they only look at
+the list, so there is never anything to save.
 
 **Input**
 
@@ -2658,6 +2665,8 @@ next
 next lots
 next 0
 next -2
+next -99999999999
+next +5
 list
 bye
 ```
@@ -2769,6 +2778,16 @@ bye
      MINION EMERGENCY!
      I can show you one task or more, but not -2.
      Like dis: next 3
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     I can show you one task or more, but not -99999999999.
+     Like dis: next 3
+    ____________________________________________________________
+
+    ____________________________________________________________
+     No dates on tasks. No bee-do!
     ____________________________________________________________
 
     ____________________________________________________________
@@ -3927,11 +3946,14 @@ D | 0 | fly /tokyo | 2026-12-02
 does not exist, is refused with what is wrong with it. `2400` is refused rather
 than quietly read as midnight at the start of the same day, and `1260` is
 refused for its minutes although it is below `2359`. A month past 12, and the
-30th of February in a leap year, are refused with the month or its length. The
-check is the same wherever a date is read: in an event's end, and in the day
-asked about by `on` and `before`, including month `00`. The last deadline is on
-the leap day at the last minute of the day, which does exist, and the `list` and
-the save file show it is the only task added.
+30th of February in a leap year, are refused with the month or its length. A part
+written as `00` is refused as the thing that does not exist, whether it is the
+month or the day: `2026-12-00` says there is no day 0, rather than that December
+has 31 days, which is true and would send the user looking for a month long
+enough to hold a day 0. The check is the same wherever a date is read: in an
+event's end, and in the day asked about by `on` and `before`. The last deadline
+is on the leap day at the last minute of the day, which does exist, and the
+`list` and the save file show it is the only task added.
 
 **Input**
 
@@ -3939,6 +3961,7 @@ the save file show it is the only task added.
 deadline pay fees /by 2026-12-02 2400
 deadline pay fees /by 2026-12-02 1260
 deadline pay fees /by 2026-13-01
+deadline pay fees /by 2026-12-00
 deadline pay fees /by 2028-02-30
 event exam week /from 2026-04-27 /to 2026-04-31
 on 2026-02-29
@@ -4000,6 +4023,11 @@ bye
     ____________________________________________________________
      MINION EMERGENCY!
      2026-13-01 isn't a real day: there is no month 13.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     2026-12-00 isn't a real day: there is no day 0.
     ____________________________________________________________
 
     ____________________________________________________________
@@ -5033,4 +5061,132 @@ bye
 ```text
 E | 0 | party | 2026-12-02 1800 | 2026-12-02
 E | 0 | shop | 2026-12-02 | 2026-12-03 0900
+```
+
+### TC47 - Only four-digit years are accepted
+
+**Aim:** Check the years Bob takes, now that a year is four digits from `0001` to
+`9999`. Before this fix the underlying date reader took the signed forms Java allows,
+which Bob never mentions and cannot show back sensibly: `+10000-01-01` was a date
+while `10000-01-01` was not, and `0000-06-01` and `-0001-06-01` were stored and then
+shown a year later than they were typed, because the date format counted the year
+within an era and never said which era it meant. Year 0 is now refused by name, since
+it is the one out-of-range year that can be written in the accepted form, and the
+three signed or overlong years are refused as dates Bob doesn't understand. The `on`
+line checks that a day asked about is refused in the same way as a day given to a
+deadline. The first and last years Bob does take are added, so the two ends of the
+range are pinned down as well, and the Data file after shows only those two.
+
+**Input**
+
+```text
+deadline ancient scroll /by 0000-06-01
+deadline older scroll /by -0001-06-01
+deadline far future /by +10000-01-01
+deadline far future /by 10000-01-01
+deadline first day /by 0001-01-01
+deadline last day /by 9999-12-31
+on 0000-06-01
+list
+bye
+```
+
+**Expected output**
+
+```text
+    ____________________________________________________________
+             __ __  _                     ____        __
+            / //_/ (_) ____   ____       / __ )____  / /_
+           / ,<   / / / __ \ / __ \     / __  / __ \/ __ \
+          / /| | / / / / / // /_/ /    / /_/ / /_/ / /_/ /
+         /_/ |_|/_/ /_/ /_/ \__, /    /_____/\____/_.___/
+                           /____/
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⠤⠔⠒⠒⠛⠛⠓⣒⣶⡦⠤⠤⠤⠤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠖⠋⠁⠀⠀⠀⠀⠀⠀⣠⢞⡝⣡⣴⣶⠶⢶⣷⣶⣝⠳⣄⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠖⠁⢀⡤⢶⠶⠿⠿⠶⣦⣤⡰⢣⢿⣾⡟⠁⠀⠀⠀⠈⠉⠻⡷⡜⣆⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠜⠁⣠⠞⣥⣺⣵⡶⠿⠿⣶⣦⣍⠳⡏⣾⠯⠁⣰⣶⣶⣦⠀⠀⠀⢹⢷⢸⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⣴⢃⣾⣿⠿⠉⠀⠀⠀⠈⠉⢻⣇⡁⢻⡀⠀⢿⣿⣿⡽⠀⠀⠀⢸⣿⣸⠃⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⣸⡇⣼⣿⡯⠀⠀⣴⣿⣽⣷⠀⠀⢹⣷⠈⢻⡄⠀⠉⠉⠀⠀⠀⢠⣿⢣⣿⡄⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠀⣿⣿⣧⢿⣿⠀⠀⠀⠻⣿⣿⡽⠀⠀⢸⣿⢳⣦⣙⠦⢄⣀⣀⣠⠾⣻⣵⡿⠁⢧⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣣⣾⣿⣿⣿⣾⡝⢿⡄⠀⠀⠀⠀⠀⠀⢀⣾⣣⣿⢿⢿⣿⣶⣒⣒⡿⠿⠛⠁⠀⠀⠘⡄⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣤⡙⢦⣀⣀⣀⣀⡤⣿⣵⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢫⠁⠀⠀⠈⠈⠛⠿⣿⣿⣒⣖⣒⣲⠿⠟⠋⠀⠀⠀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠘⣄⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡓⣦⣀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠐⠦⢤⣤⣀⣀⣤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡄⠀⠀
+         ⠀⠀⠀⠀⢀⣤⣶⣿⣿⣷⣦⣄⠙⢿⣮⣽⡷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣇⠀⠀
+         ⠀⠀⢀⣾⣿⡟⡩⣽⣿⣿⣿⣿⣳⡀⠈⠻⢷⣮⢹⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⣀⣀⣠⣶⣿⣿⡟⢹⠘⡆⠀
+         ⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⠻⣿⣿⣿⣶⣶⣶⡶⢶⣶⣾⣟⣿⠟⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⢸⠀⢳⠀
+         ⠘⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⡿⠁⠞⣺⠬⠧⠭⠽⠵⠶⠿⡿⣿⣯⣿⢿⣿⣿⢁⣡⣴⣿⣶⣼⡀
+         ⠀⠈⠙⢿⣿⣆⣿⣿⣝⣿⣿⣿⣿⣝⣦⠀⠀⠀⠀⠀⢠⣿⠙⠛⠒⠀⠠⣿⠄⠀⠀⠀⠀⠀⠀⢁⣻⡼⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⡇
+         ⠀⠀⠀⠀⠙⠛⣾⣿⣿⣿⡿⢿⣿⣿⣿⣧⣤⣄⣀⢀⣸⣟⣀⠀⠀⠀⠀⢻⡀⠄⠀⠀⠀⠀⠀⠔⡿⠛⣿⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀
+         ⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡈⠈⢩⡿⡐⠈⠁⠀⠀⠀⠀⠙⠲⠤⠤⠥⠧⠴⠿⠓⠀⠈⠜⢿⣿⣿⣿⣿⠃⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠉⢻⣿⣿⣿⣿⣿⣿⣿⣿⣷⡒⠋⠼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⢿⡿⣿⣿⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣻⡿⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠁⠐⡯⠯⣿⡿⠃⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠏⠘⣿⣿⣿⡯⠙⠒⠦⣄⣄⣀⣐⣀⡄⠀⠐⠀⣤⡞⣩⣀⠄⠀⠀⠖⠀⢈⣁⡴⠛⠁⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠈⠙⠋⠁⠀⠀⠀⠀⢹⣿⢿⣿⣿⣿⡟⠛⣿⣿⣿⣿⣿⣿⠟⠛⠋⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣾⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⠁⠀⢠⣿⣿⣿⣿⣿⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠛⠛⠛⠋⠀⠉⠉⠉⠛⠛⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     Bello! Me Bob!
+     Wat yu want Bob do? Banana?
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     0000-06-01 isn't a real day: there is no year 0.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     I don't understand "-0001-06-01" as a date.
+     Write the day as yyyy-mm-dd, and add a 24-hour time if the hour matters.
+     Like dis: 2026-12-02 or 2026-12-02 1800
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     I don't understand "+10000-01-01" as a date.
+     Write the day as yyyy-mm-dd, and add a 24-hour time if the hour matters.
+     Like dis: 2026-12-02 or 2026-12-02 1800
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     I don't understand "10000-01-01" as a date.
+     Write the day as yyyy-mm-dd, and add a 24-hour time if the hour matters.
+     Like dis: 2026-12-02 or 2026-12-02 1800
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] first day (by: Jan 01 0001)
+     Now yu have 1 task in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Okay! Bob add dis:
+       [D][ ] last day (by: Dec 31 9999)
+     Now yu have 2 tasks in da list.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     0000-06-01 isn't a real day: there is no year 0.
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Luk at tu! Here da tasks:
+     1.[D][ ] first day (by: Jan 01 0001)
+     2.[D][ ] last day (by: Dec 31 9999)
+    ____________________________________________________________
+
+    ____________________________________________________________
+     Poopaye! Bob go find banana, see yu soon!
+    ____________________________________________________________
+```
+
+**Data file after**
+
+```text
+D | 0 | first day | 0001-01-01
+D | 0 | last day | 9999-12-31
 ```
