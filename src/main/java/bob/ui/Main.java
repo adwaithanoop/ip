@@ -60,9 +60,13 @@ public class Main extends Application {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("/view/MainWindow.fxml"));
             AnchorPane root = fxmlLoader.load();
-            fxmlLoader.<MainWindow>getController().setBob(bob);
+            MainWindow mainWindow = fxmlLoader.getController();
+            mainWindow.setBob(bob);
 
             stage.setScene(new Scene(root));
+            // The close button would otherwise close the window without asking the
+            // chatbot, losing any change it has not yet managed to save.
+            stage.setOnCloseRequest(mainWindow::handleCloseRequest);
             stage.setTitle("King Bob");
             stage.setMinWidth(MIN_WIDTH);
             stage.setMinHeight(MIN_HEIGHT);

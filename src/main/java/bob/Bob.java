@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import bob.command.Command;
+import bob.command.CommandWord;
 import bob.parser.Parser;
 import bob.storage.Storage;
 import bob.task.TaskList;
@@ -78,7 +79,8 @@ import bob.ui.Ui;
  * the user says goodbye. A window instead drives the conversation itself, handing
  * over one line at a time and being given the answer back as text, through
  * {@link #getGreeting()}, {@link #getResponse}, {@link #isExit()} and
- * {@link #isLastResponseError()}. Both go
+ * {@link #isLastResponseError()}, and asking {@link #hasUnsavedChanges()} and
+ * {@link #getResponseToClosing()} when the user closes it. Both go
  * through the same {@link #handleCommand}, so neither front end can drift into
  * answering differently from the other; which of the two a chatbot is for is
  * settled when it is made, by {@code new Bob(...)} or by {@link #forGui}.
@@ -369,6 +371,32 @@ public class Bob {
      */
     public boolean isLastResponseError() {
         return isLastResponseError;
+    }
+
+    /**
+     * Returns whether a change is still in the list only, because an earlier save
+     * failed to write it, so that a window being closed knows that closing at once
+     * would lose it.
+     */
+    public boolean hasUnsavedChanges() {
+        return storage.hasUnsavedChanges();
+    }
+
+    /**
+     * Returns what the chatbot has to say when its window is closed with a change
+     * still unsaved.
+     *
+     * <p>Closing the window is taken as the user saying goodbye, so the answer is
+     * exactly the one {@code bye} would get: the save is tried once more, and a
+     * failure holds back quitting once. Afterwards {@link #isExit()} and
+     * {@link #isLastResponseError()} describe this answer, as they would after
+     * {@link #getResponse}. The window does not have to know which word ends the
+     * conversation, only that it is closing.
+     *
+     * @return everything the chatbot says on being closed, its lines separated by newlines.
+     */
+    public String getResponseToClosing() {
+        return getResponse(CommandWord.BYE.getKeyword());
     }
 
     /**
