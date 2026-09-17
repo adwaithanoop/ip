@@ -130,6 +130,22 @@ public class ArgumentParserTest {
     }
 
     @Test
+    public void parseCount_negativeNumberTooBigForInt_exceptionNamesTheNumber() {
+        // It is a number, however long, so it is refused for being below one
+        // rather than for not being a number, as -3 already was.
+        BobException exception = assertThrows(BobException.class,
+                () -> ArgumentParser.parseCount("-99999999999"));
+
+        assertTrue(exception.getMessage().contains("but not -99999999999."));
+    }
+
+    @Test
+    public void parseCount_numberWrittenWithAPlus_readAsPositive() throws BobException {
+        assertEquals(5, ArgumentParser.parseCount("+5"));
+        assertEquals(Integer.MAX_VALUE, ArgumentParser.parseCount("+99999999999"));
+    }
+
+    @Test
     public void parseCount_oneOrMore_accepted() throws BobException {
         assertEquals(1, ArgumentParser.parseCount("1"));
         assertEquals(100, ArgumentParser.parseCount("100"));

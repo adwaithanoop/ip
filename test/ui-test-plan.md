@@ -2642,10 +2642,14 @@ text that is not a day, each naming the command that was typed in its example. T
 also reject a day with a time tacked on to it: these commands answer questions about
 whole days, and quietly ignoring the `1800` would hide that the question asked was
 not the question answered. `next` rejects a missing count, a count that is not a
-number, and counts of zero and below, which ask for nothing at all. The `list` at
-the end shows that no refused command stored anything, and the absent save file
-shows that these four commands write nothing to the disk — they only look at the
-list, so there is never anything to save.
+number, and counts of zero and below, which ask for nothing at all. A count below
+one is refused for being below one however long it is written: `-99999999999` was
+told it was not a number of tasks, which it plainly is, while `-2` was told it was
+too small. A count written with a `+` is read as the number it is and answered, so
+`next +5` on an empty list is told there are no dates rather than refused. The
+`list` at the end shows that no refused command stored anything, and the absent save
+file shows that these four commands write nothing to the disk — they only look at
+the list, so there is never anything to save.
 
 **Input**
 
@@ -2661,6 +2665,8 @@ next
 next lots
 next 0
 next -2
+next -99999999999
+next +5
 list
 bye
 ```
@@ -2772,6 +2778,16 @@ bye
      MINION EMERGENCY!
      I can show you one task or more, but not -2.
      Like dis: next 3
+    ____________________________________________________________
+
+    ____________________________________________________________
+     MINION EMERGENCY!
+     I can show you one task or more, but not -99999999999.
+     Like dis: next 3
+    ____________________________________________________________
+
+    ____________________________________________________________
+     No dates on tasks. No bee-do!
     ____________________________________________________________
 
     ____________________________________________________________

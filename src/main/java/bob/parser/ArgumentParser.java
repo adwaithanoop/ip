@@ -1,5 +1,6 @@
 package bob.parser;
 
+import java.math.BigInteger;
 import java.time.LocalDate;
 import java.util.Arrays;
 
@@ -120,6 +121,12 @@ class ArgumentParser {
      * that big. Asking for more tasks than the list holds already shows all of
      * them, so the largest count that fits is taken instead, and asks for the same.
      *
+     * <p>The count is read as a {@link BigInteger} so that no number the user can
+     * type is too long to be recognised as one. Read as an {@code int}, a number
+     * past the end of the range was told it was not a number at all, which is
+     * plainly false and left {@code next -99999999999} answered differently from
+     * {@code next -5}.
+     *
      * @param countText the count as the user typed it after {@code next}.
      * @return how many tasks to show, always one or more.
      * @throws BobException if nothing was typed after {@code next}, or what was
@@ -129,21 +136,20 @@ class ArgumentParser {
         if (countText.isEmpty()) {
             throw BobException.withExample("How many tasks should I show?", NEXT_EXAMPLE);
         }
-        int count;
+        BigInteger count;
         try {
-            count = Integer.parseInt(countText);
+            // The user is free to type anything after the command word, so a
+            // number is asked for again rather than allowed to crash the chatbot.
+            count = new BigInteger(countText);
         } catch (NumberFormatException e) {
-            if (!isDigitsOnly(countText)) {
-                throw BobException.withExample("\"" + countText + "\" isn't a number of tasks.",
-                        NEXT_EXAMPLE);
-            }
-            count = Integer.MAX_VALUE;
+            throw BobException.withExample("\"" + countText + "\" isn't a number of tasks.",
+                    NEXT_EXAMPLE);
         }
-        if (count < 1) {
+        if (count.signum() < 1) {
             throw BobException.withExample("I can show you one task or more, but not " + count + ".",
                     NEXT_EXAMPLE);
         }
-        return count;
+        return count.min(BigInteger.valueOf(Integer.MAX_VALUE)).intValue();
     }
 
     /**
