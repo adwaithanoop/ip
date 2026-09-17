@@ -104,6 +104,41 @@ public class StorageTest {
     }
 
     @Test
+    public void load_backslashesThatEscapeNothing_keptAsWritten() throws IOException {
+        // Written by hand: a save would have doubled each backslash.
+        Storage storage = storageWithLines("T | 0 | copy C:\\temp\\notes");
+
+        Storage.LoadResult result = storage.load();
+
+        assertEquals(List.of(), result.messages());
+        assertEquals("[T][ ] copy C:\\temp\\notes", result.tasks().get(0).toString());
+    }
+
+    @Test
+    public void load_escapeSequencesBesideBackslashesThatEscapeNothing_eachReadAsWritten()
+            throws IOException {
+        // In the file: a\\b \| c\d
+        Storage storage = storageWithLines("T | 0 | a\\\\b \\| c\\d");
+
+        Storage.LoadResult result = storage.load();
+
+        assertEquals("[T][ ] a\\b | c\\d", result.tasks().get(0).toString());
+    }
+
+    @Test
+    public void saveAfterLoad_backslashesThatEscapeNothing_writtenEscapedAndReadBackUnchanged()
+            throws BobException, IOException {
+        Storage storage = storageWithLines("T | 0 | copy C:\\temp\\notes");
+
+        storage.save(storage.load().tasks());
+
+        // The backslashes survive the save that used to make their loss permanent.
+        assertEquals(List.of("T | 0 | copy C:\\\\temp\\\\notes"),
+                Files.readAllLines(tempDirectory.resolve("duke.txt"), StandardCharsets.UTF_8));
+        assertEquals("[T][ ] copy C:\\temp\\notes", storage.load().tasks().get(0).toString());
+    }
+
+    @Test
     public void load_unknownKindOfTask_lineReportedAndSkipped() throws IOException {
         Storage storage = storageWithLines("T | 0 | read book", "X | 0 | who knows");
 
