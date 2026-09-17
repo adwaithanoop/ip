@@ -7,7 +7,7 @@ import bob.task.TaskList;
 import bob.ui.Ui;
 
 /**
- * Prints the tasks with the soonest dates on them, most urgent first.
+ * Prints the unfinished tasks with the soonest dates on them, most urgent first.
  *
  * <p>Unlike the other listings this one reorders what it shows, which
  * {@link TaskList#findIndexesSoonestFirst()} does without disturbing the list.
@@ -16,6 +16,15 @@ import bob.ui.Ui;
  * not hold that many, and the heading says how many are actually there.
  */
 public class NextCommand extends Command {
+
+    /** Said when no task in the list has a date at all. */
+    private static final String MESSAGE_NO_DATED_TASKS = "No dates on tasks. No bee-do!";
+
+    /**
+     * Said when tasks with dates exist but every one of them is done, so the user is
+     * not told there are no dates while finished dated tasks sit in the list.
+     */
+    private static final String MESSAGE_ALL_DATED_TASKS_DONE = "All dated tasks finish! No bee-do!";
 
     /** How many tasks the user asked to see, always one or more. */
     private final int wantedCount;
@@ -33,19 +42,20 @@ public class NextCommand extends Command {
     }
 
     /**
-     * Prints up to the requested number of dated tasks, soonest first, or says that
-     * no task has a date on it yet.
+     * Prints up to the requested number of unfinished dated tasks, soonest first, or
+     * says why there are none: no task has a date, or every task with one is done.
      */
     @Override
     public void execute(TaskList tasks, Ui ui, Storage storage) {
-        List<Integer> datedTaskIndexes = tasks.findIndexesSoonestFirst();
-        int shownCount = Math.min(wantedCount, datedTaskIndexes.size());
-        // When no task has a date the heading is built naming none, and never
+        List<Integer> urgentTaskIndexes = tasks.findIndexesSoonestFirst();
+        int shownCount = Math.min(wantedCount, urgentTaskIndexes.size());
+        boolean hasDatedTask = !tasks.findIndexes(task -> task.getScheduledDate().isPresent()).isEmpty();
+        // When nothing is urgent the heading is built naming none, and never
         // printed: an empty selection is shown as the message below it instead.
-        ui.showTasks(tasks, datedTaskIndexes.subList(0, shownCount),
+        ui.showTasks(tasks, urgentTaskIndexes.subList(0, shownCount),
                 shownCount == 1
                         ? "Bee-do bee-do! Most urgent:"
                         : "Bee-do bee-do! " + shownCount + " most urgent, soonest first:",
-                "No dates on tasks. No bee-do!");
+                hasDatedTask ? MESSAGE_ALL_DATED_TASKS_DONE : MESSAGE_NO_DATED_TASKS);
     }
 }

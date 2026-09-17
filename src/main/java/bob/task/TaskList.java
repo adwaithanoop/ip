@@ -196,10 +196,13 @@ public class TaskList {
     }
 
     /**
-     * Returns the positions of the tasks that carry a date, most urgent first.
+     * Returns the positions of the unfinished tasks that carry a date, most urgent first.
      *
      * <p>A todo has no date, so it is left out rather than sorted to one end:
      * there is no answer to where an undated task belongs among dated ones.
+     *
+     * <p>A task already done is left out too, however soon its date. Nothing about it
+     * is urgent any more, and listing it would push out an unfinished task that is.
      *
      * <p>The positions are sorted, not the tasks. Sorting the list itself would
      * answer the question just as well and quietly renumber the user's whole list
@@ -208,13 +211,14 @@ public class TaskList {
      * <p>The positions are sorted into a new list rather than in place, because
      * the list {@link #findIndexes} returns cannot be changed.
      *
-     * @return the positions of the dated tasks, counting from 0, soonest first, in a
-     *         list that cannot be changed.
+     * @return the positions of the unfinished dated tasks, counting from 0, soonest
+     *         first, in a list that cannot be changed.
      */
     public List<Integer> findIndexesSoonestFirst() {
-        List<Integer> datedIndexes = findIndexes(task -> task.getScheduledDate().isPresent());
+        List<Integer> urgentIndexes = findIndexes(
+                task -> !task.isDone() && task.getScheduledDate().isPresent());
         // orElseThrow cannot fire: only tasks that have a date are in this list.
-        return datedIndexes.stream()
+        return urgentIndexes.stream()
                 .sorted(Comparator.comparing(
                         index -> tasks.get(index).getScheduledDate().orElseThrow()))
                 .toList();
