@@ -8,7 +8,7 @@ between sessions.
 
 - Add todos, deadlines and events, with dates and optional times.
 - Mark, unmark, edit and delete tasks.
-- List the tasks on, before or after a date, or the ones with the soonest dates.
+- List the tasks on, before or after a date, or the unfinished ones with the soonest dates.
 - Find tasks by a word in their description.
 - Catch mistakes such as dates that do not exist, events that end before they start, and duplicate tasks.
 - Save tasks automatically, keeping a backup copy if the save file turns out to be damaged.

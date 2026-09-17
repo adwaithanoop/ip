@@ -191,6 +191,28 @@ public class TaskListTest {
     }
 
     @Test
+    public void findIndexesSoonestFirst_soonestTasksDone_doneOnesLeftOut() throws BobException {
+        Deadline oldTax = deadlineOn("tax 2020", "2020-04-30");
+        Event camp = eventFrom("camp", "2026-06-01", "2026-06-03");
+        oldTax.markAsDone();
+        camp.markAsDone();
+        TaskList tasks = listOf(oldTax, camp, deadlineOn("tax 2026", "2026-04-30"));
+
+        // The two finished tasks have the soonest dates, but nothing about them is
+        // urgent any more, so the one open deadline is all that is left.
+        assertEquals(List.of(2), tasks.findIndexesSoonestFirst());
+    }
+
+    @Test
+    public void findIndexesSoonestFirst_everyDatedTaskDone_emptyList() throws BobException {
+        Deadline deadline = deadlineOn("return book", "2026-12-02");
+        deadline.markAsDone();
+        TaskList tasks = listOf(new Todo("read book"), deadline);
+
+        assertEquals(List.of(), tasks.findIndexesSoonestFirst());
+    }
+
+    @Test
     public void findIndexesSoonestFirst_onlyTodos_emptyList() {
         TaskList tasks = listOf(new Todo("read book"), new Todo("return book"));
 
