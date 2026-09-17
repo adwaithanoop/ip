@@ -41,7 +41,9 @@ import bob.task.Todo;
  * <p>A vertical bar or a backslash inside what the user typed is written as
  * {@code \|} or {@code \\}. Without that, a task such as
  * {@code todo tidy up | then rest} would be saved as a line with one field too
- * many, and would be unreadable on the way back in.
+ * many, and would be unreadable on the way back in. A backslash in front of any
+ * other character is read as an ordinary backslash, so someone editing the file by
+ * hand need not know about escaping to write, for example, a folder path.
  *
  * <p>This class owns the layout of the file. Writing is shared with the tasks
  * themselves: each task says what its fields are in {@link Task#toSaveFields()}
@@ -831,17 +833,30 @@ public class Storage {
         return field.replace("\\", "\\\\").replace("|", "\\|");
     }
 
-    /** Returns the text with each escape sequence replaced by the character it stands for. */
+    /**
+     * Returns the text with each escape sequence replaced by the character it stands for.
+     *
+     * <p>Only {@code \\} and {@code \|} are escape sequences, since they are the only two
+     * {@link #escape} writes. A backslash in front of any other character is kept as
+     * text, so a line typed into the file by hand, such as
+     * {@code T | 0 | copy C:\temp\notes}, loads as it reads rather than losing its
+     * backslashes — a loss the next save would otherwise make permanent.
+     */
     private static String unescape(String field) {
         StringBuilder text = new StringBuilder();
         boolean isEscaped = false;
         for (char character : field.toCharArray()) {
-            // A backslash is punctuation, so what is kept is the character after it.
-            if (character == ESCAPE_CHARACTER && !isEscaped) {
+            if (isEscaped) {
+                if (!isEscapable(character)) {
+                    // The backslash escapes nothing, so it is part of the text.
+                    text.append(ESCAPE_CHARACTER);
+                }
+                text.append(character);
+                isEscaped = false;
+            } else if (character == ESCAPE_CHARACTER) {
                 isEscaped = true;
             } else {
                 text.append(character);
-                isEscaped = false;
             }
         }
         if (isEscaped) {
@@ -849,6 +864,11 @@ public class Storage {
             text.append(ESCAPE_CHARACTER);
         }
         return text.toString();
+    }
+
+    /** Returns whether a backslash in front of the character makes an escape sequence. */
+    private static boolean isEscapable(char character) {
+        return character == ESCAPE_CHARACTER || character == FIELD_SEPARATOR_CHARACTER;
     }
 
     /**
